@@ -125,6 +125,50 @@ class ReviewFeedback(BaseModel):
     details: str = ""
 
 
+class ModelUsage(BaseModel):
+    """单个模型的累计用量."""
+
+    model_name: str
+    call_count: int = 0
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+
+    @property
+    def total_tokens(self) -> int:
+        return self.prompt_tokens + self.completion_tokens
+
+
+class UsageStats(BaseModel):
+    """模型调用成本统计."""
+
+    by_model: dict[str, ModelUsage] = Field(default_factory=dict)
+
+    @property
+    def total_prompt_tokens(self) -> int:
+        return sum(m.prompt_tokens for m in self.by_model.values())
+
+    @property
+    def total_completion_tokens(self) -> int:
+        return sum(m.completion_tokens for m in self.by_model.values())
+
+    @property
+    def total_tokens(self) -> int:
+        return self.total_prompt_tokens + self.total_completion_tokens
+
+    @property
+    def total_calls(self) -> int:
+        return sum(m.call_count for m in self.by_model.values())
+
+    def record(self, model_name: str, prompt_tokens: int, completion_tokens: int) -> None:
+        """记录一次模型调用."""
+        if model_name not in self.by_model:
+            self.by_model[model_name] = ModelUsage(model_name=model_name)
+        usage = self.by_model[model_name]
+        usage.call_count += 1
+        usage.prompt_tokens += prompt_tokens
+        usage.completion_tokens += completion_tokens
+
+
 class PipelineContext(BaseModel):
     """Pipeline 执行上下文 - 贯穿整个工作流."""
 
@@ -136,3 +180,4 @@ class PipelineContext(BaseModel):
     review: ReviewFeedback | None = None
     output_path: str = ""
     output_format: str = "markdown"
+    usage_stats: UsageStats = Field(default_factory=UsageStats)

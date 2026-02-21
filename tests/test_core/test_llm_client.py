@@ -315,3 +315,73 @@ class TestLLMClientChatJson:
 
         call_kwargs = mock_openai_instance.chat.completions.create.call_args.kwargs
         assert call_kwargs["temperature"] == 0.3
+
+
+# ---------------------------------------------------------------------------
+# LLMClient.usage_stats — token tracking
+# ---------------------------------------------------------------------------
+
+class TestLLMClientUsageTracking:
+    @patch.dict(os.environ, {"TEST_API_KEY": "test-key-123"})
+    @patch("src.core.llm_client.OpenAI")
+    def test_chat_tracks_token_usage(self, MockOpenAI, tmp_config: str) -> None:
+        mock_openai_instance = MagicMock()
+        MockOpenAI.return_value = mock_openai_instance
+
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = "response"
+        mock_response.usage.prompt_tokens = 100
+        mock_response.usage.completion_tokens = 50
+        mock_openai_instance.chat.completions.create.return_value = mock_response
+
+        client = LLMClient(tmp_config)
+        client.chat("test-model", [{"role": "user", "content": "hi"}])
+
+        assert client.usage_stats.total_calls == 1
+        assert client.usage_stats.total_prompt_tokens == 100
+        assert client.usage_stats.total_completion_tokens == 50
+
+    @patch.dict(os.environ, {"TEST_API_KEY": "test-key-123"})
+    @patch("src.core.llm_client.OpenAI")
+    def test_chat_accumulates_usage_across_calls(self, MockOpenAI, tmp_config: str) -> None:
+        mock_openai_instance = MagicMock()
+        MockOpenAI.return_value = mock_openai_instance
+
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = "ok"
+        mock_response.usage.prompt_tokens = 80
+        mock_response.usage.completion_tokens = 40
+        mock_openai_instance.chat.completions.create.return_value = mock_response
+
+        client = LLMClient(tmp_config)
+        client.chat("test-model", [{"role": "user", "content": "a"}])
+        client.chat("test-model", [{"role": "user", "content": "b"}])
+
+        assert client.usage_stats.total_calls == 2
+        assert client.usage_stats.total_prompt_tokens == 160
+        assert client.usage_stats.total_completion_tokens == 80
+
+    @patch.dict(os.environ, {"TEST_API_KEY": "test-key-123"})
+    @patch("src.core.llm_client.OpenAI")
+    def test_chat_handles_no_usage(self, MockOpenAI, tmp_config: str) -> None:
+        """When response.usage is None, no error is raised."""
+        mock_openai_instance = MagicMock()
+        MockOpenAI.return_value = mock_openai_instance
+
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = "ok"
+        mock_response.usage = None
+        mock_openai_instance.chat.completions.create.return_value = mock_response
+
+        client = LLMClient(tmp_config)
+        result = client.chat("test-model", [{"role": "user", "content": "hi"}])
+        assert result == "ok"
+        assert client.usage_stats.total_calls == 0
+
+    def test_initial_usage_stats_empty(self, tmp_config: str) -> None:
+        client = LLMClient(tmp_config)
+        assert client.usage_stats.total_calls == 0
+        assert client.usage_stats.total_tokens == 0

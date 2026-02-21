@@ -14,7 +14,8 @@
 | M1: MVP 可用 | 输入 PDF → 输出 Markdown 分析报告 | Phase 1 |
 | M2: 多源综合 | 多格式输入 + 跨文档综合分析 | Phase 2 |
 | M3: 完整功能 | 评审循环 + 知识库 + 多格式输出 | Phase 3 |
-| M4: 高级功能 | 音频转录 + 批量处理 | Phase 4 |
+| M4: Web UI | FastAPI + React/Vite 仪表盘 | Phase 4 |
+| M5: 实用功能 + Docker | 批量处理 + 导出导入 + Docker | Phase 5 |
 
 ---
 
@@ -211,13 +212,31 @@
   - 目标：后端 API 测试 + 前端组件测试
   - 依赖：T-33
 
----
+## Phase 5: 实用功能 + Docker 容器化 `[完成]`
 
-## 未来阶段（进入时再展开详细 task）
+- [x] **T-35: 批量处理 CLI**
+  - 目标：`python main.py batch ./papers/` 批量分析目录下所有文档
+  - 步骤：① 扫描支持的文件格式 → ② Rich 进度条 → ③ --recursive/--output-dir/--synthesize
+  - 验收：批量处理多文件，输出汇总表格
+  - 依赖：T-11
 
-### Phase 5: 音频 + 高级功能
-- 目标：支持音频转录和批量处理
-- 方向：faster-whisper 音频转录、会议报告专用模板、批量处理、知识库导出/导入
+- [x] **T-36: 知识库导出/导入**
+  - 目标：支持 JSON/CSV 导出和 JSON 导入
+  - 步骤：① export_json/export_csv 方法 → ② import_json 方法 → ③ CLI export/import 命令
+  - 验收：导出 → 导入 → 数据一致
+  - 依赖：T-19
+
+- [x] **T-37: 模型调用成本统计**
+  - 目标：记录和展示 LLM 调用的 token 用量
+  - 步骤：① UsageStats 模型 → ② LLMClient 记录 token → ③ Pipeline 打印 Rich 表格
+  - 验收：Pipeline 运行结束后显示按模型分组的 token 统计
+  - 依赖：T-04, T-10
+
+- [x] **T-38: Docker 容器化**
+  - 目标：一键 Docker 部署
+  - 步骤：① 多阶段 Dockerfile → ② docker-compose.yml → ③ .dockerignore
+  - 验收：`docker compose up` 启动成功，healthcheck 通过
+  - 依赖：T-33
 
 ---
 
@@ -227,9 +246,9 @@
 
 - [ ] 音频转录 Agent（faster-whisper）
 - [ ] 会议报告专用模板
-- [ ] 批量处理：`python main.py batch ./papers/`
-- [ ] 知识库导出/导入（JSON/CSV）
+- [x] 批量处理：`python main.py batch ./papers/`
+- [x] 知识库导出/导入（JSON/CSV）
 - [x] Web UI 界面
 - [ ] 异步并行处理多文档
-- [ ] 模型调用成本统计
+- [x] 模型调用成本统计
 - [ ] 自定义报告模板系统

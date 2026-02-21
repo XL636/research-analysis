@@ -6,20 +6,24 @@
 
 | 指标 | 值 |
 |------|-----|
-| 当前阶段 | Phase 4 完成，等待 Phase 5 |
-| 总任务数 | 34 |
-| 已完成 | 34 |
+| 当前阶段 | Phase 5 完成 |
+| 总任务数 | 38 |
+| 已完成 | 38 |
 | 进行中 | 0 |
 | 完成率 | 100% |
 
 ## 当前进行中
 
-> 暂无正在进行的任务。Phase 0-4 已全部完成。
+> 暂无正在进行的任务。Phase 0-5 已全部完成。
 
 ## 已完成任务（最新在上）
 
 | 日期 | Task | 说明 |
 |------|------|------|
+| 2026-02-21 | T-38 | Docker 容器化（多阶段构建 + docker-compose） |
+| 2026-02-21 | T-37 | 模型调用成本统计（UsageStats + Rich 表格） |
+| 2026-02-21 | T-36 | 知识库导出/导入（JSON/CSV export + JSON import） |
+| 2026-02-21 | T-35 | 批量处理 CLI（batch 命令 + 进度条） |
 | 2026-02-21 | T-34 | API pytest + 前端 Vitest 测试 (168 total) |
 | 2026-02-21 | T-33 | 生产构建 (vite build) + FastAPI 静态文件服务 |
 | 2026-02-21 | T-32 | Analyze 页面 SSE 进度 + 报告预览/下载 |
@@ -59,15 +63,16 @@
 
 | 模块 | 测试数 | 状态 |
 |------|--------|------|
-| Models (Pydantic) | 45 | 全部通过 |
-| LLM Client | 19 | 全部通过 |
+| Models (Pydantic + UsageStats) | 51 | 全部通过 |
+| LLM Client (含 usage tracking) | 23 | 全部通过 |
 | Pipeline Engine | 19 | 全部通过 |
 | Agents (4个) | 12 | 全部通过 |
 | Parsers (PDF/PPT/Note) | 20 | 全部通过 |
-| Knowledge Base | 9 | 全部通过 |
+| Knowledge Base (含 export/import) | 15 | 全部通过 |
+| CLI (batch/export/import) | 12 | 全部通过 |
 | API Routes (FastAPI) | 14 | 全部通过 |
 | Frontend Components (Vitest) | 30 | 全部通过 |
-| **合计** | **168** | **全部通过** |
+| **合计** | **196** | **全部通过** |
 
 ## 里程碑进度
 
@@ -77,7 +82,7 @@
 | M2: 多源综合 | 已完成 | PPT/TXT/DOCX + 跨文档综合 |
 | M3: 完整功能 | 已完成 | 评审循环 + 知识库 + DOCX/PPTX 输出 |
 | M4: Web UI | 已完成 | FastAPI + React/Vite 仪表盘 |
-| M5: 高级功能 | 未开始 | 音频转录 + 批量处理 |
+| M5: 实用功能 + Docker | 已完成 | 批量处理 + 导出导入 + 成本统计 + Docker |
 
 ## 阻塞项
 

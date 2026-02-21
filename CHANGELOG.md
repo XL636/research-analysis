@@ -41,9 +41,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - CLI: analyze, search, list commands via Typer (T-11/T-21)
 - Config: settings.yaml with per-agent model assignment, 4 prompt templates (T-12/T-21)
 
+- CLI: `batch` command for bulk processing directories with progress bar (T-35)
+- CLI: `export` command - export knowledge base to JSON/CSV (T-36)
+- CLI: `import` command - import knowledge base from JSON backup (T-36)
+- Store: KnowledgeBase.export_json/export_csv/import_json methods (T-36)
+- Core: UsageStats model for tracking LLM token usage per model (T-37)
+- Core: LLMClient auto-records prompt/completion tokens from API responses (T-37)
+- Core: Pipeline prints Rich table cost summary after each run (T-37)
+- Docker: Multi-stage Dockerfile (node:22-alpine + python:3.11-slim) (T-38)
+- Docker: docker-compose.yml with volume mounts and healthcheck (T-38)
+- Docker: .dockerignore for optimized builds (T-38)
+
 ### Testing
-- 168 tests total (138 Python + 30 frontend), all passing
-- Backend: models, LLM client, engine, parsers, agents, knowledge base, API routes
+- 196 tests total (166 Python + 30 frontend), all passing
+- Backend: models, LLM client, engine, parsers, agents, knowledge base, API routes, CLI commands
 - Frontend: Badge, KpiCard, SearchInput, EmptyState, ProgressStepper, MarkdownRenderer
 
 ## [0.0.1] - 2026-02-21

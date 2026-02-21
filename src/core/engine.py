@@ -8,12 +8,13 @@ import yaml
 from loguru import logger
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.table import Table
 
 from src.agents.analyzer import AnalyzerAgent
 from src.agents.generator import GeneratorAgent
 from src.agents.parser import ParserAgent
 from src.core.llm_client import LLMClient
-from src.core.models import PipelineContext
+from src.core.models import PipelineContext, UsageStats
 from src.outputs.markdown_writer import write_markdown
 
 console = Console()
@@ -144,7 +145,44 @@ class Pipeline:
             ctx.output_path = self._write_output(ctx, output_path)
             progress.update(task, description=f"✅ 输出完成: {ctx.output_path}")
 
+        # 同步 usage stats
+        if isinstance(getattr(self.llm, 'usage_stats', None), UsageStats):
+            ctx.usage_stats = self.llm.usage_stats
+            if ctx.usage_stats.total_calls > 0:
+                self._print_usage_summary(ctx)
+
         return ctx
+
+    def _print_usage_summary(self, ctx: PipelineContext) -> None:
+        """打印模型调用成本摘要."""
+        stats = ctx.usage_stats
+        table = Table(title="模型调用统计")
+        table.add_column("模型", style="cyan")
+        table.add_column("调用次数", justify="right")
+        table.add_column("Prompt Tokens", justify="right")
+        table.add_column("Completion Tokens", justify="right")
+        table.add_column("Total Tokens", justify="right", style="bold")
+
+        for usage in stats.by_model.values():
+            table.add_row(
+                usage.model_name,
+                str(usage.call_count),
+                f"{usage.prompt_tokens:,}",
+                f"{usage.completion_tokens:,}",
+                f"{usage.total_tokens:,}",
+            )
+
+        table.add_section()
+        table.add_row(
+            "[bold]合计[/bold]",
+            str(stats.total_calls),
+            f"{stats.total_prompt_tokens:,}",
+            f"{stats.total_completion_tokens:,}",
+            f"{stats.total_tokens:,}",
+        )
+
+        console.print()
+        console.print(table)
 
     def _write_output(self, ctx: PipelineContext, output_path: str | None) -> str:
         """写入输出文件."""
