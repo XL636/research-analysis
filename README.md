@@ -100,19 +100,49 @@ research-analysis/
 
 ## Architecture
 
+5 个 Agent 串联的线性 Pipeline，每个 Agent 使用不同模型，通过 Pydantic model 传递数据：
+
 ```
-Input Files → [Parser] → [Analyzer] → [Synthesizer] → [Generator] → [Reviewer] → Output
-                                                                        ↓ (不合格)
-                                                                    回退 Generator
+文件输入 (PDF/PPT/TXT/MD)
+  │
+  ▼
+┌─────────────────┐
+│  ParserAgent     │  qwen-turbo（轻量）
+│  解析文件内容     │  文件 → ParsedDocument
+└────────┬────────┘
+         ▼
+┌─────────────────┐
+│  AnalyzerAgent   │  deepseek-chat（强力）
+│  深度分析         │  ParsedDocument → AnalysisResult
+└────────┬────────┘
+         ▼
+┌─────────────────┐
+│ SynthesizerAgent │  deepseek-chat（强力）
+│ 跨文档综合       │  多个 AnalysisResult → SynthesisResult
+└────────┬────────┘  （单文档时跳过）
+         ▼
+┌─────────────────┐
+│ GeneratorAgent   │  qwen-plus（中等）
+│ 生成报告         │  → Report (Markdown)
+└────────┬────────┘
+         ▼
+┌─────────────────┐       不合格（最多 2 次）
+│ ReviewerAgent    │  glm-4-flash ──────────┐
+│ 质量审查         │                         │
+└────────┬────────┘                         │
+         │ 合格                      ┌──────▼────────┐
+         ▼                           │ GeneratorAgent  │
+   输出报告                          │  重新生成        │
+  (MD/DOCX/PPTX)                    └─────────────────┘
 ```
 
-| Agent | 职责 | 模型级别 |
-|-------|------|---------|
-| Parser | 从 PDF/PPT/音频/笔记提取结构化文本 | 轻量模型 |
-| Analyzer | 深度分析单篇文档 | 强力模型 |
-| Synthesizer | 跨文档对比和主题归纳 | 强力模型 |
-| Generator | 按模板生成报告 | 中等模型 |
-| Reviewer | 质量检查，不合格打回重做 | 中等模型 |
+| Agent | 职责 | 模型 | 服务商 |
+|-------|------|------|--------|
+| Parser | 从 PDF/PPT/TXT 提取结构化文本 | qwen-turbo | 阿里 DashScope |
+| Analyzer | 深度分析单篇文档 | deepseek-chat | DeepSeek |
+| Synthesizer | 跨文档对比和主题归纳 | deepseek-chat | DeepSeek |
+| Generator | 按模板生成报告 | qwen-plus | 阿里 DashScope |
+| Reviewer | 质量检查，不合格打回重做 | glm-4-flash | 智谱 AI |
 
 ## Environment Variables
 
