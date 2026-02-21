@@ -1,0 +1,53 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/),
+and this project adheres to [Semantic Versioning](https://semver.org/).
+
+## [Unreleased]
+
+### Added
+- API: FastAPI backend with CORS, lifespan, health endpoint (T-22)
+- API: Knowledge Base endpoints - search, documents, document detail, tags (T-23)
+- API: Dashboard stats aggregation endpoint (T-24)
+- API: Pipeline endpoints - file upload, SSE progress streaming, results (T-25)
+- API: Reports download endpoint (T-25)
+- API: PipelineRunner async wrapper with asyncio.Queue progress (T-25)
+- API: File upload manager with type validation (T-25)
+- CLI: `serve` command to start Web UI server (T-22)
+- Web: React + Vite + TypeScript + Tailwind v4 frontend project (T-26)
+- Web: Design system - Indigo primary, Emerald accent, Crimson Pro + Atkinson Hyperlegible fonts (T-26)
+- Web: TypeScript interfaces mirroring Python Pydantic models (T-26)
+- Web: API client layer with axios (pipeline, knowledge, dashboard) (T-26)
+- Web: Custom hooks - usePipelineProgress (SSE), useDocuments, useSearch with debounce (T-26)
+- Web: Sidebar navigation + AppLayout with React Router (T-27)
+- Web: UI component library - KpiCard, Badge, SearchInput, DataTable, FileDropzone, ProgressStepper, MarkdownRenderer, EmptyState (T-28)
+- Web: Dashboard page with KPI cards + recent activity table (T-29)
+- Web: Knowledge Base page with FTS5 search, tag filter, document table (T-30)
+- Web: Document Detail page with analysis cards and SVG relevance score (T-30)
+- Web: Analyze page - file upload with format selector and synthesis toggle (T-31)
+- Web: Analyze page - SSE progress stepper and report preview/download (T-32)
+- Web: Production build (vite build → dist/) + FastAPI static file serving + SPA routing (T-33)
+- Core: Pydantic data models for pipeline data flow (T-03)
+- Core: Unified LLM client with multi-model support via OpenAI-compatible API (T-04)
+- Core: Agent base class with prompt loading and LLM calling (T-05)
+- Core: Pipeline engine orchestrating Parse → Analyze → Synthesize → Generate → Review (T-10)
+- Parsers: PDF parser using PyMuPDF (T-06), PPT parser using python-pptx (T-13), Note parser for MD/TXT/DOCX (T-14)
+- Agents: Parser, Analyzer, Generator, Reviewer, Synthesizer (T-07/T-08/T-09/T-15/T-17)
+- Pipeline: Reviewer feedback loop with configurable max retries (T-18)
+- Store: SQLite + FTS5 knowledge base with tag system (T-19)
+- Outputs: Markdown, DOCX, PPTX report writers (T-20)
+- CLI: analyze, search, list commands via Typer (T-11/T-21)
+- Config: settings.yaml with per-agent model assignment, 4 prompt templates (T-12/T-21)
+
+### Testing
+- 168 tests total (138 Python + 30 frontend), all passing
+- Backend: models, LLM client, engine, parsers, agents, knowledge base, API routes
+- Frontend: Badge, KpiCard, SearchInput, EmptyState, ProgressStepper, MarkdownRenderer
+
+## [0.0.1] - 2026-02-21
+
+### Added
+- Initial project structure
+- Project scaffolding and base configuration

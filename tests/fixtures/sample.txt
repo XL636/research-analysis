@@ -1,0 +1,5 @@
+This is the first paragraph about deep learning techniques. It covers various neural network architectures and their applications.
+
+This is the second paragraph discussing reinforcement learning. It explains how agents learn through trial and error in an environment.
+
+This is the third paragraph about natural language processing. It describes transformer models and their impact on the field.

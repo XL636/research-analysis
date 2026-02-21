@@ -1,0 +1,62 @@
+# 模型配置
+models:
+  deepseek-chat:
+    provider: deepseek
+    base_url: https://api.deepseek.com
+    model: deepseek-chat
+    api_key_env: DEEPSEEK_API_KEY
+
+  deepseek-reasoner:
+    provider: deepseek
+    base_url: https://api.deepseek.com
+    model: deepseek-reasoner
+    api_key_env: DEEPSEEK_API_KEY
+
+  qwen-plus:
+    provider: dashscope
+    base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+    model: qwen-plus
+    api_key_env: DASHSCOPE_API_KEY
+
+  qwen-turbo:
+    provider: dashscope
+    base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+    model: qwen-turbo
+    api_key_env: DASHSCOPE_API_KEY
+
+  glm-4-plus:
+    provider: zhipu
+    base_url: https://open.bigmodel.cn/api/paas/v4/
+    model: glm-4-plus
+    api_key_env: ZHIPU_API_KEY
+
+  glm-4-flash:
+    provider: zhipu
+    base_url: https://open.bigmodel.cn/api/paas/v4/
+    model: glm-4-flash
+    api_key_env: ZHIPU_API_KEY
+
+# Agent 模型分配
+agent_models:
+  parser: qwen-turbo        # 轻量模型，成本低
+  analyzer: deepseek-chat    # 强力模型，深度分析
+  synthesizer: deepseek-chat # 强力模型，跨文档综合
+  generator: qwen-plus       # 中等模型，报告生成
+  reviewer: glm-4-flash      # 中等模型，质量检查
+
+# Pipeline 配置
+pipeline:
+  max_review_retries: 2      # Reviewer 最多打回次数
+  output_dir: ./output       # 默认输出目录
+
+# 知识库配置
+knowledge_base:
+  db_path: ./knowledge_base/research.db
+
+# API 配置
+api:
+  host: "0.0.0.0"
+  port: 8000
+  cors_origins: ["http://localhost:5173", "http://localhost:3000"]
+  upload_dir: ./uploads
+  max_upload_size: 52428800  # 50MB
