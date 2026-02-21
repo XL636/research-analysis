@@ -1,4 +1,5 @@
 import { Circle, Loader, CheckCircle, XCircle } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 interface Step {
   name: string
@@ -14,29 +15,31 @@ const statusConfig = {
     icon: Circle,
     color: 'text-gray-300',
     lineColor: 'bg-gray-200',
-    label: 'Pending',
+    labelKey: 'status.pending',
   },
   running: {
     icon: Loader,
     color: 'text-primary-500',
     lineColor: 'bg-primary-200',
-    label: 'Running',
+    labelKey: 'status.running',
   },
   completed: {
     icon: CheckCircle,
     color: 'text-emerald-500',
     lineColor: 'bg-emerald-300',
-    label: 'Completed',
+    labelKey: 'status.completed',
   },
   error: {
     icon: XCircle,
     color: 'text-red-500',
     lineColor: 'bg-red-300',
-    label: 'Error',
+    labelKey: 'status.error',
   },
 }
 
 export default function ProgressStepper({ steps }: ProgressStepperProps) {
+  const { t } = useTranslation()
+
   return (
     <div className="space-y-0">
       {steps.map((step, index) => {
@@ -75,7 +78,7 @@ export default function ProgressStepper({ steps }: ProgressStepperProps) {
               >
                 {step.name}
               </p>
-              <p className="text-xs text-gray-400 mt-0.5">{config.label}</p>
+              <p className="text-xs text-gray-400 mt-0.5">{t(config.labelKey)}</p>
             </div>
           </div>
         )

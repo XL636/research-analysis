@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Web: i18n 双语支持 zh-CN + en，react-i18next + 语言切换按钮 + localStorage 持久化 (T-40)
+
+### Previously Added
 - API: FastAPI backend with CORS, lifespan, health endpoint (T-22)
 - API: Knowledge Base endpoints - search, documents, document detail, tags (T-23)
 - API: Dashboard stats aggregation endpoint (T-24)

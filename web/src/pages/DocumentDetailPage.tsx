@@ -9,12 +9,14 @@ import {
   ArrowRight,
   BarChart3,
 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { useDocument } from '../hooks/useDocuments'
 import Badge from '../components/ui/Badge'
 import EmptyState from '../components/ui/EmptyState'
 import type { AnalysisResult } from '../types'
 
 function ScoreIndicator({ score }: { score: number }) {
+  const { t } = useTranslation()
   const percentage = (score / 10) * 100
   const circumference = 2 * Math.PI * 54
   const strokeDashoffset = circumference - (percentage / 100) * circumference
@@ -56,12 +58,14 @@ function ScoreIndicator({ score }: { score: number }) {
           </span>
         </div>
       </div>
-      <p className="mt-2 text-sm text-gray-500">out of 10</p>
+      <p className="mt-2 text-sm text-gray-500">{t('detail.outOf10')}</p>
     </div>
   )
 }
 
 function AnalysisCards({ analysis }: { analysis: AnalysisResult }) {
+  const { t } = useTranslation()
+
   return (
     <div className="space-y-6">
       {/* Summary */}
@@ -69,7 +73,7 @@ function AnalysisCards({ analysis }: { analysis: AnalysisResult }) {
         <div className="flex items-center gap-2 mb-4">
           <FileText className="h-5 w-5 text-primary-600" />
           <h2 className="font-heading text-lg font-semibold text-primary-950">
-            Summary
+            {t('detail.summary')}
           </h2>
         </div>
         <p className="text-primary-950 leading-relaxed">{analysis.summary}</p>
@@ -81,7 +85,7 @@ function AnalysisCards({ analysis }: { analysis: AnalysisResult }) {
           <div className="flex items-center gap-2 mb-4">
             <Lightbulb className="h-5 w-5 text-primary-600" />
             <h2 className="font-heading text-lg font-semibold text-primary-950">
-              Key Findings
+              {t('detail.keyFindings')}
             </h2>
           </div>
           <ol className="space-y-4">
@@ -102,14 +106,14 @@ function AnalysisCards({ analysis }: { analysis: AnalysisResult }) {
           <div className="flex items-center gap-2 mb-4">
             <FlaskConical className="h-5 w-5 text-primary-600" />
             <h2 className="font-heading text-lg font-semibold text-primary-950">
-              Methodology
+              {t('detail.methodology')}
             </h2>
           </div>
           <p className="text-primary-950 mb-4">{analysis.methodology.approach}</p>
           <div className="space-y-3">
             <div>
               <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                Strengths
+                {t('detail.strengths')}
               </h3>
               <ul className="space-y-1.5">
                 {analysis.methodology.strengths.map((s, idx) => (
@@ -122,7 +126,7 @@ function AnalysisCards({ analysis }: { analysis: AnalysisResult }) {
             </div>
             <div>
               <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                Limitations
+                {t('detail.limitations')}
               </h3>
               <ul className="space-y-1.5">
                 {analysis.methodology.limitations.map((l, idx) => (
@@ -141,7 +145,7 @@ function AnalysisCards({ analysis }: { analysis: AnalysisResult }) {
           <div className="flex items-center gap-2 mb-4">
             <Award className="h-5 w-5 text-primary-600" />
             <h2 className="font-heading text-lg font-semibold text-primary-950">
-              Contributions
+              {t('detail.contributions')}
             </h2>
           </div>
           <ul className="space-y-2">
@@ -159,7 +163,7 @@ function AnalysisCards({ analysis }: { analysis: AnalysisResult }) {
           <div className="flex items-center gap-2 mb-4">
             <AlertTriangle className="h-5 w-5 text-primary-600" />
             <h2 className="font-heading text-lg font-semibold text-primary-950">
-              Limitations
+              {t('detail.limitationsCard')}
             </h2>
           </div>
           <ul className="space-y-2">
@@ -177,7 +181,7 @@ function AnalysisCards({ analysis }: { analysis: AnalysisResult }) {
           <div className="flex items-center gap-2 mb-4">
             <ArrowRight className="h-5 w-5 text-primary-600" />
             <h2 className="font-heading text-lg font-semibold text-primary-950">
-              Future Work
+              {t('detail.futureWork')}
             </h2>
           </div>
           <ul className="space-y-2">
@@ -195,7 +199,7 @@ function AnalysisCards({ analysis }: { analysis: AnalysisResult }) {
           <div className="flex items-center gap-2 mb-4">
             <BarChart3 className="h-5 w-5 text-primary-600" />
             <h2 className="font-heading text-lg font-semibold text-primary-950">
-              Relevance Score
+              {t('detail.relevanceScore')}
             </h2>
           </div>
           <ScoreIndicator score={analysis.relevance_score} />
@@ -206,6 +210,7 @@ function AnalysisCards({ analysis }: { analysis: AnalysisResult }) {
 }
 
 export default function DocumentDetailPage() {
+  const { t } = useTranslation()
   const { id } = useParams()
   const { data: doc, isLoading } = useDocument(Number(id))
 
@@ -213,9 +218,9 @@ export default function DocumentDetailPage() {
     return (
       <div>
         <h1 className="text-2xl font-heading font-bold text-primary-950 mb-6">
-          Document Detail
+          {t('detail.title')}
         </h1>
-        <p className="text-gray-500">Loading...</p>
+        <p className="text-gray-500">{t('common.loading')}</p>
       </div>
     )
   }
@@ -228,12 +233,12 @@ export default function DocumentDetailPage() {
           className="inline-flex items-center gap-1.5 text-sm text-primary-600 hover:text-primary-800 transition-colors duration-200 mb-6"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to Knowledge Base
+          {t('detail.backToKB')}
         </Link>
         <EmptyState
           icon={FileText}
-          title="Document not found"
-          description="The document you are looking for does not exist or has been removed."
+          title={t('detail.notFoundTitle')}
+          description={t('detail.notFoundDesc')}
         />
       </div>
     )
@@ -247,7 +252,7 @@ export default function DocumentDetailPage() {
         className="inline-flex items-center gap-1.5 text-sm text-primary-600 hover:text-primary-800 transition-colors duration-200 mb-6"
       >
         <ArrowLeft className="h-4 w-4" />
-        Back to Knowledge Base
+        {t('detail.backToKB')}
       </Link>
 
       {/* Header */}
@@ -275,8 +280,8 @@ export default function DocumentDetailPage() {
       ) : (
         <EmptyState
           icon={FileText}
-          title="No analysis available"
-          description="This document has not been analyzed yet. Run the analysis pipeline to generate insights."
+          title={t('detail.noAnalysisTitle')}
+          description={t('detail.noAnalysisDesc')}
         />
       )}
     </div>

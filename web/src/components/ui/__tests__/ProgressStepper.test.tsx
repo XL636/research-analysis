@@ -18,9 +18,9 @@ describe('ProgressStepper', () => {
 
   it('renders correct status labels', () => {
     render(<ProgressStepper steps={steps} />)
-    expect(screen.getByText('Completed')).toBeInTheDocument()
-    expect(screen.getByText('Running')).toBeInTheDocument()
-    expect(screen.getByText('Pending')).toBeInTheDocument()
+    expect(screen.getByText('status.completed')).toBeInTheDocument()
+    expect(screen.getByText('status.running')).toBeInTheDocument()
+    expect(screen.getByText('status.pending')).toBeInTheDocument()
   })
 
   it('renders error status', () => {
@@ -29,7 +29,7 @@ describe('ProgressStepper', () => {
     ]
     render(<ProgressStepper steps={errorSteps} />)
     expect(screen.getByText('Validate')).toBeInTheDocument()
-    expect(screen.getByText('Error')).toBeInTheDocument()
+    expect(screen.getByText('status.error')).toBeInTheDocument()
   })
 
   it('renders the correct number of steps', () => {
@@ -42,6 +42,6 @@ describe('ProgressStepper', () => {
     const singleStep = [{ name: 'Only Step', status: 'pending' as const }]
     render(<ProgressStepper steps={singleStep} />)
     expect(screen.getByText('Only Step')).toBeInTheDocument()
-    expect(screen.getByText('Pending')).toBeInTheDocument()
+    expect(screen.getByText('status.pending')).toBeInTheDocument()
   })
 })

@@ -5,7 +5,7 @@ import SearchInput from '../SearchInput'
 describe('SearchInput', () => {
   it('renders with default placeholder', () => {
     render(<SearchInput value="" onChange={() => {}} />)
-    expect(screen.getByPlaceholderText('Search...')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('common.search')).toBeInTheDocument()
   })
 
   it('renders with custom placeholder', () => {
@@ -17,21 +17,21 @@ describe('SearchInput', () => {
 
   it('displays the current value', () => {
     render(<SearchInput value="test query" onChange={() => {}} />)
-    const input = screen.getByPlaceholderText('Search...') as HTMLInputElement
+    const input = screen.getByPlaceholderText('common.search') as HTMLInputElement
     expect(input.value).toBe('test query')
   })
 
   it('fires onChange callback when typing', () => {
     const handleChange = vi.fn()
     render(<SearchInput value="" onChange={handleChange} />)
-    const input = screen.getByPlaceholderText('Search...')
+    const input = screen.getByPlaceholderText('common.search')
     fireEvent.change(input, { target: { value: 'hello' } })
     expect(handleChange).toHaveBeenCalledWith('hello')
   })
 
   it('renders as a text input', () => {
     render(<SearchInput value="" onChange={() => {}} />)
-    const input = screen.getByPlaceholderText('Search...') as HTMLInputElement
+    const input = screen.getByPlaceholderText('common.search') as HTMLInputElement
     expect(input.type).toBe('text')
   })
 })

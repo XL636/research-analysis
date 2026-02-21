@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Search } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { useDocuments, useTags } from '../hooks/useDocuments'
 import { useSearch } from '../hooks/useSearch'
 import SearchInput from '../components/ui/SearchInput'
@@ -12,40 +13,9 @@ import type { DocumentSummary, SearchResult } from '../types'
 
 type TableRow = DocumentSummary | SearchResult
 
-const columns: Column<TableRow>[] = [
-  {
-    key: 'title',
-    header: 'Title',
-  },
-  {
-    key: 'file_type',
-    header: 'Type',
-    render: (row) => <Badge variant="primary">{row.file_type}</Badge>,
-  },
-  {
-    key: 'tags',
-    header: 'Tags',
-    render: (row) => (
-      <div className="flex flex-wrap gap-1">
-        {row.tags
-          .split(', ')
-          .filter(Boolean)
-          .map((tag) => (
-            <Badge key={tag} variant="accent">
-              {tag}
-            </Badge>
-          ))}
-      </div>
-    ),
-  },
-  {
-    key: 'date',
-    header: 'Date',
-  },
-]
-
 export default function KnowledgeBasePage() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const [selectedTag, setSelectedTag] = useState<string | undefined>(undefined)
 
   const { query, setQuery, results: searchResults } = useSearch()
@@ -58,6 +28,38 @@ export default function KnowledgeBasePage() {
     : documents ?? []
   const isLoading = isSearching ? searchResults.isLoading : docsLoading
 
+  const columns: Column<TableRow>[] = [
+    {
+      key: 'title',
+      header: t('table.title'),
+    },
+    {
+      key: 'file_type',
+      header: t('table.type'),
+      render: (row) => <Badge variant="primary">{row.file_type}</Badge>,
+    },
+    {
+      key: 'tags',
+      header: t('table.tags'),
+      render: (row) => (
+        <div className="flex flex-wrap gap-1">
+          {row.tags
+            .split(', ')
+            .filter(Boolean)
+            .map((tag) => (
+              <Badge key={tag} variant="accent">
+                {tag}
+              </Badge>
+            ))}
+        </div>
+      ),
+    },
+    {
+      key: 'date',
+      header: t('table.date'),
+    },
+  ]
+
   const handleTagClick = (tagName: string) => {
     setSelectedTag((prev) => (prev === tagName ? undefined : tagName))
   }
@@ -65,7 +67,7 @@ export default function KnowledgeBasePage() {
   return (
     <div>
       <h1 className="text-2xl font-heading font-bold text-primary-950 mb-6">
-        Knowledge Base
+        {t('knowledge.title')}
       </h1>
 
       <div className="space-y-6">
@@ -73,7 +75,7 @@ export default function KnowledgeBasePage() {
         <SearchInput
           value={query}
           onChange={setQuery}
-          placeholder="Search documents..."
+          placeholder={t('knowledge.searchPlaceholder')}
         />
 
         {/* Tag filter */}
@@ -106,15 +108,15 @@ export default function KnowledgeBasePage() {
 
         {/* Document list */}
         {isLoading ? (
-          <p className="text-gray-500">Loading...</p>
+          <p className="text-gray-500">{t('common.loading')}</p>
         ) : displayData.length === 0 ? (
           <EmptyState
             icon={Search}
-            title="No documents found"
+            title={t('knowledge.noDocsTitle')}
             description={
               isSearching
-                ? 'Try a different search query or clear the search to browse all documents.'
-                : 'No documents match the selected filter. Upload and analyze a document to get started.'
+                ? t('knowledge.noDocsSearch')
+                : t('knowledge.noDocsDefault')
             }
           />
         ) : (

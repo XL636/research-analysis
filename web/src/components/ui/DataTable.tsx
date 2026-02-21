@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 
 export interface Column<T> {
   key: string
@@ -17,6 +18,8 @@ export default function DataTable<T extends object>({
   data,
   onRowClick,
 }: DataTableProps<T>) {
+  const { t } = useTranslation()
+
   return (
     <div className="overflow-x-auto rounded-xl bg-surface-card shadow-sm">
       <table className="w-full text-sm">
@@ -56,7 +59,7 @@ export default function DataTable<T extends object>({
       </table>
       {data.length === 0 && (
         <div className="px-6 py-12 text-center text-sm text-gray-400">
-          No data available
+          {t('common.noData')}
         </div>
       )}
     </div>

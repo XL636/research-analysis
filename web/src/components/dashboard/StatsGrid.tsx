@@ -1,4 +1,5 @@
 import { FileText, TrendingUp, Star, Tag } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import KpiCard from '../ui/KpiCard'
 import type { DashboardStats } from '../../types'
 
@@ -7,31 +8,32 @@ interface StatsGridProps {
 }
 
 export default function StatsGrid({ stats }: StatsGridProps) {
+  const { t } = useTranslation()
   const topTag = stats.top_tags[0]
 
   return (
     <div className="grid grid-cols-4 gap-6">
       <KpiCard
-        title="Total Documents"
+        title={t('dashboard.totalDocuments')}
         value={stats.total_documents}
         icon={FileText}
       />
       <KpiCard
-        title="Recent Analyses"
+        title={t('dashboard.recentAnalyses')}
         value={stats.recent_analyses}
         icon={TrendingUp}
-        trend="Last 7 days"
+        trend={t('dashboard.last7Days')}
       />
       <KpiCard
-        title="Avg. Score"
+        title={t('dashboard.avgScore')}
         value={stats.avg_score.toFixed(1)}
         icon={Star}
       />
       <KpiCard
-        title="Top Tag"
+        title={t('dashboard.topTag')}
         value={topTag?.name || 'N/A'}
         icon={Tag}
-        trend={topTag ? `${topTag.count} documents` : undefined}
+        trend={topTag ? t('dashboard.nDocuments', { count: topTag.count }) : undefined}
       />
     </div>
   )

@@ -9,6 +9,7 @@ import {
   AlertCircle,
   Loader,
 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import FileDropzone from '../components/ui/FileDropzone'
 import ProgressStepper from '../components/ui/ProgressStepper'
 import MarkdownRenderer from '../components/ui/MarkdownRenderer'
@@ -25,6 +26,7 @@ const FORMAT_OPTIONS = [
 ] as const
 
 export default function AnalyzePage() {
+  const { t } = useTranslation()
   const [phase, setPhase] = useState<Phase>('upload')
   const [files, setFiles] = useState<File[]>([])
   const [format, setFormat] = useState('markdown')
@@ -47,7 +49,7 @@ export default function AnalyzePage() {
         setPhase('result')
       }).catch(() => {
         setReportContent('')
-        setReportTitle('Analysis Complete')
+        setReportTitle('')
         setPhase('result')
       })
     }
@@ -84,7 +86,7 @@ export default function AnalyzePage() {
     return (
       <div>
         <h1 className="text-2xl font-heading font-bold text-primary-950 mb-6">
-          Analyze Documents
+          {t('analyze.title')}
         </h1>
 
         <div className="bg-surface-card rounded-xl shadow-sm p-8">
@@ -95,7 +97,7 @@ export default function AnalyzePage() {
             {/* Output format selector */}
             <div>
               <label className="block text-sm font-medium text-primary-950 mb-2">
-                Output Format
+                {t('analyze.outputFormat')}
               </label>
               <div className="flex gap-2">
                 {FORMAT_OPTIONS.map(opt => {
@@ -123,7 +125,7 @@ export default function AnalyzePage() {
             {/* Synthesize toggle */}
             <div>
               <label className="block text-sm font-medium text-primary-950 mb-2">
-                Cross-document synthesis
+                {t('analyze.crossDocSynthesis')}
               </label>
               <button
                 type="button"
@@ -144,7 +146,7 @@ export default function AnalyzePage() {
                   />
                 </span>
                 <span className="text-sm text-gray-600">
-                  Compare and synthesize across multiple documents
+                  {t('analyze.crossDocDesc')}
                 </span>
               </button>
             </div>
@@ -164,10 +166,10 @@ export default function AnalyzePage() {
             {isSubmitting ? (
               <span className="flex items-center justify-center gap-2">
                 <Loader className="h-4 w-4 animate-spin" />
-                Starting...
+                {t('analyze.starting')}
               </span>
             ) : (
-              'Start Analysis'
+              t('analyze.startAnalysis')
             )}
           </button>
         </div>
@@ -180,14 +182,14 @@ export default function AnalyzePage() {
     return (
       <div>
         <h1 className="text-2xl font-heading font-bold text-primary-950 mb-6">
-          Analyzing...
+          {t('analyze.analyzing')}
         </h1>
 
         {error && (
           <div className="mb-6 flex items-start gap-3 rounded-lg bg-red-50 p-4">
             <AlertCircle className="h-5 w-5 flex-shrink-0 text-red-500 mt-0.5" />
             <div>
-              <p className="text-sm font-medium text-red-800">Analysis Error</p>
+              <p className="text-sm font-medium text-red-800">{t('analyze.analysisError')}</p>
               <p className="text-sm text-red-600 mt-1">{error}</p>
             </div>
           </div>
@@ -204,7 +206,7 @@ export default function AnalyzePage() {
             <div className="flex-1 border-l border-gray-200 pl-8">
               <div className="mb-6">
                 <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">
-                  Files Being Analyzed
+                  {t('analyze.filesBeingAnalyzed')}
                 </h3>
                 <ul className="space-y-2">
                   {files.map((file, index) => (
@@ -221,7 +223,7 @@ export default function AnalyzePage() {
 
               <div className="mb-6">
                 <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-1">
-                  Output Format
+                  {t('analyze.outputFormat')}
                 </h3>
                 <p className="text-sm text-primary-950 capitalize">{format}</p>
               </div>
@@ -231,7 +233,7 @@ export default function AnalyzePage() {
                 onClick={handleReset}
                 className="text-sm text-gray-400 hover:text-gray-600 underline transition-colors duration-200"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
             </div>
           </div>
@@ -244,7 +246,7 @@ export default function AnalyzePage() {
   return (
     <div>
       <h1 className="text-2xl font-heading font-bold text-primary-950 mb-6">
-        {reportTitle || 'Analysis Complete'}
+        {reportTitle || t('analyze.analysisComplete')}
       </h1>
 
       {/* Action bar */}
@@ -255,7 +257,7 @@ export default function AnalyzePage() {
           className="flex items-center gap-2 border border-primary-500 text-primary-600 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 hover:bg-primary-50"
         >
           <Plus className="h-4 w-4" />
-          New Analysis
+          {t('analyze.newAnalysis')}
         </button>
 
         <a
@@ -264,7 +266,7 @@ export default function AnalyzePage() {
           className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg px-6 py-2 text-sm font-medium transition-all duration-200"
         >
           <Download className="h-4 w-4" />
-          Download Report
+          {t('analyze.downloadReport')}
         </a>
       </div>
 
@@ -275,15 +277,15 @@ export default function AnalyzePage() {
         ) : (
           <EmptyState
             icon={FileSearch}
-            title="No Report Content"
-            description="The analysis completed but did not produce any report content."
+            title={t('analyze.noReportTitle')}
+            description={t('analyze.noReportDesc')}
             action={
               <button
                 type="button"
                 onClick={handleReset}
                 className="text-sm text-primary-600 hover:text-primary-800 underline transition-colors duration-200"
               >
-                Try again
+                {t('analyze.tryAgain')}
               </button>
             }
           />

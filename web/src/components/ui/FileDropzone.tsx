@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { Upload, X, FileText } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 interface FileDropzoneProps {
   onFilesSelected: (files: File[]) => void
@@ -16,6 +17,7 @@ export default function FileDropzone({
     'text/markdown': ['.md'],
   },
 }: FileDropzoneProps) {
+  const { t } = useTranslation()
   const [files, setFiles] = useState<File[]>([])
 
   const onDrop = useCallback(
@@ -59,15 +61,15 @@ export default function FileDropzone({
         />
         {isDragActive ? (
           <p className="text-sm font-medium text-primary-600">
-            Drop files here...
+            {t('dropzone.dropHere')}
           </p>
         ) : (
           <>
             <p className="text-sm font-medium text-gray-600">
-              Drag & drop files here, or click to browse
+              {t('dropzone.dragOrClick')}
             </p>
             <p className="mt-1 text-xs text-gray-400">
-              Supports PDF, PPTX, TXT, MD
+              {t('dropzone.supportedFormats')}
             </p>
           </>
         )}

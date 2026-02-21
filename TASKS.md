@@ -244,6 +244,14 @@
   - 验收：`python main.py analyze paper.pdf --template meeting` 输出组会格式报告
   - 依赖：T-09
 
+## Phase 6: 国际化 + 优化 `[进行中]`
+
+- [x] **T-40: Web UI i18n 双语支持（zh-CN + en）**
+  - 目标：Web UI 支持中英双语切换
+  - 步骤：① react-i18next + i18next 基础设施 → ② 翻译文件 zh-CN.json + en.json → ③ 所有组件/页面 t() 替换 → ④ Sidebar 语言切换按钮
+  - 验收：默认中文，可切换英文，刷新保持语言偏好
+  - 依赖：T-34
+
 ---
 
 ## Backlog（想法池）

@@ -11,27 +11,30 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "react-router-dom": "^7.6.1",
     "@tanstack/react-query": "^5.80.6",
     "axios": "^1.9.0",
-    "react-markdown": "^10.1.0",
-    "remark-gfm": "^4.0.1",
+    "i18next": "^25.8.13",
+    "i18next-browser-languagedetector": "^8.2.1",
+    "lucide-react": "^0.514.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
     "react-dropzone": "^14.3.8",
-    "lucide-react": "^0.514.0"
+    "react-i18next": "^16.5.4",
+    "react-markdown": "^10.1.0",
+    "react-router-dom": "^7.6.1",
+    "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.1.10",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.0",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.6.0",
+    "jsdom": "^26.1.0",
+    "tailwindcss": "^4.1.10",
     "typescript": "~5.8.3",
     "vite": "^6.3.5",
-    "tailwindcss": "^4.1.10",
-    "@tailwindcss/vite": "^4.1.10",
-    "vitest": "^3.2.3",
-    "@testing-library/react": "^16.3.0",
-    "@testing-library/jest-dom": "^6.6.3",
-    "jsdom": "^26.1.0"
+    "vitest": "^3.2.3"
   }
 }
