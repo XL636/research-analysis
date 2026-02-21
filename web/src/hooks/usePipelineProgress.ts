@@ -11,8 +11,9 @@ interface PipelineProgressState {
 }
 
 export function usePipelineProgress(runId: string | null): PipelineProgressState {
-  const [steps, setSteps] = useState(
-    PIPELINE_STEPS.map(name => ({ name, status: 'pending' as const }))
+  type StepStatus = 'pending' | 'running' | 'completed' | 'error'
+  const [steps, setSteps] = useState<{ name: string; status: StepStatus }[]>(
+    PIPELINE_STEPS.map(name => ({ name, status: 'pending' }))
   )
   const [isComplete, setIsComplete] = useState(false)
   const [error, setError] = useState<string | null>(null)
