@@ -31,6 +31,7 @@ def analyze(
     files: list[str] = typer.Argument(..., help="要分析的文件路径（支持 PDF/PPTX/MD/TXT）"),
     output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
     format: str = typer.Option("markdown", "--format", "-f", help="输出格式: markdown/docx/pptx"),
+    template: str = typer.Option("default", "--template", "-t", help="报告模板: default/meeting"),
     synthesize: bool = typer.Option(False, "--synthesize", "-s", help="启用跨文档综合分析"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="显示详细日志"),
 ) -> None:
@@ -50,11 +51,12 @@ def analyze(
         console.print("[red]没有可用的输入文件[/red]")
         raise typer.Exit(1)
 
-    console.print(f"\n[bold]📚 开始分析 {len(valid_files)} 个文件[/bold]\n")
+    template_label = "会议报告" if template == "meeting" else "标准报告"
+    console.print(f"\n[bold]📚 开始分析 {len(valid_files)} 个文件 (模板: {template_label})[/bold]\n")
 
     from src.core.engine import Pipeline
 
-    pipeline = Pipeline()
+    pipeline = Pipeline(template=template)
     ctx = pipeline.run(
         input_files=valid_files,
         output_format=format,
@@ -143,6 +145,7 @@ SUPPORTED_EXTENSIONS = {".pdf", ".pptx", ".md", ".txt", ".docx"}
 def batch(
     directory: str = typer.Argument(..., help="要批量处理的目录路径"),
     format: str = typer.Option("markdown", "--format", "-f", help="输出格式: markdown/docx/pptx"),
+    template: str = typer.Option("default", "--template", "-t", help="报告模板: default/meeting"),
     synthesize: bool = typer.Option(False, "--synthesize", "-s", help="启用跨文档综合分析"),
     recursive: bool = typer.Option(False, "--recursive", "-r", help="递归扫描子目录"),
     output_dir: Optional[str] = typer.Option(None, "--output-dir", "-d", help="输出目录"),
@@ -176,7 +179,7 @@ def batch(
 
     from src.core.engine import Pipeline
 
-    pipeline = Pipeline()
+    pipeline = Pipeline(template=template)
 
     # 设置输出目录
     out_dir = Path(output_dir) if output_dir else Path(pipeline.output_dir)

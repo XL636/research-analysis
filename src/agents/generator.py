@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 
 from loguru import logger
 
@@ -13,11 +14,37 @@ from src.core.models import (
     SynthesisResult,
 )
 
+# 可用模板：名称 -> prompt 文件路径
+TEMPLATES: dict[str, str] = {
+    "default": "config/prompts/generator_system.txt",
+    "meeting": "config/prompts/meeting_report.txt",
+}
+
 
 class GeneratorAgent(BaseAgent):
     """生成 Agent：根据分析结果生成格式化报告."""
 
     agent_type = "generator"
+
+    def __init__(self, *args, template: str = "default", **kwargs):
+        super().__init__(*args, **kwargs)
+        self._template = template
+
+    @property
+    def system_prompt(self) -> str:
+        """根据模板选择加载对应的 Prompt."""
+        if self._system_prompt is None:
+            template_path = TEMPLATES.get(self._template)
+            if template_path and Path(template_path).exists():
+                self._system_prompt = Path(template_path).read_text(encoding="utf-8")
+            else:
+                # fallback: 尝试默认路径
+                prompt_path = Path(f"config/prompts/{self.agent_type}_system.txt")
+                if prompt_path.exists():
+                    self._system_prompt = prompt_path.read_text(encoding="utf-8")
+                else:
+                    self._system_prompt = self._default_system_prompt()
+        return self._system_prompt
 
     def _default_system_prompt(self) -> str:
         return """你是一位专业的学术报告撰写专家。你的任务是根据文档分析结果，生成结构清晰、内容丰富的组会报告。
