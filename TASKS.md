@@ -238,6 +238,12 @@
   - 验收：`docker compose up` 启动成功，healthcheck 通过
   - 依赖：T-33
 
+- [x] **T-39: 会议报告专用模板**
+  - 目标：组会场景专用报告模板
+  - 步骤：① meeting_report.txt 模板 → ② GeneratorAgent 模板选择 → ③ CLI --template 选项
+  - 验收：`python main.py analyze paper.pdf --template meeting` 输出组会格式报告
+  - 依赖：T-09
+
 ---
 
 ## Backlog（想法池）
@@ -245,7 +251,7 @@
 > 以下是未排期的功能点和优化想法，随时可以追加。进入开发时移到对应 Phase。
 
 - [ ] 音频转录 Agent（faster-whisper）
-- [ ] 会议报告专用模板
+- [x] 会议报告专用模板
 - [x] 批量处理：`python main.py batch ./papers/`
 - [x] 知识库导出/导入（JSON/CSV）
 - [x] Web UI 界面

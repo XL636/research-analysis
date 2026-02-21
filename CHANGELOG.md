@@ -51,6 +51,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Docker: Multi-stage Dockerfile (node:22-alpine + python:3.11-slim) (T-38)
 - Docker: docker-compose.yml with volume mounts and healthcheck (T-38)
 - Docker: .dockerignore for optimized builds (T-38)
+- Templates: Meeting report template for seminar presentations (T-39)
+- CLI: `--template meeting` option for analyze and batch commands (T-39)
 
 ### Testing
 - 196 tests total (166 Python + 30 frontend), all passing
