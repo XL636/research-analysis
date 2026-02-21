@@ -52,3 +52,11 @@ pipeline:
 # 知识库配置
 knowledge_base:
   db_path: ./knowledge_base/research.db
+
+# API 配置
+api:
+  host: "0.0.0.0"
+  port: 8000
+  cors_origins: ["http://localhost:5173", "http://localhost:3000"]
+  upload_dir: ./uploads
+  max_upload_size: 52428800  # 50MB

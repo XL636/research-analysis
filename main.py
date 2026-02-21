@@ -136,5 +136,32 @@ def list_docs(
     console.print(table)
 
 
+@app.command()
+def serve(
+    host: str = typer.Option("0.0.0.0", "--host", "-h", help="绑定地址"),
+    port: int = typer.Option(8000, "--port", "-p", help="端口号"),
+    reload: bool = typer.Option(False, "--reload", help="开发模式自动重载"),
+) -> None:
+    """启动 Web UI 服务."""
+    try:
+        import uvicorn
+    except ImportError:
+        console.print("[red]请先安装 web 依赖: uv sync --extra web[/red]")
+        raise typer.Exit(1)
+
+    console.print(f"\n[bold]Starting Research Analysis Web UI[/bold]")
+    console.print(f"  API: http://{host}:{port}/docs")
+    console.print(f"  UI:  http://{host}:{port}\n")
+
+    uvicorn.run(
+        "src.api.app:create_app",
+        factory=True,
+        host=host,
+        port=port,
+        reload=reload,
+        reload_dirs=["src"] if reload else None,
+    )
+
+
 if __name__ == "__main__":
     app()
