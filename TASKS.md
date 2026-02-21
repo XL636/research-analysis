@@ -152,7 +152,7 @@
   - 验收：修改 Prompt 文件无需改代码；search/list 命令可用
   - 依赖：T-19
 
-## Phase 4: Web UI `[进行中]`
+## Phase 4: Web UI `[完成]`
 
 ### Backend API (FastAPI)
 
@@ -187,27 +187,27 @@
   - 目标：KpiCard、Badge、SearchInput、DataTable、FileDropzone、ProgressStepper、MarkdownRenderer、EmptyState
   - 依赖：T-26
 
-- [ ] **T-29: Dashboard 页面**
+- [x] **T-29: Dashboard 页面**
   - 目标：仪表板页面，展示统计数据和最近文档
   - 依赖：T-28, T-24
 
-- [ ] **T-30: Knowledge Base + Document Detail 页面**
+- [x] **T-30: Knowledge Base + Document Detail 页面**
   - 目标：知识库列表页 + 文档详情页
   - 依赖：T-28, T-23
 
-- [ ] **T-31: Analyze 页面 - 上传表单**
+- [x] **T-31: Analyze 页面 - 上传表单**
   - 目标：文件上传表单和格式选择
   - 依赖：T-28, T-25
 
-- [ ] **T-32: Analyze 页面 - SSE 进度 + 报告预览**
+- [x] **T-32: Analyze 页面 - SSE 进度 + 报告预览**
   - 目标：实时进度显示和报告 Markdown 预览
   - 依赖：T-31
 
-- [ ] **T-33: 生产构建 + 静态文件服务**
+- [x] **T-33: 生产构建 + 静态文件服务**
   - 目标：Vite 构建 + FastAPI 静态文件服务
   - 依赖：T-32
 
-- [ ] **T-34: 测试 - API pytest + 前端 Vitest**
+- [x] **T-34: 测试 - API pytest + 前端 Vitest**
   - 目标：后端 API 测试 + 前端组件测试
   - 依赖：T-33
 
@@ -229,7 +229,7 @@
 - [ ] 会议报告专用模板
 - [ ] 批量处理：`python main.py batch ./papers/`
 - [ ] 知识库导出/导入（JSON/CSV）
-- [ ] Web UI 界面
+- [x] Web UI 界面
 - [ ] 异步并行处理多文档
 - [ ] 模型调用成本统计
 - [ ] 自定义报告模板系统

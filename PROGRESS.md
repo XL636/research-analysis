@@ -6,20 +6,26 @@
 
 | 指标 | 值 |
 |------|-----|
-| 当前阶段 | Phase 4: Web UI 进行中 |
+| 当前阶段 | Phase 4 完成，等待 Phase 5 |
 | 总任务数 | 34 |
-| 已完成 | 28 |
+| 已完成 | 34 |
 | 进行中 | 0 |
-| 完成率 | 82% |
+| 完成率 | 100% |
 
 ## 当前进行中
 
-> T-29 ~ T-34: Web UI 页面实现和测试待完成。
+> 暂无正在进行的任务。Phase 0-4 已全部完成。
 
 ## 已完成任务（最新在上）
 
 | 日期 | Task | 说明 |
 |------|------|------|
+| 2026-02-21 | T-34 | API pytest + 前端 Vitest 测试 (168 total) |
+| 2026-02-21 | T-33 | 生产构建 (vite build) + FastAPI 静态文件服务 |
+| 2026-02-21 | T-32 | Analyze 页面 SSE 进度 + 报告预览/下载 |
+| 2026-02-21 | T-31 | Analyze 页面上传表单 + 格式选择 + 综合开关 |
+| 2026-02-21 | T-30 | Knowledge Base + Document Detail 页面 |
+| 2026-02-21 | T-29 | Dashboard 页面（KPI 卡片 + 最近活动） |
 | 2026-02-21 | T-28 | UI 组件库（KpiCard, Badge, SearchInput, DataTable, FileDropzone, ProgressStepper, MarkdownRenderer, EmptyState） |
 | 2026-02-21 | T-27 | 布局组件（Sidebar + AppLayout）+ React Router |
 | 2026-02-21 | T-26 | React/Vite 项目初始化 + Tailwind v4 + 设计系统 |
@@ -59,7 +65,9 @@
 | Agents (4个) | 12 | 全部通过 |
 | Parsers (PDF/PPT/Note) | 20 | 全部通过 |
 | Knowledge Base | 9 | 全部通过 |
-| **合计** | **124** | **全部通过** |
+| API Routes (FastAPI) | 14 | 全部通过 |
+| Frontend Components (Vitest) | 30 | 全部通过 |
+| **合计** | **168** | **全部通过** |
 
 ## 里程碑进度
 
@@ -68,7 +76,7 @@
 | M1: MVP 可用 | 已完成 | PDF → Markdown 报告 |
 | M2: 多源综合 | 已完成 | PPT/TXT/DOCX + 跨文档综合 |
 | M3: 完整功能 | 已完成 | 评审循环 + 知识库 + DOCX/PPTX 输出 |
-| M4: Web UI | 进行中 | 后端 API 完成，前端框架和组件库完成 |
+| M4: Web UI | 已完成 | FastAPI + React/Vite 仪表盘 |
 | M5: 高级功能 | 未开始 | 音频转录 + 批量处理 |
 
 ## 阻塞项
