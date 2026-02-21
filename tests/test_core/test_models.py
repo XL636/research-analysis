@@ -454,3 +454,55 @@ class TestSerializationRoundTrip:
         assert len(restored.theme_comparisons) == 1
         assert restored.theme_comparisons[0].theme == "Efficiency"
         assert len(restored.source_analyses) == 1
+
+
+class TestUsageStats:
+    """Tests for UsageStats and ModelUsage."""
+
+    def test_empty_stats(self) -> None:
+        from src.core.models import UsageStats
+        stats = UsageStats()
+        assert stats.total_calls == 0
+        assert stats.total_tokens == 0
+        assert stats.total_prompt_tokens == 0
+        assert stats.total_completion_tokens == 0
+
+    def test_record_single_call(self) -> None:
+        from src.core.models import UsageStats
+        stats = UsageStats()
+        stats.record("gpt-4", 100, 50)
+        assert stats.total_calls == 1
+        assert stats.total_prompt_tokens == 100
+        assert stats.total_completion_tokens == 50
+        assert stats.total_tokens == 150
+
+    def test_record_multiple_calls_same_model(self) -> None:
+        from src.core.models import UsageStats
+        stats = UsageStats()
+        stats.record("gpt-4", 100, 50)
+        stats.record("gpt-4", 200, 100)
+        assert stats.total_calls == 2
+        assert stats.by_model["gpt-4"].call_count == 2
+        assert stats.by_model["gpt-4"].prompt_tokens == 300
+        assert stats.by_model["gpt-4"].completion_tokens == 150
+
+    def test_record_multiple_models(self) -> None:
+        from src.core.models import UsageStats
+        stats = UsageStats()
+        stats.record("gpt-4", 100, 50)
+        stats.record("gpt-3.5", 80, 40)
+        assert stats.total_calls == 2
+        assert len(stats.by_model) == 2
+        assert stats.total_prompt_tokens == 180
+        assert stats.total_completion_tokens == 90
+        assert stats.total_tokens == 270
+
+    def test_model_usage_total_tokens(self) -> None:
+        from src.core.models import ModelUsage
+        mu = ModelUsage(model_name="test", prompt_tokens=500, completion_tokens=200)
+        assert mu.total_tokens == 700
+
+    def test_pipeline_context_has_usage_stats(self) -> None:
+        ctx = PipelineContext()
+        assert ctx.usage_stats is not None
+        assert ctx.usage_stats.total_calls == 0

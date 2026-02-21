@@ -11,6 +11,8 @@ from loguru import logger
 from openai import OpenAI
 from pydantic import BaseModel
 
+from src.core.models import UsageStats
+
 
 class ModelConfig(BaseModel):
     """单个模型配置."""
@@ -28,6 +30,7 @@ class LLMClient:
         self._config_path = config_path
         self._models: dict[str, ModelConfig] = {}
         self._clients: dict[str, OpenAI] = {}
+        self.usage_stats = UsageStats()
         self._load_config()
 
     def _load_config(self) -> None:
@@ -79,6 +82,18 @@ class LLMClient:
             max_tokens=max_tokens,
             **kwargs,
         )
+
+        # 记录 token 用量
+        if response.usage:
+            self.usage_stats.record(
+                model_name=model_name,
+                prompt_tokens=response.usage.prompt_tokens or 0,
+                completion_tokens=response.usage.completion_tokens or 0,
+            )
+            logger.debug(
+                f"Token usage: prompt={response.usage.prompt_tokens}, "
+                f"completion={response.usage.completion_tokens}"
+            )
 
         content = response.choices[0].message.content or ""
         logger.debug(f"LLM response: {len(content)} chars")
