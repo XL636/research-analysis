@@ -136,6 +136,119 @@ def list_docs(
     console.print(table)
 
 
+SUPPORTED_EXTENSIONS = {".pdf", ".pptx", ".md", ".txt", ".docx"}
+
+
+@app.command()
+def batch(
+    directory: str = typer.Argument(..., help="要批量处理的目录路径"),
+    format: str = typer.Option("markdown", "--format", "-f", help="输出格式: markdown/docx/pptx"),
+    synthesize: bool = typer.Option(False, "--synthesize", "-s", help="启用跨文档综合分析"),
+    recursive: bool = typer.Option(False, "--recursive", "-r", help="递归扫描子目录"),
+    output_dir: Optional[str] = typer.Option(None, "--output-dir", "-d", help="输出目录"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="显示详细日志"),
+) -> None:
+    """批量处理目录下的所有研究材料."""
+    _setup_logging(verbose)
+
+    dir_path = Path(directory)
+    if not dir_path.is_dir():
+        console.print(f"[red]目录不存在: {directory}[/red]")
+        raise typer.Exit(1)
+
+    # 扫描文件
+    if recursive:
+        files = [f for f in dir_path.rglob("*") if f.suffix.lower() in SUPPORTED_EXTENSIONS]
+    else:
+        files = [f for f in dir_path.iterdir() if f.is_file() and f.suffix.lower() in SUPPORTED_EXTENSIONS]
+
+    if not files:
+        console.print(f"[yellow]目录中没有找到支持的文件 ({', '.join(SUPPORTED_EXTENSIONS)})[/yellow]")
+        raise typer.Exit(1)
+
+    files.sort()
+    console.print(f"\n[bold]📂 批量处理: 发现 {len(files)} 个文件[/bold]\n")
+    for f in files:
+        console.print(f"  • {f.relative_to(dir_path)}")
+    console.print()
+
+    from rich.progress import BarColumn, MofNCompleteColumn, Progress, TextColumn, TimeElapsedColumn
+
+    from src.core.engine import Pipeline
+
+    pipeline = Pipeline()
+
+    # 设置输出目录
+    out_dir = Path(output_dir) if output_dir else Path(pipeline.output_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    results: list[dict] = []
+    with Progress(
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        MofNCompleteColumn(),
+        TimeElapsedColumn(),
+        console=console,
+    ) as progress:
+        task = progress.add_task("批量分析", total=len(files))
+
+        for file_path in files:
+            progress.update(task, description=f"分析: {file_path.name}")
+            try:
+                ext_map = {"markdown": ".md", "docx": ".docx", "pptx": ".pptx"}
+                ext = ext_map.get(format, ".md")
+                out_path = str(out_dir / f"{file_path.stem}_report{ext}")
+
+                ctx = pipeline.run(
+                    input_files=[str(file_path)],
+                    output_format=format,
+                    output_path=out_path,
+                    synthesize=False,
+                )
+                results.append({"file": file_path.name, "status": "success", "output": ctx.output_path})
+            except Exception as e:
+                logger.error(f"Failed to process {file_path}: {e}")
+                results.append({"file": file_path.name, "status": "failed", "output": str(e)})
+            progress.advance(task)
+
+    # 综合分析（可选）
+    if synthesize and len(files) > 1:
+        console.print("\n[bold]🔄 生成综合分析...[/bold]")
+        try:
+            ext_map = {"markdown": ".md", "docx": ".docx", "pptx": ".pptx"}
+            ext = ext_map.get(format, ".md")
+            synth_path = str(out_dir / f"synthesis_report{ext}")
+
+            ctx = pipeline.run(
+                input_files=[str(f) for f in files],
+                output_format=format,
+                output_path=synth_path,
+                synthesize=True,
+            )
+            results.append({"file": "[综合分析]", "status": "success", "output": ctx.output_path})
+        except Exception as e:
+            logger.error(f"Synthesis failed: {e}")
+            results.append({"file": "[综合分析]", "status": "failed", "output": str(e)})
+
+    # 汇总结果
+    table = Table(title="批量处理结果")
+    table.add_column("文件", style="cyan")
+    table.add_column("状态", style="green")
+    table.add_column("输出", style="dim")
+
+    success_count = 0
+    for r in results:
+        status_style = "green" if r["status"] == "success" else "red"
+        status_text = "✅ 成功" if r["status"] == "success" else "❌ 失败"
+        if r["status"] == "success":
+            success_count += 1
+        table.add_row(r["file"], f"[{status_style}]{status_text}[/{status_style}]", r["output"])
+
+    console.print()
+    console.print(table)
+    console.print(f"\n[bold]完成: {success_count}/{len(results)} 成功[/bold]")
+
+
 @app.command()
 def serve(
     host: str = typer.Option("0.0.0.0", "--host", "-h", help="绑定地址"),
