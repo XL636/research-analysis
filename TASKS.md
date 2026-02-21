@@ -152,11 +152,70 @@
   - 验收：修改 Prompt 文件无需改代码；search/list 命令可用
   - 依赖：T-19
 
+## Phase 4: Web UI `[进行中]`
+
+### Backend API (FastAPI)
+
+- [x] **T-22: FastAPI 骨架 + pyproject.toml + serve 命令**
+  - 目标：创建 FastAPI 应用骨架，添加 web 依赖，CLI serve 命令
+  - 依赖：T-21
+
+- [x] **T-23: Knowledge Base API 端点**
+  - 目标：文档列表、搜索、标签、文档详情 API
+  - 依赖：T-22
+
+- [x] **T-24: Dashboard API 统计端点**
+  - 目标：仪表板统计数据 API
+  - 依赖：T-22
+
+- [x] **T-25: Pipeline API + SSE + 文件上传 + 报告**
+  - 目标：文件上传、Pipeline 运行、SSE 进度推送、报告下载
+  - 依赖：T-22
+
+### Frontend (React + Vite + Tailwind)
+
+- [x] **T-26: React/Vite 项目初始化 + Tailwind + 设计系统**
+  - 目标：创建 web/ 目录，配置 Vite + React + TypeScript + Tailwind v4
+  - 步骤：① package.json → ② Vite/TS 配置 → ③ Tailwind 主题 → ④ 类型定义 → ⑤ API 客户端
+  - 依赖：T-22
+
+- [x] **T-27: 布局组件 + React Router**
+  - 目标：Sidebar 导航 + AppLayout 布局 + 路由配置
+  - 依赖：T-26
+
+- [x] **T-28: UI 组件库**
+  - 目标：KpiCard、Badge、SearchInput、DataTable、FileDropzone、ProgressStepper、MarkdownRenderer、EmptyState
+  - 依赖：T-26
+
+- [ ] **T-29: Dashboard 页面**
+  - 目标：仪表板页面，展示统计数据和最近文档
+  - 依赖：T-28, T-24
+
+- [ ] **T-30: Knowledge Base + Document Detail 页面**
+  - 目标：知识库列表页 + 文档详情页
+  - 依赖：T-28, T-23
+
+- [ ] **T-31: Analyze 页面 - 上传表单**
+  - 目标：文件上传表单和格式选择
+  - 依赖：T-28, T-25
+
+- [ ] **T-32: Analyze 页面 - SSE 进度 + 报告预览**
+  - 目标：实时进度显示和报告 Markdown 预览
+  - 依赖：T-31
+
+- [ ] **T-33: 生产构建 + 静态文件服务**
+  - 目标：Vite 构建 + FastAPI 静态文件服务
+  - 依赖：T-32
+
+- [ ] **T-34: 测试 - API pytest + 前端 Vitest**
+  - 目标：后端 API 测试 + 前端组件测试
+  - 依赖：T-33
+
 ---
 
 ## 未来阶段（进入时再展开详细 task）
 
-### Phase 4: 音频 + 高级功能
+### Phase 5: 音频 + 高级功能
 - 目标：支持音频转录和批量处理
 - 方向：faster-whisper 音频转录、会议报告专用模板、批量处理、知识库导出/导入
 

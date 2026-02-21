@@ -6,20 +6,27 @@
 
 | 指标 | 值 |
 |------|-----|
-| 当前阶段 | Phase 3 完成，等待 Phase 4 |
-| 总任务数 | 21 |
-| 已完成 | 21 |
+| 当前阶段 | Phase 4: Web UI 进行中 |
+| 总任务数 | 34 |
+| 已完成 | 28 |
 | 进行中 | 0 |
-| 完成率 | 100% |
+| 完成率 | 82% |
 
 ## 当前进行中
 
-> 暂无正在进行的任务。Phase 0-3 已全部完成。
+> T-29 ~ T-34: Web UI 页面实现和测试待完成。
 
 ## 已完成任务（最新在上）
 
 | 日期 | Task | 说明 |
 |------|------|------|
+| 2026-02-21 | T-28 | UI 组件库（KpiCard, Badge, SearchInput, DataTable, FileDropzone, ProgressStepper, MarkdownRenderer, EmptyState） |
+| 2026-02-21 | T-27 | 布局组件（Sidebar + AppLayout）+ React Router |
+| 2026-02-21 | T-26 | React/Vite 项目初始化 + Tailwind v4 + 设计系统 |
+| 2026-02-21 | T-25 | Pipeline API + SSE + 文件上传 + 报告下载 |
+| 2026-02-21 | T-24 | Dashboard API 统计端点 |
+| 2026-02-21 | T-23 | Knowledge Base API 端点 |
+| 2026-02-21 | T-22 | FastAPI 骨架 + serve 命令 |
 | 2026-02-21 | T-21 | Prompt 模板外置 + CLI search/list 命令 |
 | 2026-02-21 | T-20 | DOCX/PPTX 输出适配器 |
 | 2026-02-21 | T-19 | SQLite + FTS5 知识库 |
@@ -61,7 +68,8 @@
 | M1: MVP 可用 | 已完成 | PDF → Markdown 报告 |
 | M2: 多源综合 | 已完成 | PPT/TXT/DOCX + 跨文档综合 |
 | M3: 完整功能 | 已完成 | 评审循环 + 知识库 + DOCX/PPTX 输出 |
-| M4: 高级功能 | 未开始 | 音频转录 + 批量处理 |
+| M4: Web UI | 进行中 | 后端 API 完成，前端框架和组件库完成 |
+| M5: 高级功能 | 未开始 | 音频转录 + 批量处理 |
 
 ## 阻塞项
 
