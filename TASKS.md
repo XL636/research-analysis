@@ -252,6 +252,12 @@
   - 验收：默认中文，可切换英文，刷新保持语言偏好
   - 依赖：T-34
 
+- [x] **T-41: Web UI API Key 设置页面**
+  - 目标：在 Web UI 中添加设置页面，让用户直接输入和管理 LLM API Key
+  - 步骤：① 后端 schemas + LLMClient.clear_clients() → ② 后端 settings 路由 (GET/PUT /api/settings/api-keys) → ③ 前端类型 + API 层 → ④ i18n + Badge 扩展 → ⑤ SettingsPage + 路由 + 侧边栏导航
+  - 验收：Settings 页显示 3 个 provider，输入 Key 保存后状态变为"已配置"，重启后 Key 仍在
+  - 依赖：T-40
+
 ---
 
 ## Backlog（想法池）

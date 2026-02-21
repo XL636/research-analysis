@@ -66,5 +66,20 @@
   "table.tags": "标签",
   "table.date": "日期",
   "lang.zhCN": "中文",
-  "lang.en": "English"
+  "lang.en": "English",
+  "nav.settings": "设置",
+  "settings.title": "设置",
+  "settings.apiKeys": "API 密钥配置",
+  "settings.apiKeysDesc": "配置 LLM 服务商的 API 密钥，分析功能需要至少配置一组密钥。",
+  "settings.provider": "服务商",
+  "settings.envVar": "环境变量",
+  "settings.models": "关联模型",
+  "settings.status": "状态",
+  "settings.configured": "已配置",
+  "settings.notConfigured": "未配置",
+  "settings.apiKeyPlaceholder": "输入 API Key...",
+  "settings.save": "保存",
+  "settings.saving": "保存中...",
+  "settings.saveSuccess": "API 密钥保存成功",
+  "settings.currentKey": "当前密钥"
 }

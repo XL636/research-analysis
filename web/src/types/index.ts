@@ -86,3 +86,25 @@ export interface DashboardStats {
   top_tags: TagCount[]
   recent_documents: DocumentSummary[]
 }
+
+// Settings
+export interface ProviderStatus {
+  env_var: string
+  provider: string
+  configured: boolean
+  masked_key: string
+  models: string[]
+}
+
+export interface ApiKeyStatusResponse {
+  providers: ProviderStatus[]
+}
+
+export interface ApiKeySaveRequest {
+  keys: Record<string, string>
+}
+
+export interface ApiKeySaveResponse {
+  success: boolean
+  providers: ProviderStatus[]
+}

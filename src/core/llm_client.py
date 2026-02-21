@@ -132,3 +132,7 @@ class LLMClient:
     @property
     def available_models(self) -> list[str]:
         return list(self._models.keys())
+
+    def clear_clients(self) -> None:
+        """清除缓存的客户端，下次调用时将用新的 API Key 重建."""
+        self._clients.clear()

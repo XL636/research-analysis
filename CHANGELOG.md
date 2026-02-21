@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Web: Settings 页面 — API Key 管理（GET/PUT /api/settings/api-keys），支持保存到 config/.env + 自动同步 os.environ (T-41)
 - Web: i18n 双语支持 zh-CN + en，react-i18next + 语言切换按钮 + localStorage 持久化 (T-40)
 
 ### Previously Added

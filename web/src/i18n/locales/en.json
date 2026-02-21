@@ -66,5 +66,20 @@
   "table.tags": "Tags",
   "table.date": "Date",
   "lang.zhCN": "中文",
-  "lang.en": "English"
+  "lang.en": "English",
+  "nav.settings": "Settings",
+  "settings.title": "Settings",
+  "settings.apiKeys": "API Key Configuration",
+  "settings.apiKeysDesc": "Configure LLM provider API keys. At least one key is required for analysis.",
+  "settings.provider": "Provider",
+  "settings.envVar": "Environment Variable",
+  "settings.models": "Models",
+  "settings.status": "Status",
+  "settings.configured": "Configured",
+  "settings.notConfigured": "Not Configured",
+  "settings.apiKeyPlaceholder": "Enter API Key...",
+  "settings.save": "Save",
+  "settings.saving": "Saving...",
+  "settings.saveSuccess": "API keys saved successfully",
+  "settings.currentKey": "Current Key"
 }

@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 import yaml
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -14,6 +15,11 @@ from fastapi.staticfiles import StaticFiles
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan: startup / shutdown."""
+    # Load API keys from config/.env if present
+    env_path = Path("config/.env")
+    if env_path.exists():
+        load_dotenv(env_path, override=True)
+
     # Startup: ensure upload dir exists
     config = _load_config()
     upload_dir = config.get("api", {}).get("upload_dir", "./uploads")
@@ -57,11 +63,13 @@ def create_app() -> FastAPI:
     from src.api.routes.knowledge import router as knowledge_router
     from src.api.routes.pipeline import router as pipeline_router
     from src.api.routes.reports import router as reports_router
+    from src.api.routes.settings import router as settings_router
 
     app.include_router(pipeline_router, prefix="/api/pipeline", tags=["Pipeline"])
     app.include_router(knowledge_router, prefix="/api/knowledge", tags=["Knowledge"])
     app.include_router(dashboard_router, prefix="/api/dashboard", tags=["Dashboard"])
     app.include_router(reports_router, prefix="/api/reports", tags=["Reports"])
+    app.include_router(settings_router, prefix="/api/settings", tags=["Settings"])
 
     # Serve static frontend (production build)
     dist_dir = Path("web/dist")

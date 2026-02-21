@@ -2,13 +2,15 @@ import type { ReactNode } from 'react'
 
 interface BadgeProps {
   children: ReactNode
-  variant?: 'default' | 'primary' | 'accent'
+  variant?: 'default' | 'primary' | 'accent' | 'success' | 'warning'
 }
 
 const variantClasses: Record<string, string> = {
   default: 'bg-gray-100 text-gray-800',
   primary: 'bg-primary-100 text-primary-800',
   accent: 'bg-emerald-100 text-emerald-800',
+  success: 'bg-emerald-100 text-emerald-800',
+  warning: 'bg-amber-100 text-amber-800',
 }
 
 export default function Badge({ children, variant = 'default' }: BadgeProps) {

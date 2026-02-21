@@ -72,3 +72,26 @@ class DashboardStats(BaseModel):
     avg_score: float = 0.0
     top_tags: list[TagCount] = Field(default_factory=list)
     recent_documents: list[DocumentSummary] = Field(default_factory=list)
+
+
+# --- Settings ---
+
+class ProviderStatus(BaseModel):
+    env_var: str
+    provider: str
+    configured: bool = False
+    masked_key: str = ""
+    models: list[str] = Field(default_factory=list)
+
+
+class ApiKeyStatusResponse(BaseModel):
+    providers: list[ProviderStatus]
+
+
+class ApiKeySaveRequest(BaseModel):
+    keys: dict[str, str]  # { "DEEPSEEK_API_KEY": "sk-xxx", ... }
+
+
+class ApiKeySaveResponse(BaseModel):
+    success: bool
+    providers: list[ProviderStatus]

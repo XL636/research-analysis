@@ -1,12 +1,13 @@
 import { useEffect } from 'react'
 import { NavLink } from 'react-router-dom'
-import { BookOpen, LayoutDashboard, FileSearch, Library, Globe } from 'lucide-react'
+import { BookOpen, LayoutDashboard, FileSearch, Library, Globe, Settings } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 const navItems = [
   { to: '/', labelKey: 'nav.dashboard', icon: LayoutDashboard },
   { to: '/analyze', labelKey: 'nav.analyze', icon: FileSearch },
   { to: '/knowledge', labelKey: 'nav.knowledge', icon: Library },
+  { to: '/settings', labelKey: 'nav.settings', icon: Settings },
 ]
 
 export default function Sidebar() {
