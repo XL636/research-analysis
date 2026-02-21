@@ -3,7 +3,9 @@ services:
     build: .
     ports:
       - "8000:8000"
-    env_file: .env
+    env_file:
+      - path: .env
+        required: false
     volumes:
       - ./config:/app/config          # 配置可热更新
       - kb_data:/app/knowledge_base    # 持久化知识库
