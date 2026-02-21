@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import csv
+import io
+import json
 import sqlite3
 from pathlib import Path
 
@@ -206,3 +209,141 @@ class KnowledgeBase:
         if row and row["analysis_json"]:
             return AnalysisResult.model_validate_json(row["analysis_json"])
         return None
+
+    def export_json(self, path: str) -> int:
+        """导出全部文档+分析为 JSON 文件.
+
+        Returns:
+            导出的文档数量
+        """
+        with self._connect() as conn:
+            rows = conn.execute(
+                """SELECT d.id, d.title, d.file_path, d.file_type, d.summary,
+                          d.content, d.analysis_json, d.created_at, d.updated_at,
+                          GROUP_CONCAT(t.name, ', ') as tags
+                   FROM documents d
+                   LEFT JOIN document_tags dt ON dt.document_id = d.id
+                   LEFT JOIN tags t ON t.id = dt.tag_id
+                   GROUP BY d.id
+                   ORDER BY d.id"""
+            ).fetchall()
+
+        documents = []
+        for row in rows:
+            doc = {
+                "id": row["id"],
+                "title": row["title"],
+                "file_path": row["file_path"] or "",
+                "file_type": row["file_type"] or "",
+                "summary": row["summary"] or "",
+                "content": row["content"] or "",
+                "analysis_json": row["analysis_json"] or "",
+                "created_at": row["created_at"] or "",
+                "updated_at": row["updated_at"] or "",
+                "tags": [t.strip() for t in (row["tags"] or "").split(",") if t.strip()],
+            }
+            documents.append(doc)
+
+        export_data = {
+            "version": "1.0",
+            "document_count": len(documents),
+            "documents": documents,
+        }
+
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(export_data, f, ensure_ascii=False, indent=2)
+
+        logger.info(f"Exported {len(documents)} documents to {path}")
+        return len(documents)
+
+    def export_csv(self, path: str) -> int:
+        """导出摘要表格为 CSV.
+
+        Returns:
+            导出的文档数量
+        """
+        with self._connect() as conn:
+            rows = conn.execute(
+                """SELECT d.id, d.title, d.file_path, d.file_type, d.summary,
+                          d.created_at, GROUP_CONCAT(t.name, ', ') as tags
+                   FROM documents d
+                   LEFT JOIN document_tags dt ON dt.document_id = d.id
+                   LEFT JOIN tags t ON t.id = dt.tag_id
+                   GROUP BY d.id
+                   ORDER BY d.id"""
+            ).fetchall()
+
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "w", encoding="utf-8", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(["id", "title", "file_path", "file_type", "summary", "tags", "created_at"])
+            for row in rows:
+                writer.writerow([
+                    row["id"],
+                    row["title"],
+                    row["file_path"] or "",
+                    row["file_type"] or "",
+                    row["summary"] or "",
+                    row["tags"] or "",
+                    row["created_at"] or "",
+                ])
+
+        count = len(rows)
+        logger.info(f"Exported {count} documents to {path}")
+        return count
+
+    def import_json(self, path: str) -> int:
+        """从 JSON 文件导入文档到知识库.
+
+        Returns:
+            导入的文档数量
+        """
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        documents = data.get("documents", [])
+        imported = 0
+
+        with self._connect() as conn:
+            for doc in documents:
+                # 插入文档
+                cursor = conn.execute(
+                    """INSERT INTO documents (title, file_path, file_type, summary, content, analysis_json, created_at, updated_at)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (
+                        doc["title"],
+                        doc.get("file_path", ""),
+                        doc.get("file_type", ""),
+                        doc.get("summary", ""),
+                        doc.get("content", ""),
+                        doc.get("analysis_json", ""),
+                        doc.get("created_at", ""),
+                        doc.get("updated_at", ""),
+                    ),
+                )
+                doc_id = cursor.lastrowid
+
+                # 同步 FTS 索引
+                conn.execute(
+                    "INSERT INTO documents_fts (rowid, title, summary, content) VALUES (?, ?, ?, ?)",
+                    (doc_id, doc["title"], doc.get("summary", ""), doc.get("content", "")),
+                )
+
+                # 添加标签
+                for tag_name in doc.get("tags", []):
+                    if tag_name:
+                        conn.execute("INSERT OR IGNORE INTO tags (name) VALUES (?)", (tag_name,))
+                        tag_row = conn.execute("SELECT id FROM tags WHERE name = ?", (tag_name,)).fetchone()
+                        if tag_row:
+                            conn.execute(
+                                "INSERT OR IGNORE INTO document_tags (document_id, tag_id) VALUES (?, ?)",
+                                (doc_id, tag_row["id"]),
+                            )
+
+                imported += 1
+
+            conn.commit()
+
+        logger.info(f"Imported {imported} documents from {path}")
+        return imported

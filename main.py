@@ -249,6 +249,49 @@ def batch(
     console.print(f"\n[bold]完成: {success_count}/{len(results)} 成功[/bold]")
 
 
+@app.command(name="export")
+def export_kb(
+    format: str = typer.Option("json", "--format", "-f", help="导出格式: json/csv"),
+    output: str = typer.Option("backup.json", "--output", "-o", help="输出文件路径"),
+) -> None:
+    """导出知识库数据."""
+    from src.store.knowledge_base import KnowledgeBase
+
+    kb = KnowledgeBase()
+
+    if format == "csv":
+        if not output.endswith(".csv"):
+            output = output.rsplit(".", 1)[0] + ".csv"
+        count = kb.export_csv(output)
+    else:
+        if not output.endswith(".json"):
+            output = output.rsplit(".", 1)[0] + ".json"
+        count = kb.export_json(output)
+
+    console.print(f"[bold green]✅ 导出完成: {count} 篇文档 → {output}[/bold green]")
+
+
+@app.command(name="import")
+def import_kb(
+    file: str = typer.Argument(..., help="要导入的 JSON 文件路径"),
+) -> None:
+    """从 JSON 文件导入数据到知识库."""
+    file_path = Path(file)
+    if not file_path.exists():
+        console.print(f"[red]文件不存在: {file}[/red]")
+        raise typer.Exit(1)
+
+    if not file_path.suffix == ".json":
+        console.print("[red]仅支持 JSON 格式导入[/red]")
+        raise typer.Exit(1)
+
+    from src.store.knowledge_base import KnowledgeBase
+
+    kb = KnowledgeBase()
+    count = kb.import_json(str(file_path))
+    console.print(f"[bold green]✅ 导入完成: {count} 篇文档[/bold green]")
+
+
 @app.command()
 def serve(
     host: str = typer.Option("0.0.0.0", "--host", "-h", help="绑定地址"),

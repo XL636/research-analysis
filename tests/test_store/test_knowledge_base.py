@@ -1,6 +1,9 @@
 """知识库单元测试."""
 from __future__ import annotations
 
+import csv
+import json
+
 import pytest
 
 from src.core.models import AnalysisResult, KeyFinding, MethodologyAssessment
@@ -97,3 +100,103 @@ class TestKnowledgeBase:
         assert len(results) > 0
         # tags field should contain the stored tags
         assert "ml" in results[0]["tags"]
+
+
+class TestKnowledgeBaseExportImport:
+    """Tests for export/import functionality."""
+
+    def test_export_json(self, kb, sample_analysis, tmp_path):
+        kb.store_analysis(sample_analysis, file_path="/tmp/paper.pdf", file_type="pdf")
+        out = str(tmp_path / "export.json")
+        count = kb.export_json(out)
+        assert count == 1
+
+        with open(out, encoding="utf-8") as f:
+            data = json.load(f)
+        assert data["version"] == "1.0"
+        assert data["document_count"] == 1
+        assert data["documents"][0]["title"] == "ML Paper"
+        assert "ml" in data["documents"][0]["tags"]
+
+    def test_export_csv(self, kb, sample_analysis, tmp_path):
+        kb.store_analysis(sample_analysis, file_path="/tmp/paper.pdf", file_type="pdf")
+        out = str(tmp_path / "export.csv")
+        count = kb.export_csv(out)
+        assert count == 1
+
+        with open(out, encoding="utf-8") as f:
+            reader = csv.reader(f)
+            headers = next(reader)
+            assert "title" in headers
+            row = next(reader)
+            assert "ML Paper" in row
+
+    def test_import_json(self, tmp_path):
+        # Export from one KB
+        kb1 = KnowledgeBase(db_path=str(tmp_path / "src.db"))
+        analysis = AnalysisResult(
+            document_title="Import Test",
+            summary="Testing import",
+            tags=["test", "import"],
+            relevance_score=5.0,
+        )
+        kb1.store_analysis(analysis)
+        export_path = str(tmp_path / "data.json")
+        kb1.export_json(export_path)
+
+        # Import into another KB
+        kb2 = KnowledgeBase(db_path=str(tmp_path / "dest.db"))
+        count = kb2.import_json(export_path)
+        assert count == 1
+
+        docs = kb2.list_documents()
+        assert len(docs) == 1
+        assert docs[0]["title"] == "Import Test"
+
+    def test_import_preserves_tags(self, tmp_path):
+        kb1 = KnowledgeBase(db_path=str(tmp_path / "src.db"))
+        analysis = AnalysisResult(
+            document_title="Tagged Doc",
+            summary="Has tags",
+            tags=["alpha", "beta"],
+        )
+        kb1.store_analysis(analysis)
+        export_path = str(tmp_path / "data.json")
+        kb1.export_json(export_path)
+
+        kb2 = KnowledgeBase(db_path=str(tmp_path / "dest.db"))
+        kb2.import_json(export_path)
+
+        docs = kb2.list_documents()
+        assert "alpha" in docs[0]["tags"]
+        assert "beta" in docs[0]["tags"]
+
+    def test_export_empty_db(self, kb, tmp_path):
+        out = str(tmp_path / "empty.json")
+        count = kb.export_json(out)
+        assert count == 0
+        with open(out, encoding="utf-8") as f:
+            data = json.load(f)
+        assert data["documents"] == []
+
+    def test_roundtrip_preserves_analysis_json(self, tmp_path):
+        kb1 = KnowledgeBase(db_path=str(tmp_path / "src.db"))
+        analysis = AnalysisResult(
+            document_title="Roundtrip",
+            summary="Testing roundtrip",
+            relevance_score=9.5,
+            contributions=["Contribution 1"],
+        )
+        kb1.store_analysis(analysis)
+        export_path = str(tmp_path / "rt.json")
+        kb1.export_json(export_path)
+
+        kb2 = KnowledgeBase(db_path=str(tmp_path / "dest.db"))
+        kb2.import_json(export_path)
+
+        docs = kb2.list_documents()
+        assert len(docs) == 1
+        retrieved = kb2.get_analysis(docs[0]["id"])
+        assert retrieved is not None
+        assert retrieved.document_title == "Roundtrip"
+        assert retrieved.relevance_score == 9.5

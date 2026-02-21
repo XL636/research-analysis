@@ -124,3 +124,58 @@ class TestBatchCommand:
 
         assert result.exit_code == 0
         assert "1/2 成功" in result.output
+
+
+# ---------------------------------------------------------------------------
+# Export command
+# ---------------------------------------------------------------------------
+
+class TestExportCommand:
+    """Tests for the 'export' CLI command."""
+
+    def test_export_json_default(self, tmp_path: Path):
+        with patch("src.store.knowledge_base.KnowledgeBase") as MockKB:
+            MockKB.return_value.export_json.return_value = 5
+            result = runner.invoke(app, ["export", "--format", "json", "-o", str(tmp_path / "out.json")])
+        assert result.exit_code == 0
+        assert "5 篇文档" in result.output
+        MockKB.return_value.export_json.assert_called_once()
+
+    def test_export_csv(self, tmp_path: Path):
+        with patch("src.store.knowledge_base.KnowledgeBase") as MockKB:
+            MockKB.return_value.export_csv.return_value = 3
+            result = runner.invoke(app, ["export", "--format", "csv", "-o", str(tmp_path / "out.csv")])
+        assert result.exit_code == 0
+        assert "3 篇文档" in result.output
+        MockKB.return_value.export_csv.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# Import command
+# ---------------------------------------------------------------------------
+
+class TestImportCommand:
+    """Tests for the 'import' CLI command."""
+
+    def test_import_nonexistent_file(self):
+        result = runner.invoke(app, ["import", "/nonexistent/file.json"])
+        assert result.exit_code != 0
+        assert "文件不存在" in result.output
+
+    def test_import_non_json_file(self, tmp_path: Path):
+        csv_file = tmp_path / "data.csv"
+        csv_file.write_text("a,b,c")
+        result = runner.invoke(app, ["import", str(csv_file)])
+        assert result.exit_code != 0
+        assert "仅支持 JSON" in result.output
+
+    def test_import_success(self, tmp_path: Path):
+        json_file = tmp_path / "backup.json"
+        json_file.write_text(json.dumps({"documents": []}))
+
+        with patch("src.store.knowledge_base.KnowledgeBase") as MockKB:
+            MockKB.return_value.import_json.return_value = 10
+            result = runner.invoke(app, ["import", str(json_file)])
+
+        assert result.exit_code == 0
+        assert "10 篇文档" in result.output
