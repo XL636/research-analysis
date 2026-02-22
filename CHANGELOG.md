@@ -8,10 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Fixed
+- Store: 时区根因修复 — `_beijing_now()` 显式传入时间戳，`_meta` 表一次性迁移旧 UTC 数据 (T-44)
 - Parser: PPTX 解析不再因非占位符 shape 抛出 "shape is not a placeholder" 错误 (T-43)
 - Store: 知识库日期默认存储北京时间（UTC+8），列表/搜索显示 `YYYY-MM-DD HH:MM` 格式 (T-43)
 
 ### Added
+- Web: 文档详情页删除按钮 + 确认对话框，删除后跳转知识库列表 (T-44)
+- Web: 文档详情页多格式报告下载（Markdown / DOCX / PPTX）(T-44)
+- API: DELETE /documents/{id} 端点，级联删除 FTS + 标签关联 (T-44)
+- API: GET /documents/{id}/report 端点，复用现有 writer 生成文件下载 (T-44)
+- API: GET /documents/check-duplicate 端点，按文件名检测重复 (T-44)
+- Web: 分析页重复文件检测弹窗 — 覆盖旧结果 / 保留两份 / 取消提交 (T-44)
 - Web: 相关性评分旁添加 HelpCircle tooltip，悬停显示评分说明（中英双语）(T-43)
 - Web: Settings 页 Per-Agent 模型选择 — 5 个 Agent 卡片各带模型下拉框，即时保存到 settings.yaml (T-42)
 - Web: 内联 API Key 提示 — 当所选模型缺少 API Key 时，在卡片内直接输入保存 (T-42)
