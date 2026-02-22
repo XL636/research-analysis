@@ -30,6 +30,7 @@ import {
 import { getDocumentReportUrl } from '../api/knowledge'
 import Badge from '../components/ui/Badge'
 import EmptyState from '../components/ui/EmptyState'
+import MarkdownRenderer from '../components/ui/MarkdownRenderer'
 import type { AnalysisResult } from '../types'
 
 function ScoreIndicator({ score }: { score: number }) {
@@ -254,6 +255,7 @@ export default function DocumentDetailPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [editTitle, setEditTitle] = useState('')
+  const [activeTab, setActiveTab] = useState<'cards' | 'report'>('cards')
 
   const handleDelete = () => {
     deleteMutation.mutate(Number(id), {
@@ -452,9 +454,43 @@ export default function DocumentDetailPage() {
         )}
       </div>
 
+      {/* Tab bar (only when report_content exists) */}
+      {doc.analysis && doc.report_content && (
+        <div className="flex border-b border-gray-200 mb-6">
+          <button
+            type="button"
+            onClick={() => setActiveTab('cards')}
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors duration-200 ${
+              activeTab === 'cards'
+                ? 'border-primary-600 text-primary-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            {t('detail.tabCards')}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('report')}
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors duration-200 ${
+              activeTab === 'report'
+                ? 'border-primary-600 text-primary-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            {t('detail.tabReport')}
+          </button>
+        </div>
+      )}
+
       {/* Analysis content or empty state */}
       {doc.analysis ? (
-        <AnalysisCards analysis={doc.analysis} />
+        activeTab === 'report' && doc.report_content ? (
+          <div className="bg-surface-card rounded-xl shadow-sm p-8">
+            <MarkdownRenderer content={doc.report_content} />
+          </div>
+        ) : (
+          <AnalysisCards analysis={doc.analysis} />
+        )
       ) : (
         <EmptyState
           icon={FileText}

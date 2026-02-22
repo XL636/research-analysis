@@ -282,6 +282,12 @@
   - 验收：标题编辑保存后列表/搜索可见，分组 CRUD 正常，文档可分组筛选
   - 依赖：T-44
 
+- [x] **T-46: 知识库详情页「完整报告」Tab**
+  - 目标：将 Pipeline 生成的散文式报告存入数据库，详情页添加 Tab 切换（分析卡片 / 完整报告）
+  - 步骤：① DB 迁移 report_content 列 → ② update/get_report_content 方法 → ③ Pipeline 存储报告 → ④ API + Schema 支持 → ⑤ 前端 Tab UI + MarkdownRenderer → ⑥ 下载优先使用存储的报告 → ⑦ i18n
+  - 验收：新分析文档详情页出现两个 Tab，旧文档无 Tab 向后兼容，下载使用存储报告
+  - 依赖：T-45
+
 ---
 
 ## Backlog（想法池）

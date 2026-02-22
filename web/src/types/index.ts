@@ -39,6 +39,7 @@ export interface DocumentDetail {
   date: string
   analysis: AnalysisResult | null
   collection_id: number | null
+  report_content: string | null
 }
 
 export interface UpdateTitleResponse {

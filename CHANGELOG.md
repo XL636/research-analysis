@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Store: 知识库日期默认存储北京时间（UTC+8），列表/搜索显示 `YYYY-MM-DD HH:MM` 格式 (T-43)
 
 ### Added
+- Web: 知识库详情页「完整报告」Tab — 当存在 report_content 时显示 Tab 切换（分析卡片 / 完整报告）(T-46)
+- Store: documents 表新增 report_content 列 + 自动迁移，Pipeline 分析后自动存储完整报告 (T-46)
+- API: get_document 返回 report_content，下载端点优先使用存储的原始报告 (T-46)
 - Web: 知识库页左侧分组侧栏 — 全部/未分类/自建分组，支持新建/重命名/删除分组 (T-45)
 - Web: 文档详情页 inline 标题编辑 — Pencil 图标触发，Enter 保存，Escape 取消 (T-45)
 - Web: 文档详情页分组选择器下拉框 — FolderOpen + select 切换分组 (T-45)

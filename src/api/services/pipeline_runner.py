@@ -62,6 +62,7 @@ async def run_pipeline(
         # Step 2: Analyze
         await queue.put(StepProgress(step="analyze", status="running"))
         analyses = []
+        stored_doc_ids: list[int] = []
         for doc in parsed:
             analysis = await asyncio.to_thread(pipeline.analyzer.process, doc)
             analyses.append(analysis)
@@ -69,7 +70,8 @@ async def run_pipeline(
             try:
                 from src.store.knowledge_base import KnowledgeBase
                 kb = KnowledgeBase()
-                kb.store_analysis(analysis, file_path=doc.file_path, file_type=doc.file_type.value)
+                doc_id = kb.store_analysis(analysis, file_path=doc.file_path, file_type=doc.file_type.value)
+                stored_doc_ids.append(doc_id)
             except Exception:
                 pass
         await queue.put(StepProgress(step="analyze", status="completed", message=f"{len(analyses)} analyses"))
@@ -105,6 +107,16 @@ async def run_pipeline(
             await queue.put(StepProgress(step="review", status="completed", message=f"score: {review.overall_score}"))
         except Exception:
             await queue.put(StepProgress(step="review", status="completed", message="skipped"))
+
+        # Store report_content in knowledge base for each document
+        if report and stored_doc_ids:
+            try:
+                from src.store.knowledge_base import KnowledgeBase
+                kb = KnowledgeBase()
+                for did in stored_doc_ids:
+                    kb.update_report_content(did, report.content)
+            except Exception:
+                pass
 
         # Write output
         output_dir = Path("./output")

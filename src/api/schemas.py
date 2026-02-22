@@ -50,6 +50,7 @@ class DocumentDetail(BaseModel):
     date: str = ""
     analysis: dict | None = None
     collection_id: int | None = None
+    report_content: str | None = None
 
 
 class SearchResult(BaseModel):

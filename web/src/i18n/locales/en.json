@@ -81,6 +81,8 @@
   "detail.titleCancel": "Cancel",
   "detail.collection": "Collection",
   "detail.uncategorized": "Uncategorized",
+  "detail.tabCards": "Analysis Cards",
+  "detail.tabReport": "Full Report",
   "detail.downloadAs": "Download report:",
   "table.title": "Title",
   "table.type": "Type",

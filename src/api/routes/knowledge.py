@@ -127,7 +127,7 @@ async def get_document(
     with kb._connect() as conn:
         row = conn.execute(
             """SELECT d.id, d.title, d.file_type, d.file_path, d.summary,
-                      d.analysis_json, d.collection_id,
+                      d.analysis_json, d.report_content, d.collection_id,
                       strftime('%Y-%m-%d %H:%M', d.created_at) as created_at,
                       GROUP_CONCAT(t.name, ', ') as tags
                FROM documents d
@@ -155,6 +155,7 @@ async def get_document(
         date=row["created_at"] or "",
         analysis=analysis,
         collection_id=row["collection_id"],
+        report_content=row["report_content"] or None,
     )
 
 
@@ -247,11 +248,20 @@ async def download_document_report(
     kb: KnowledgeBase = Depends(get_knowledge_base),
 ):
     """下载文档分析报告（支持 markdown / docx / pptx）."""
+    # 优先使用存储的完整报告
+    stored_content = kb.get_report_content(doc_id)
     analysis = kb.get_analysis(doc_id)
     if not analysis:
         raise HTTPException(status_code=404, detail="Analysis not found")
 
-    report = _analysis_to_report(analysis)
+    if stored_content:
+        report = Report(
+            title=analysis.document_title,
+            content=stored_content,
+            format="markdown",
+        )
+    else:
+        report = _analysis_to_report(analysis)
     tmp_dir = tempfile.mkdtemp()
 
     ext_map = {"markdown": ".md", "docx": ".docx", "pptx": ".pptx"}

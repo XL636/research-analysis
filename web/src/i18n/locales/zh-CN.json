@@ -81,6 +81,8 @@
   "detail.titleCancel": "取消",
   "detail.collection": "分组",
   "detail.uncategorized": "未分类",
+  "detail.tabCards": "分析卡片",
+  "detail.tabReport": "完整报告",
   "detail.downloadAs": "下载报告：",
   "table.title": "标题",
   "table.type": "类型",

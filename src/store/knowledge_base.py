@@ -116,6 +116,20 @@ class KnowledgeBase:
                 conn.commit()
                 logger.info("Collections migration completed")
 
+            # report_content 迁移
+            report_migrated = conn.execute(
+                "SELECT value FROM _meta WHERE key = 'report_content_migrated'"
+            ).fetchone()
+            if not report_migrated:
+                cols = [r[1] for r in conn.execute("PRAGMA table_info(documents)").fetchall()]
+                if "report_content" not in cols:
+                    conn.execute("ALTER TABLE documents ADD COLUMN report_content TEXT")
+                conn.execute(
+                    "INSERT OR REPLACE INTO _meta (key, value) VALUES ('report_content_migrated', '1')"
+                )
+                conn.commit()
+                logger.info("report_content migration completed")
+
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
@@ -293,7 +307,8 @@ class KnowledgeBase:
         with self._connect() as conn:
             rows = conn.execute(
                 """SELECT d.id, d.title, d.file_path, d.file_type, d.summary,
-                          d.content, d.analysis_json, d.created_at, d.updated_at,
+                          d.content, d.analysis_json, d.report_content,
+                          d.created_at, d.updated_at,
                           GROUP_CONCAT(t.name, ', ') as tags
                    FROM documents d
                    LEFT JOIN document_tags dt ON dt.document_id = d.id
@@ -312,6 +327,7 @@ class KnowledgeBase:
                 "summary": row["summary"] or "",
                 "content": row["content"] or "",
                 "analysis_json": row["analysis_json"] or "",
+                "report_content": row["report_content"] or "",
                 "created_at": row["created_at"] or "",
                 "updated_at": row["updated_at"] or "",
                 "tags": [t.strip() for t in (row["tags"] or "").split(",") if t.strip()],
@@ -383,8 +399,8 @@ class KnowledgeBase:
             for doc in documents:
                 # 插入文档
                 cursor = conn.execute(
-                    """INSERT INTO documents (title, file_path, file_type, summary, content, analysis_json, created_at, updated_at)
-                       VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                    """INSERT INTO documents (title, file_path, file_type, summary, content, analysis_json, report_content, created_at, updated_at)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                     (
                         doc["title"],
                         doc.get("file_path", ""),
@@ -392,6 +408,7 @@ class KnowledgeBase:
                         doc.get("summary", ""),
                         doc.get("content", ""),
                         doc.get("analysis_json", ""),
+                        doc.get("report_content", ""),
                         doc.get("created_at", ""),
                         doc.get("updated_at", ""),
                     ),
@@ -421,6 +438,35 @@ class KnowledgeBase:
 
         logger.info(f"Imported {imported} documents from {path}")
         return imported
+
+    def update_report_content(self, doc_id: int, report_content: str) -> bool:
+        """存储完整报告内容到文档.
+
+        Returns:
+            是否成功更新
+        """
+        beijing_now = self._beijing_now()
+        with self._connect() as conn:
+            row = conn.execute("SELECT id FROM documents WHERE id = ?", (doc_id,)).fetchone()
+            if not row:
+                return False
+            conn.execute(
+                "UPDATE documents SET report_content = ?, updated_at = ? WHERE id = ?",
+                (report_content, beijing_now, doc_id),
+            )
+            conn.commit()
+        logger.info(f"Stored report_content for doc id={doc_id}")
+        return True
+
+    def get_report_content(self, doc_id: int) -> str | None:
+        """获取文档的完整报告内容."""
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT report_content FROM documents WHERE id = ?", (doc_id,)
+            ).fetchone()
+        if row and row["report_content"]:
+            return row["report_content"]
+        return None
 
     def delete_document(self, doc_id: int) -> bool:
         """删除文档及其关联数据（FTS、标签）.
