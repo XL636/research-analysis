@@ -108,3 +108,34 @@ export interface ApiKeySaveResponse {
   success: boolean
   providers: ProviderStatus[]
 }
+
+// Agent Model Assignment
+export interface ModelInfo {
+  name: string
+  provider: string
+  api_key_env: string
+  api_key_configured: boolean
+}
+
+export interface AgentModelAssignment {
+  agent: string
+  model: string
+  provider: string
+  api_key_env: string
+  api_key_configured: boolean
+}
+
+export interface AgentModelsResponse {
+  agent_models: AgentModelAssignment[]
+  available_models: ModelInfo[]
+}
+
+export interface AgentModelsSaveRequest {
+  agent_models: Record<string, string>
+}
+
+export interface AgentModelsSaveResponse {
+  success: boolean
+  agent_models: AgentModelAssignment[]
+  available_models: ModelInfo[]
+}

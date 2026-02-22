@@ -10,9 +10,14 @@ import yaml
 from fastapi import APIRouter
 
 from src.api.schemas import (
+    AgentModelAssignment,
+    AgentModelsSaveRequest,
+    AgentModelsSaveResponse,
+    AgentModelsResponse,
     ApiKeySaveRequest,
     ApiKeySaveResponse,
     ApiKeyStatusResponse,
+    ModelInfo,
     ProviderStatus,
 )
 
@@ -21,13 +26,27 @@ router = APIRouter()
 _ENV_FILE = Path("config/.env")
 
 
+_CONFIG_PATH = Path("config/settings.yaml")
+
+
+def _load_full_config() -> dict:
+    """Load entire settings.yaml."""
+    if not _CONFIG_PATH.exists():
+        return {}
+    with open(_CONFIG_PATH, encoding="utf-8") as f:
+        return yaml.safe_load(f) or {}
+
+
+def _save_config(config: dict) -> None:
+    """Write config back to settings.yaml."""
+    _CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with open(_CONFIG_PATH, "w", encoding="utf-8") as f:
+        yaml.dump(config, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
+
+
 def _load_models_config() -> dict:
     """Load models section from settings.yaml."""
-    config_path = Path("config/settings.yaml")
-    if not config_path.exists():
-        return {}
-    with open(config_path, encoding="utf-8") as f:
-        return yaml.safe_load(f).get("models", {})
+    return _load_full_config().get("models", {})
 
 
 def _build_provider_list() -> list[ProviderStatus]:
@@ -121,3 +140,88 @@ async def save_api_keys(req: ApiKeySaveRequest):
         pass  # Non-critical — clients will rebuild on next call
 
     return ApiKeySaveResponse(success=True, providers=_build_provider_list())
+
+
+# --- Agent Model Assignment ---
+
+
+def _build_agent_model_data() -> tuple[list[AgentModelAssignment], list[ModelInfo]]:
+    """Build agent-model assignments and available models from config + env."""
+    config = _load_full_config()
+    models_config = config.get("models", {})
+    agent_models_config = config.get("agent_models", {})
+
+    # Available models
+    available_models = []
+    for model_name, conf in models_config.items():
+        env_var = conf.get("api_key_env", "")
+        available_models.append(
+            ModelInfo(
+                name=model_name,
+                provider=conf.get("provider", ""),
+                api_key_env=env_var,
+                api_key_configured=bool(os.environ.get(env_var, "")),
+            )
+        )
+
+    # Agent assignments
+    agent_assignments = []
+    for agent_name, model_name in agent_models_config.items():
+        model_conf = models_config.get(model_name, {})
+        env_var = model_conf.get("api_key_env", "")
+        agent_assignments.append(
+            AgentModelAssignment(
+                agent=agent_name,
+                model=model_name,
+                provider=model_conf.get("provider", ""),
+                api_key_env=env_var,
+                api_key_configured=bool(os.environ.get(env_var, "")),
+            )
+        )
+
+    return agent_assignments, available_models
+
+
+@router.get("/agent-models", response_model=AgentModelsResponse)
+async def get_agent_models():
+    """Get current agent-model assignments and available models."""
+    assignments, models = _build_agent_model_data()
+    return AgentModelsResponse(agent_models=assignments, available_models=models)
+
+
+@router.put("/agent-models", response_model=AgentModelsSaveResponse)
+async def save_agent_models(req: AgentModelsSaveRequest):
+    """Update agent-model assignments in settings.yaml."""
+    config = _load_full_config()
+    models_config = config.get("models", {})
+    valid_agents = set(config.get("agent_models", {}).keys())
+    valid_models = set(models_config.keys())
+
+    # Validate
+    for agent, model in req.agent_models.items():
+        if agent not in valid_agents:
+            from fastapi import HTTPException
+
+            raise HTTPException(400, f"Unknown agent: {agent}")
+        if model not in valid_models:
+            from fastapi import HTTPException
+
+            raise HTTPException(400, f"Unknown model: {model}")
+
+    # Update config
+    config["agent_models"].update(req.agent_models)
+    _save_config(config)
+
+    # Clear LLM client cache so new assignments take effect
+    try:
+        from src.core.llm_client import LLMClient
+
+        client = LLMClient()
+        client.clear_clients()
+    except Exception:
+        pass
+
+    assignments, models = _build_agent_model_data()
+    return AgentModelsSaveResponse(
+        success=True, agent_models=assignments, available_models=models
+    )

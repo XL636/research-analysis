@@ -258,6 +258,12 @@
   - 验收：Settings 页显示 3 个 provider，输入 Key 保存后状态变为"已配置"，重启后 Key 仍在
   - 依赖：T-40
 
+- [x] **T-42: Per-Agent 模型选择 + 内联 API Key 配置**
+  - 目标：Settings 页支持为每个 Agent 选择模型，缺少 API Key 时内联提示输入
+  - 步骤：① 后端 schemas (ModelInfo, AgentModelAssignment 等) → ② 后端 GET/PUT /api/settings/agent-models 端点 → ③ 前端类型 + API 层 → ④ AgentModelCard 组件 → ⑤ SettingsPage 重构（Agent 模型卡片 + 可折叠 API Key 表格）→ ⑥ i18n 双语
+  - 验收：5 个 Agent 卡片显示模型下拉框，切换模型即时保存到 settings.yaml，缺少 Key 时内联输入并保存
+  - 依赖：T-41
+
 ---
 
 ## Backlog（想法池）

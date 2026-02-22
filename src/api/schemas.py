@@ -95,3 +95,35 @@ class ApiKeySaveRequest(BaseModel):
 class ApiKeySaveResponse(BaseModel):
     success: bool
     providers: list[ProviderStatus]
+
+
+# --- Agent Model Assignment ---
+
+class ModelInfo(BaseModel):
+    name: str
+    provider: str
+    api_key_env: str
+    api_key_configured: bool
+
+
+class AgentModelAssignment(BaseModel):
+    agent: str
+    model: str
+    provider: str
+    api_key_env: str
+    api_key_configured: bool
+
+
+class AgentModelsResponse(BaseModel):
+    agent_models: list[AgentModelAssignment]
+    available_models: list[ModelInfo]
+
+
+class AgentModelsSaveRequest(BaseModel):
+    agent_models: dict[str, str]  # {"parser": "qwen-turbo", ...}
+
+
+class AgentModelsSaveResponse(BaseModel):
+    success: bool
+    agent_models: list[AgentModelAssignment]
+    available_models: list[ModelInfo]
