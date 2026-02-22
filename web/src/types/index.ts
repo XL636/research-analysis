@@ -53,6 +53,16 @@ export interface TagCount {
   count: number
 }
 
+export interface DeleteResponse {
+  success: boolean
+  message: string
+}
+
+export interface DuplicateCheckResponse {
+  has_duplicate: boolean
+  existing_documents: DocumentSummary[]
+}
+
 // Analysis types
 export interface KeyFinding {
   finding: string

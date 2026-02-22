@@ -6,6 +6,7 @@ import csv
 import io
 import json
 import sqlite3
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 import yaml
@@ -33,6 +34,11 @@ class KnowledgeBase:
         self.db_path = db_path
         Path(db_path).parent.mkdir(parents=True, exist_ok=True)
         self._init_db()
+
+    @staticmethod
+    def _beijing_now() -> str:
+        """返回北京时间字符串."""
+        return datetime.now(timezone(timedelta(hours=8))).strftime('%Y-%m-%d %H:%M:%S')
 
     def _init_db(self) -> None:
         """初始化数据库表结构."""
@@ -64,7 +70,29 @@ class KnowledgeBase:
                 CREATE VIRTUAL TABLE IF NOT EXISTS documents_fts USING fts5(
                     title, summary, content
                 );
+
+                CREATE TABLE IF NOT EXISTS _meta (
+                    key TEXT PRIMARY KEY,
+                    value TEXT
+                );
             """)
+
+            # 一次性时区迁移：旧数据库中 datetime('now') 生成的 UTC 时间 → +8h
+            migrated = conn.execute(
+                "SELECT value FROM _meta WHERE key = 'tz_migrated'"
+            ).fetchone()
+            if not migrated:
+                conn.execute(
+                    """UPDATE documents SET
+                           created_at = datetime(created_at, '+8 hours'),
+                           updated_at = datetime(updated_at, '+8 hours')
+                       WHERE created_at IS NOT NULL AND length(created_at) > 0"""
+                )
+                conn.execute(
+                    "INSERT OR REPLACE INTO _meta (key, value) VALUES ('tz_migrated', '1')"
+                )
+                conn.commit()
+                logger.info("Timezone migration completed: UTC → Beijing time")
 
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path)
@@ -85,11 +113,13 @@ class KnowledgeBase:
 
         analysis_json = analysis.model_dump_json()
 
+        beijing_now = self._beijing_now()
+
         with self._connect() as conn:
             cursor = conn.execute(
-                """INSERT INTO documents (title, file_path, file_type, summary, content, analysis_json)
-                   VALUES (?, ?, ?, ?, ?, ?)""",
-                (analysis.document_title, file_path, file_type, analysis.summary, content, analysis_json),
+                """INSERT INTO documents (title, file_path, file_type, summary, content, analysis_json, created_at, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                (analysis.document_title, file_path, file_type, analysis.summary, content, analysis_json, beijing_now, beijing_now),
             )
             doc_id = cursor.lastrowid
 
@@ -350,3 +380,56 @@ class KnowledgeBase:
 
         logger.info(f"Imported {imported} documents from {path}")
         return imported
+
+    def delete_document(self, doc_id: int) -> bool:
+        """删除文档及其关联数据（FTS、标签）.
+
+        Returns:
+            是否成功删除
+        """
+        with self._connect() as conn:
+            row = conn.execute("SELECT id FROM documents WHERE id = ?", (doc_id,)).fetchone()
+            if not row:
+                return False
+
+            conn.execute("DELETE FROM documents_fts WHERE rowid = ?", (doc_id,))
+            conn.execute("DELETE FROM document_tags WHERE document_id = ?", (doc_id,))
+            conn.execute("DELETE FROM documents WHERE id = ?", (doc_id,))
+            conn.commit()
+
+        logger.info(f"Deleted document id={doc_id}")
+        return True
+
+    def find_by_filename(self, filename: str) -> list[dict]:
+        """按文件名查找文档（用于重复检测）.
+
+        Args:
+            filename: 文件名（不含路径）
+
+        Returns:
+            匹配的文档列表
+        """
+        with self._connect() as conn:
+            rows = conn.execute(
+                """SELECT d.id, d.title, d.file_type,
+                          strftime('%Y-%m-%d %H:%M', d.created_at) as created_at,
+                          GROUP_CONCAT(t.name, ', ') as tags
+                   FROM documents d
+                   LEFT JOIN document_tags dt ON dt.document_id = d.id
+                   LEFT JOIN tags t ON t.id = dt.tag_id
+                   WHERE d.file_path LIKE ?
+                   GROUP BY d.id
+                   ORDER BY d.created_at DESC""",
+                (f"%{filename}",),
+            ).fetchall()
+
+        return [
+            {
+                "id": row["id"],
+                "title": row["title"],
+                "file_type": row["file_type"] or "",
+                "tags": row["tags"] or "",
+                "date": row["created_at"] or "",
+            }
+            for row in rows
+        ]

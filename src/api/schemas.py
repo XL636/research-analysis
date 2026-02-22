@@ -64,6 +64,16 @@ class TagCount(BaseModel):
     count: int
 
 
+class DeleteResponse(BaseModel):
+    success: bool
+    message: str = ""
+
+
+class DuplicateCheckResponse(BaseModel):
+    has_duplicate: bool
+    existing_documents: list[DocumentSummary] = Field(default_factory=list)
+
+
 # --- Dashboard ---
 
 class DashboardStats(BaseModel):

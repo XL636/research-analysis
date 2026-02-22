@@ -1,5 +1,5 @@
-import { useQuery } from '@tanstack/react-query'
-import { listDocuments, getDocument, getTags } from '../api/knowledge'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { listDocuments, getDocument, getTags, deleteDocument } from '../api/knowledge'
 
 export function useDocuments(tag?: string) {
   return useQuery({
@@ -20,5 +20,17 @@ export function useTags() {
   return useQuery({
     queryKey: ['tags'],
     queryFn: getTags,
+  })
+}
+
+export function useDeleteDocument() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => deleteDocument(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['documents'] })
+      queryClient.invalidateQueries({ queryKey: ['tags'] })
+      queryClient.invalidateQueries({ queryKey: ['search'] })
+    },
   })
 }

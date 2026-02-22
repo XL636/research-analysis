@@ -16,6 +16,8 @@ import MarkdownRenderer from '../components/ui/MarkdownRenderer'
 import EmptyState from '../components/ui/EmptyState'
 import { usePipelineProgress } from '../hooks/usePipelineProgress'
 import { startPipeline, getPipelineResult, getDownloadUrl } from '../api/pipeline'
+import { checkDuplicate, deleteDocument } from '../api/knowledge'
+import type { DocumentSummary } from '../types'
 
 type Phase = 'upload' | 'analyzing' | 'result'
 
@@ -36,6 +38,10 @@ export default function AnalyzePage() {
   const [reportTitle, setReportTitle] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  // Duplicate detection state
+  const [showDuplicateDialog, setShowDuplicateDialog] = useState(false)
+  const [duplicateDocs, setDuplicateDocs] = useState<DocumentSummary[]>([])
+
   const { steps, isComplete, error } = usePipelineProgress(runId)
 
   // Watch for pipeline completion or error
@@ -55,9 +61,7 @@ export default function AnalyzePage() {
     }
   }, [isComplete, runId])
 
-  const handleSubmit = async () => {
-    if (files.length === 0 || isSubmitting) return
-
+  const doStartPipeline = async () => {
     setIsSubmitting(true)
     try {
       const response = await startPipeline(files, format, synthesize)
@@ -70,6 +74,48 @@ export default function AnalyzePage() {
     }
   }
 
+  const handleSubmit = async () => {
+    if (files.length === 0 || isSubmitting) return
+
+    // Check for duplicates before starting
+    try {
+      const result = await checkDuplicate(files[0].name)
+      if (result.has_duplicate) {
+        setDuplicateDocs(result.existing_documents)
+        setShowDuplicateDialog(true)
+        return
+      }
+    } catch {
+      // If check fails, proceed normally
+    }
+
+    await doStartPipeline()
+  }
+
+  const handleDuplicateOverride = async () => {
+    setShowDuplicateDialog(false)
+    // Start new analysis first, then delete old records
+    await doStartPipeline()
+    // Delete old duplicates after starting new analysis
+    for (const doc of duplicateDocs) {
+      try {
+        await deleteDocument(doc.id)
+      } catch {
+        // ignore delete errors
+      }
+    }
+  }
+
+  const handleDuplicateKeepBoth = async () => {
+    setShowDuplicateDialog(false)
+    await doStartPipeline()
+  }
+
+  const handleDuplicateCancel = () => {
+    setShowDuplicateDialog(false)
+    setDuplicateDocs([])
+  }
+
   const handleReset = () => {
     setPhase('upload')
     setFiles([])
@@ -79,6 +125,8 @@ export default function AnalyzePage() {
     setReportContent('')
     setReportTitle('')
     setIsSubmitting(false)
+    setShowDuplicateDialog(false)
+    setDuplicateDocs([])
   }
 
   // ── Phase 1: Upload ──────────────────────────────────────────────────
@@ -173,6 +221,59 @@ export default function AnalyzePage() {
             )}
           </button>
         </div>
+
+        {/* Duplicate detection dialog */}
+        {showDuplicateDialog && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="bg-white rounded-xl shadow-xl p-6 max-w-md w-full mx-4">
+              <div className="flex items-start gap-3 mb-4">
+                <AlertCircle className="h-6 w-6 text-amber-500 shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="text-lg font-heading font-semibold text-primary-950">
+                    {t('analyze.duplicateTitle')}
+                  </h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {t('analyze.duplicateDesc')}
+                  </p>
+                </div>
+              </div>
+
+              {/* Existing documents list */}
+              <div className="mb-6 bg-gray-50 rounded-lg p-3 space-y-2">
+                {duplicateDocs.map((doc) => (
+                  <div key={doc.id} className="flex items-center justify-between text-sm">
+                    <span className="text-primary-950 font-medium truncate">{doc.title}</span>
+                    <span className="text-gray-500 shrink-0 ml-2">{doc.date}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={handleDuplicateOverride}
+                  className="w-full px-4 py-2 text-sm font-medium text-white bg-amber-500 rounded-lg hover:bg-amber-600 transition-colors duration-200"
+                >
+                  {t('analyze.duplicateOverride')}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDuplicateKeepBoth}
+                  className="w-full px-4 py-2 text-sm font-medium text-primary-700 bg-primary-50 border border-primary-200 rounded-lg hover:bg-primary-100 transition-colors duration-200"
+                >
+                  {t('analyze.duplicateKeepBoth')}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDuplicateCancel}
+                  className="w-full px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+                >
+                  {t('analyze.duplicateCancel')}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     )
   }
