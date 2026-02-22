@@ -7,6 +7,7 @@ import {
   Download,
   Plus,
   AlertCircle,
+  HelpCircle,
   Loader,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -172,9 +173,21 @@ export default function AnalyzePage() {
 
             {/* Synthesize toggle */}
             <div>
-              <label className="block text-sm font-medium text-primary-950 mb-2">
-                {t('analyze.crossDocSynthesis')}
-              </label>
+              <div className="flex items-center gap-1.5 mb-2">
+                <label className="block text-sm font-medium text-primary-950">
+                  {t('analyze.crossDocSynthesis')}
+                </label>
+                <div className="relative group">
+                  <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2
+                                  hidden group-hover:block w-56 p-2 text-xs text-white
+                                  bg-gray-800 rounded-lg shadow-lg z-10">
+                    {t('analyze.crossDocTooltip')}
+                    <div className="absolute top-full left-1/2 -translate-x-1/2
+                                    border-4 border-transparent border-t-gray-800" />
+                  </div>
+                </div>
+              </div>
               <button
                 type="button"
                 role="switch"

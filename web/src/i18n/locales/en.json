@@ -27,6 +27,7 @@
   "analyze.outputFormat": "Output Format",
   "analyze.crossDocSynthesis": "Cross-document synthesis",
   "analyze.crossDocDesc": "Compare and synthesize across multiple documents",
+  "analyze.crossDocTooltip": "When uploading 2+ files, generates a cross-document synthesis: common themes, key differences, research gaps, and recommendations",
   "analyze.startAnalysis": "Start Analysis",
   "analyze.starting": "Starting...",
   "analyze.analysisError": "Analysis Error",
