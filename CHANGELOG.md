@@ -13,6 +13,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Store: 知识库日期默认存储北京时间（UTC+8），列表/搜索显示 `YYYY-MM-DD HH:MM` 格式 (T-43)
 
 ### Added
+- Web: 知识库页左侧分组侧栏 — 全部/未分类/自建分组，支持新建/重命名/删除分组 (T-45)
+- Web: 文档详情页 inline 标题编辑 — Pencil 图标触发，Enter 保存，Escape 取消 (T-45)
+- Web: 文档详情页分组选择器下拉框 — FolderOpen + select 切换分组 (T-45)
+- API: PATCH /documents/{id}/title 端点，更新标题 + FTS5 索引重建 (T-45)
+- API: Collections CRUD 端点 — GET/POST/PATCH/DELETE /collections (T-45)
+- API: PATCH /documents/{id}/collection 端点，移动文档到分组 (T-45)
+- Store: collections 表迁移 + documents.collection_id 列 (T-45)
+- Store: list_documents 支持 collection_id 和 uncategorized 筛选 (T-45)
 - Web: 文档详情页删除按钮 + 确认对话框，删除后跳转知识库列表 (T-44)
 - Web: 文档详情页多格式报告下载（Markdown / DOCX / PPTX）(T-44)
 - API: DELETE /documents/{id} 端点，级联删除 FTS + 标签关联 (T-44)
