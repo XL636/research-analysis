@@ -37,6 +37,7 @@ class DocumentSummary(BaseModel):
     file_type: str = ""
     tags: str = ""
     date: str = ""
+    collection_id: int | None = None
 
 
 class DocumentDetail(BaseModel):
@@ -48,6 +49,7 @@ class DocumentDetail(BaseModel):
     tags: str = ""
     date: str = ""
     analysis: dict | None = None
+    collection_id: int | None = None
 
 
 class SearchResult(BaseModel):
@@ -72,6 +74,37 @@ class DeleteResponse(BaseModel):
 class DuplicateCheckResponse(BaseModel):
     has_duplicate: bool
     existing_documents: list[DocumentSummary] = Field(default_factory=list)
+
+
+# --- Title Update ---
+
+class UpdateTitleRequest(BaseModel):
+    title: str
+
+
+class UpdateTitleResponse(BaseModel):
+    success: bool
+    title: str
+
+
+# --- Collections ---
+
+class CollectionSummary(BaseModel):
+    id: int
+    name: str
+    document_count: int = 0
+
+
+class CreateCollectionRequest(BaseModel):
+    name: str
+
+
+class RenameCollectionRequest(BaseModel):
+    name: str
+
+
+class MoveToCollectionRequest(BaseModel):
+    collection_id: int | None = None
 
 
 # --- Dashboard ---

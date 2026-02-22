@@ -26,6 +26,7 @@ export interface DocumentSummary {
   file_type: string
   tags: string
   date: string
+  collection_id: number | null
 }
 
 export interface DocumentDetail {
@@ -37,6 +38,22 @@ export interface DocumentDetail {
   tags: string
   date: string
   analysis: AnalysisResult | null
+  collection_id: number | null
+}
+
+export interface UpdateTitleResponse {
+  success: boolean
+  title: string
+}
+
+export interface CollectionSummary {
+  id: number
+  name: string
+  document_count: number
+}
+
+export interface MoveToCollectionRequest {
+  collection_id: number | null
 }
 
 export interface SearchResult {

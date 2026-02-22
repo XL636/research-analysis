@@ -14,9 +14,19 @@ import {
   HelpCircle,
   Trash2,
   Download,
+  Pencil,
+  Check,
+  X,
+  FolderOpen,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { useDocument, useDeleteDocument } from '../hooks/useDocuments'
+import {
+  useDocument,
+  useDeleteDocument,
+  useUpdateDocumentTitle,
+  useCollections,
+  useMoveDocumentToCollection,
+} from '../hooks/useDocuments'
 import { getDocumentReportUrl } from '../api/knowledge'
 import Badge from '../components/ui/Badge'
 import EmptyState from '../components/ui/EmptyState'
@@ -238,12 +248,55 @@ export default function DocumentDetailPage() {
   const { id } = useParams()
   const { data: doc, isLoading } = useDocument(Number(id))
   const deleteMutation = useDeleteDocument()
+  const titleMutation = useUpdateDocumentTitle()
+  const { data: collections } = useCollections()
+  const moveMutation = useMoveDocumentToCollection()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [isEditingTitle, setIsEditingTitle] = useState(false)
+  const [editTitle, setEditTitle] = useState('')
 
   const handleDelete = () => {
     deleteMutation.mutate(Number(id), {
       onSuccess: () => navigate('/knowledge'),
     })
+  }
+
+  const handleStartEditTitle = () => {
+    if (doc) {
+      setEditTitle(doc.title)
+      setIsEditingTitle(true)
+    }
+  }
+
+  const handleSaveTitle = () => {
+    const trimmed = editTitle.trim()
+    if (trimmed && trimmed !== doc?.title) {
+      titleMutation.mutate(
+        { id: Number(id), title: trimmed },
+        { onSuccess: () => setIsEditingTitle(false) },
+      )
+    } else {
+      setIsEditingTitle(false)
+    }
+  }
+
+  const handleCancelEditTitle = () => {
+    setIsEditingTitle(false)
+    setEditTitle('')
+  }
+
+  const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSaveTitle()
+    } else if (e.key === 'Escape') {
+      handleCancelEditTitle()
+    }
+  }
+
+  const handleCollectionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value
+    const collectionId = value === '' ? null : Number(value)
+    moveMutation.mutate({ docId: Number(id), collectionId })
   }
 
   if (isLoading) {
@@ -290,9 +343,49 @@ export default function DocumentDetailPage() {
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-start justify-between mb-3">
-          <h1 className="text-2xl font-heading font-bold text-primary-950">
-            {doc.title}
-          </h1>
+          {isEditingTitle ? (
+            <div className="flex items-center gap-2 flex-1 mr-4">
+              <input
+                type="text"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                onKeyDown={handleTitleKeyDown}
+                autoFocus
+                className="text-2xl font-heading font-bold text-primary-950 bg-white border border-primary-300 rounded-lg px-3 py-1 flex-1 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              />
+              <button
+                type="button"
+                onClick={handleSaveTitle}
+                disabled={titleMutation.isPending}
+                title={t('detail.titleSave')}
+                className="p-1.5 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-md transition-colors duration-200 disabled:opacity-50"
+              >
+                <Check className="h-5 w-5" />
+              </button>
+              <button
+                type="button"
+                onClick={handleCancelEditTitle}
+                title={t('detail.titleCancel')}
+                className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors duration-200"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-heading font-bold text-primary-950">
+                {doc.title}
+              </h1>
+              <button
+                type="button"
+                onClick={handleStartEditTitle}
+                title={t('detail.titleEdit')}
+                className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-md transition-colors duration-200"
+              >
+                <Pencil className="h-4 w-4" />
+              </button>
+            </div>
+          )}
           <button
             type="button"
             onClick={() => setShowDeleteConfirm(true)}
@@ -313,6 +406,28 @@ export default function DocumentDetailPage() {
               </Badge>
             ))}
           <span className="text-sm text-gray-500">{doc.date}</span>
+        </div>
+
+        {/* Collection selector */}
+        <div className="flex items-center gap-2 mt-3">
+          <FolderOpen className="h-4 w-4 text-gray-500" />
+          <label className="text-sm text-gray-500" htmlFor="collection-select">
+            {t('detail.collection')}
+          </label>
+          <select
+            id="collection-select"
+            value={doc.collection_id ?? ''}
+            onChange={handleCollectionChange}
+            disabled={moveMutation.isPending}
+            className="text-sm border border-gray-300 rounded-lg px-2 py-1 bg-white text-primary-950 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:opacity-50 transition-colors duration-200"
+          >
+            <option value="">{t('detail.uncategorized')}</option>
+            {collections?.map((col) => (
+              <option key={col.id} value={col.id}>
+                {col.name}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Download buttons */}

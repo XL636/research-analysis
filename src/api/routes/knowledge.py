@@ -12,12 +12,18 @@ from fastapi.responses import FileResponse
 
 from src.api.dependencies import get_knowledge_base
 from src.api.schemas import (
+    CollectionSummary,
+    CreateCollectionRequest,
     DeleteResponse,
     DocumentDetail,
     DocumentSummary,
     DuplicateCheckResponse,
+    MoveToCollectionRequest,
+    RenameCollectionRequest,
     SearchResult,
     TagCount,
+    UpdateTitleRequest,
+    UpdateTitleResponse,
 )
 from src.core.models import AnalysisResult, Report
 from src.store.knowledge_base import KnowledgeBase
@@ -88,10 +94,12 @@ async def search_documents(
 async def list_documents(
     tag: str | None = Query(None, description="按标签筛选"),
     limit: int = Query(20, ge=1, le=200),
+    collection_id: int | None = Query(None, description="按分组筛选"),
+    uncategorized: bool = Query(False, description="只显示未分类文档"),
     kb: KnowledgeBase = Depends(get_knowledge_base),
 ):
     """列出知识库文档."""
-    docs = kb.list_documents(tag=tag, limit=limit)
+    docs = kb.list_documents(tag=tag, limit=limit, collection_id=collection_id, uncategorized=uncategorized)
     return [DocumentSummary(**d) for d in docs]
 
 
@@ -119,7 +127,7 @@ async def get_document(
     with kb._connect() as conn:
         row = conn.execute(
             """SELECT d.id, d.title, d.file_type, d.file_path, d.summary,
-                      d.analysis_json,
+                      d.analysis_json, d.collection_id,
                       strftime('%Y-%m-%d %H:%M', d.created_at) as created_at,
                       GROUP_CONCAT(t.name, ', ') as tags
                FROM documents d
@@ -146,6 +154,7 @@ async def get_document(
         tags=row["tags"] or "",
         date=row["created_at"] or "",
         analysis=analysis,
+        collection_id=row["collection_id"],
     )
 
 
@@ -159,6 +168,75 @@ async def delete_document(
     if not success:
         raise HTTPException(status_code=404, detail="Document not found")
     return DeleteResponse(success=True, message="Document deleted")
+
+
+@router.patch("/documents/{doc_id}/title", response_model=UpdateTitleResponse)
+async def update_document_title(
+    doc_id: int,
+    body: UpdateTitleRequest,
+    kb: KnowledgeBase = Depends(get_knowledge_base),
+):
+    """更新文档标题."""
+    success = kb.update_title(doc_id, body.title)
+    if not success:
+        raise HTTPException(status_code=404, detail="Document not found")
+    return UpdateTitleResponse(success=True, title=body.title)
+
+
+@router.patch("/documents/{doc_id}/collection", response_model=DeleteResponse)
+async def move_document_to_collection(
+    doc_id: int,
+    body: MoveToCollectionRequest,
+    kb: KnowledgeBase = Depends(get_knowledge_base),
+):
+    """移动文档到分组."""
+    success = kb.move_document_to_collection(doc_id, body.collection_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Document or collection not found")
+    return DeleteResponse(success=True, message="Document moved")
+
+
+@router.get("/collections", response_model=list[CollectionSummary])
+async def list_collections(
+    kb: KnowledgeBase = Depends(get_knowledge_base),
+):
+    """列出分组."""
+    return [CollectionSummary(**c) for c in kb.list_collections()]
+
+
+@router.post("/collections", response_model=CollectionSummary)
+async def create_collection(
+    body: CreateCollectionRequest,
+    kb: KnowledgeBase = Depends(get_knowledge_base),
+):
+    """新建分组."""
+    coll_id = kb.create_collection(body.name)
+    return CollectionSummary(id=coll_id, name=body.name, document_count=0)
+
+
+@router.patch("/collections/{collection_id}", response_model=DeleteResponse)
+async def rename_collection(
+    collection_id: int,
+    body: RenameCollectionRequest,
+    kb: KnowledgeBase = Depends(get_knowledge_base),
+):
+    """重命名分组."""
+    success = kb.rename_collection(collection_id, body.name)
+    if not success:
+        raise HTTPException(status_code=404, detail="Collection not found")
+    return DeleteResponse(success=True, message="Collection renamed")
+
+
+@router.delete("/collections/{collection_id}", response_model=DeleteResponse)
+async def delete_collection(
+    collection_id: int,
+    kb: KnowledgeBase = Depends(get_knowledge_base),
+):
+    """删除分组."""
+    success = kb.delete_collection(collection_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Collection not found")
+    return DeleteResponse(success=True, message="Collection deleted")
 
 
 @router.get("/documents/{doc_id}/report")

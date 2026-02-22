@@ -94,6 +94,28 @@ class KnowledgeBase:
                 conn.commit()
                 logger.info("Timezone migration completed: UTC → Beijing time")
 
+            # Collections 迁移
+            collections_migrated = conn.execute(
+                "SELECT value FROM _meta WHERE key = 'collections_migrated'"
+            ).fetchone()
+            if not collections_migrated:
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS collections (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        name TEXT NOT NULL,
+                        created_at TEXT
+                    )
+                """)
+                # 检查 documents 表是否已有 collection_id 列
+                cols = [r[1] for r in conn.execute("PRAGMA table_info(documents)").fetchall()]
+                if "collection_id" not in cols:
+                    conn.execute("ALTER TABLE documents ADD COLUMN collection_id INTEGER REFERENCES collections(id)")
+                conn.execute(
+                    "INSERT OR REPLACE INTO _meta (key, value) VALUES ('collections_migrated', '1')"
+                )
+                conn.commit()
+                logger.info("Collections migration completed")
+
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
@@ -182,44 +204,62 @@ class KnowledgeBase:
             for row in rows
         ]
 
-    def list_documents(self, tag: str | None = None, limit: int = 20) -> list[dict]:
+    def list_documents(
+        self,
+        tag: str | None = None,
+        limit: int = 20,
+        collection_id: int | None = None,
+        uncategorized: bool = False,
+    ) -> list[dict]:
         """列出知识库中的文档.
 
         Args:
             tag: 按标签筛选（可选）
             limit: 最大结果数
+            collection_id: 按分组筛选（可选）
+            uncategorized: 只显示未分类文档
 
         Returns:
             文档列表
         """
         with self._connect() as conn:
+            where_clauses: list[str] = []
+            params: list = []
+
             if tag:
-                rows = conn.execute(
-                    """SELECT d.id, d.title, d.file_type,
-                              strftime('%Y-%m-%d %H:%M', d.created_at) as created_at,
-                              GROUP_CONCAT(t.name, ', ') as tags
-                       FROM documents d
-                       JOIN document_tags dt ON dt.document_id = d.id
-                       JOIN tags t ON t.id = dt.tag_id
-                       WHERE t.name = ?
-                       GROUP BY d.id
-                       ORDER BY d.created_at DESC
-                       LIMIT ?""",
-                    (tag, limit),
-                ).fetchall()
-            else:
-                rows = conn.execute(
-                    """SELECT d.id, d.title, d.file_type,
+                where_clauses.append("t.name = ?")
+                params.append(tag)
+
+            if collection_id is not None:
+                where_clauses.append("d.collection_id = ?")
+                params.append(collection_id)
+            elif uncategorized:
+                where_clauses.append("d.collection_id IS NULL")
+
+            base_select = """SELECT d.id, d.title, d.file_type, d.collection_id,
                               strftime('%Y-%m-%d %H:%M', d.created_at) as created_at,
                               GROUP_CONCAT(t.name, ', ') as tags
                        FROM documents d
                        LEFT JOIN document_tags dt ON dt.document_id = d.id
-                       LEFT JOIN tags t ON t.id = dt.tag_id
-                       GROUP BY d.id
-                       ORDER BY d.created_at DESC
-                       LIMIT ?""",
-                    (limit,),
-                ).fetchall()
+                       LEFT JOIN tags t ON t.id = dt.tag_id"""
+
+            if tag:
+                # 用 JOIN 而非 LEFT JOIN 来筛选标签
+                base_select = """SELECT d.id, d.title, d.file_type, d.collection_id,
+                              strftime('%Y-%m-%d %H:%M', d.created_at) as created_at,
+                              GROUP_CONCAT(t.name, ', ') as tags
+                       FROM documents d
+                       JOIN document_tags dt ON dt.document_id = d.id
+                       JOIN tags t ON t.id = dt.tag_id"""
+
+            where_sql = ""
+            if where_clauses:
+                where_sql = " WHERE " + " AND ".join(where_clauses)
+
+            query = f"{base_select}{where_sql} GROUP BY d.id ORDER BY d.created_at DESC LIMIT ?"
+            params.append(limit)
+
+            rows = conn.execute(query, params).fetchall()
 
         return [
             {
@@ -228,6 +268,7 @@ class KnowledgeBase:
                 "file_type": row["file_type"] or "",
                 "tags": row["tags"] or "",
                 "date": row["created_at"] or "",
+                "collection_id": row["collection_id"],
             }
             for row in rows
         ]
@@ -398,6 +439,126 @@ class KnowledgeBase:
             conn.commit()
 
         logger.info(f"Deleted document id={doc_id}")
+        return True
+
+    def update_title(self, doc_id: int, new_title: str) -> bool:
+        """更新文档标题（含 FTS 索引重建）.
+
+        Returns:
+            是否成功更新
+        """
+        beijing_now = self._beijing_now()
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT id, summary, content FROM documents WHERE id = ?", (doc_id,)
+            ).fetchone()
+            if not row:
+                return False
+
+            conn.execute(
+                "UPDATE documents SET title = ?, updated_at = ? WHERE id = ?",
+                (new_title, beijing_now, doc_id),
+            )
+            # FTS5 不支持 UPDATE，需要 DELETE + INSERT 重建索引
+            conn.execute("DELETE FROM documents_fts WHERE rowid = ?", (doc_id,))
+            conn.execute(
+                "INSERT INTO documents_fts (rowid, title, summary, content) VALUES (?, ?, ?, ?)",
+                (doc_id, new_title, row["summary"] or "", row["content"] or ""),
+            )
+            conn.commit()
+
+        logger.info(f"Updated title for doc id={doc_id}: {new_title}")
+        return True
+
+    # ── Collections ──
+
+    def create_collection(self, name: str) -> int:
+        """创建分组.
+
+        Returns:
+            新分组 ID
+        """
+        beijing_now = self._beijing_now()
+        with self._connect() as conn:
+            cursor = conn.execute(
+                "INSERT INTO collections (name, created_at) VALUES (?, ?)",
+                (name, beijing_now),
+            )
+            conn.commit()
+            return cursor.lastrowid
+
+    def list_collections(self) -> list[dict]:
+        """列出分组 + 文档计数."""
+        with self._connect() as conn:
+            rows = conn.execute(
+                """SELECT c.id, c.name,
+                          COUNT(d.id) as document_count
+                   FROM collections c
+                   LEFT JOIN documents d ON d.collection_id = c.id
+                   GROUP BY c.id
+                   ORDER BY c.name"""
+            ).fetchall()
+
+        return [
+            {
+                "id": row["id"],
+                "name": row["name"],
+                "document_count": row["document_count"],
+            }
+            for row in rows
+        ]
+
+    def rename_collection(self, collection_id: int, name: str) -> bool:
+        """重命名分组."""
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT id FROM collections WHERE id = ?", (collection_id,)
+            ).fetchone()
+            if not row:
+                return False
+            conn.execute(
+                "UPDATE collections SET name = ? WHERE id = ?",
+                (name, collection_id),
+            )
+            conn.commit()
+        return True
+
+    def delete_collection(self, collection_id: int) -> bool:
+        """删除分组（文档归入未分类）."""
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT id FROM collections WHERE id = ?", (collection_id,)
+            ).fetchone()
+            if not row:
+                return False
+            conn.execute(
+                "UPDATE documents SET collection_id = NULL WHERE collection_id = ?",
+                (collection_id,),
+            )
+            conn.execute("DELETE FROM collections WHERE id = ?", (collection_id,))
+            conn.commit()
+        logger.info(f"Deleted collection id={collection_id}")
+        return True
+
+    def move_document_to_collection(self, doc_id: int, collection_id: int | None) -> bool:
+        """移动文档到分组（collection_id=None 表示移到未分类）."""
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT id FROM documents WHERE id = ?", (doc_id,)
+            ).fetchone()
+            if not row:
+                return False
+            if collection_id is not None:
+                coll = conn.execute(
+                    "SELECT id FROM collections WHERE id = ?", (collection_id,)
+                ).fetchone()
+                if not coll:
+                    return False
+            conn.execute(
+                "UPDATE documents SET collection_id = ? WHERE id = ?",
+                (collection_id, doc_id),
+            )
+            conn.commit()
         return True
 
     def find_by_filename(self, filename: str) -> list[dict]:
