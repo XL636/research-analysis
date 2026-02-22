@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- Output: PDF 报告输出 — Markdown→HTML→PDF (weasyprint)，A4 学术排版，CJK 字体支持 (T-47)
+- Output: PPTX 学术简洁风重写 — 封面页/章节页/内容页，蓝白配色，Bullet 列表，智能分页 (T-47)
+- Web: FileDropzone 添加 .docx MIME type 上传支持 (T-47)
+- Web: 分析页和详情页格式选择器添加 PDF 选项 (T-47)
+- Docker: weasyprint 系统依赖 + CJK 字体 (fonts-noto-cjk) (T-47)
+- CLI: analyze/batch 命令 --format 添加 pdf 选项 (T-47)
+- API: 报告下载端点支持 PDF 格式 (T-47)
+
 ### Fixed
 - Store: 时区根因修复 — `_beijing_now()` 显式传入时间戳，`_meta` 表一次性迁移旧 UTC 数据 (T-44)
 - Parser: PPTX 解析不再因非占位符 shape 抛出 "shape is not a placeholder" 错误 (T-43)

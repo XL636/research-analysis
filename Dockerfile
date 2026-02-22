@@ -10,9 +10,12 @@ RUN npm run build
 FROM python:3.11-slim AS runtime
 WORKDIR /app
 
-# Install system dependencies and curl for healthcheck
+# Install system dependencies for healthcheck + weasyprint PDF rendering + CJK fonts
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
+    libpango-1.0-0 libpangoft2-1.0-0 libpangocairo-1.0-0 \
+    libgdk-pixbuf-2.0-0 libffi-dev shared-mime-info \
+    fonts-noto-cjk \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv
@@ -20,7 +23,7 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
 # Copy dependency files first for layer caching
 COPY pyproject.toml uv.lock ./
-RUN uv sync --extra web --no-dev --frozen
+RUN uv sync --extra web --extra pdf --no-dev --frozen
 
 # Copy application code
 COPY src/ ./src/

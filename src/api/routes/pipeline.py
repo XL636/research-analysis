@@ -17,7 +17,7 @@ router = APIRouter()
 @router.post("/run", response_model=PipelineRunResponse)
 async def start_pipeline(
     files: list[UploadFile] = File(..., description="上传文件（PDF/PPTX/MD/TXT/DOCX）"),
-    format: str = Form("markdown", description="输出格式: markdown/docx/pptx"),
+    format: str = Form("markdown", description="输出格式: markdown/docx/pptx/pdf"),
     synthesize: bool = Form(False, description="启用跨文档综合分析"),
 ):
     """Upload files and start analysis pipeline."""

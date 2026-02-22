@@ -244,7 +244,7 @@ async def delete_collection(
 async def download_document_report(
     doc_id: int,
     background_tasks: BackgroundTasks,
-    format: str = Query("markdown", regex="^(markdown|docx|pptx)$"),
+    format: str = Query("markdown", regex="^(markdown|docx|pptx|pdf)$"),
     kb: KnowledgeBase = Depends(get_knowledge_base),
 ):
     """下载文档分析报告（支持 markdown / docx / pptx）."""
@@ -264,7 +264,7 @@ async def download_document_report(
         report = _analysis_to_report(analysis)
     tmp_dir = tempfile.mkdtemp()
 
-    ext_map = {"markdown": ".md", "docx": ".docx", "pptx": ".pptx"}
+    ext_map = {"markdown": ".md", "docx": ".docx", "pptx": ".pptx", "pdf": ".pdf"}
     ext = ext_map[format]
     safe_title = "".join(c if c.isalnum() or c in " _-" else "_" for c in report.title)[:60]
     output_path = str(Path(tmp_dir) / f"{safe_title}{ext}")
@@ -277,10 +277,14 @@ async def download_document_report(
         from src.outputs.docx_writer import write_docx
         write_docx(report, output_path)
         media_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-    else:  # pptx
+    elif format == "pptx":
         from src.outputs.pptx_writer import write_pptx
         write_pptx(report, output_path)
         media_type = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+    else:  # pdf
+        from src.outputs.pdf_writer import write_pdf
+        write_pdf(report, output_path)
+        media_type = "application/pdf"
 
     background_tasks.add_task(shutil.rmtree, tmp_dir, True)
 

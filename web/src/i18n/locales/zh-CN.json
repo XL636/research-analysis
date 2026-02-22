@@ -45,7 +45,7 @@
   "analyze.duplicateCancel": "取消提交",
   "dropzone.dropHere": "将文件拖放到此处...",
   "dropzone.dragOrClick": "将文件拖放到此处，或点击浏览",
-  "dropzone.supportedFormats": "支持 PDF、PPTX、TXT、MD",
+  "dropzone.supportedFormats": "支持 PDF、PPTX、DOCX、TXT、MD",
   "knowledge.title": "知识库",
   "knowledge.searchPlaceholder": "搜索文档...",
   "knowledge.noDocsTitle": "未找到文档",

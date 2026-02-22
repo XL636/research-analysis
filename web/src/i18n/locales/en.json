@@ -45,7 +45,7 @@
   "analyze.duplicateCancel": "Cancel",
   "dropzone.dropHere": "Drop files here...",
   "dropzone.dragOrClick": "Drag & drop files here, or click to browse",
-  "dropzone.supportedFormats": "Supports PDF, PPTX, TXT, MD",
+  "dropzone.supportedFormats": "Supports PDF, PPTX, DOCX, TXT, MD",
   "knowledge.title": "Knowledge Base",
   "knowledge.searchPlaceholder": "Search documents...",
   "knowledge.noDocsTitle": "No documents found",

@@ -13,6 +13,7 @@ export default function FileDropzone({
   accept = {
     'application/pdf': ['.pdf'],
     'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'],
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
     'text/plain': ['.txt'],
     'text/markdown': ['.md'],
   },

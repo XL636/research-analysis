@@ -193,7 +193,7 @@ class Pipeline:
             # 自动生成输出路径
             Path(self.output_dir).mkdir(parents=True, exist_ok=True)
             base_name = Path(ctx.input_files[0]).stem if ctx.input_files else "report"
-            ext_map = {"markdown": ".md", "docx": ".docx", "pptx": ".pptx"}
+            ext_map = {"markdown": ".md", "docx": ".docx", "pptx": ".pptx", "pdf": ".pdf"}
             ext = ext_map.get(ctx.output_format, ".md")
             output_path = str(Path(self.output_dir) / f"{base_name}_report{ext}")
 
@@ -214,6 +214,14 @@ class Pipeline:
             except ImportError:
                 logger.warning("python-pptx not installed for output, falling back to markdown")
                 output_path = output_path.replace(".pptx", ".md")
+                return write_markdown(ctx.report, output_path)
+        elif ctx.output_format == "pdf":
+            try:
+                from src.outputs.pdf_writer import write_pdf
+                return write_pdf(ctx.report, output_path)
+            except ImportError:
+                logger.warning("weasyprint not installed, falling back to markdown")
+                output_path = output_path.replace(".pdf", ".md")
                 return write_markdown(ctx.report, output_path)
         else:
             return write_markdown(ctx.report, output_path)

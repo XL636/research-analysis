@@ -30,7 +30,7 @@ def _setup_logging(verbose: bool = False) -> None:
 def analyze(
     files: list[str] = typer.Argument(..., help="要分析的文件路径（支持 PDF/PPTX/MD/TXT）"),
     output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
-    format: str = typer.Option("markdown", "--format", "-f", help="输出格式: markdown/docx/pptx"),
+    format: str = typer.Option("markdown", "--format", "-f", help="输出格式: markdown/docx/pptx/pdf"),
     template: str = typer.Option("default", "--template", "-t", help="报告模板: default/meeting"),
     synthesize: bool = typer.Option(False, "--synthesize", "-s", help="启用跨文档综合分析"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="显示详细日志"),
@@ -144,7 +144,7 @@ SUPPORTED_EXTENSIONS = {".pdf", ".pptx", ".md", ".txt", ".docx"}
 @app.command()
 def batch(
     directory: str = typer.Argument(..., help="要批量处理的目录路径"),
-    format: str = typer.Option("markdown", "--format", "-f", help="输出格式: markdown/docx/pptx"),
+    format: str = typer.Option("markdown", "--format", "-f", help="输出格式: markdown/docx/pptx/pdf"),
     template: str = typer.Option("default", "--template", "-t", help="报告模板: default/meeting"),
     synthesize: bool = typer.Option(False, "--synthesize", "-s", help="启用跨文档综合分析"),
     recursive: bool = typer.Option(False, "--recursive", "-r", help="递归扫描子目录"),
@@ -198,7 +198,7 @@ def batch(
         for file_path in files:
             progress.update(task, description=f"分析: {file_path.name}")
             try:
-                ext_map = {"markdown": ".md", "docx": ".docx", "pptx": ".pptx"}
+                ext_map = {"markdown": ".md", "docx": ".docx", "pptx": ".pptx", "pdf": ".pdf"}
                 ext = ext_map.get(format, ".md")
                 out_path = str(out_dir / f"{file_path.stem}_report{ext}")
 

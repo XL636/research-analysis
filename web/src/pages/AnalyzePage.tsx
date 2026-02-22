@@ -26,6 +26,7 @@ const FORMAT_OPTIONS = [
   { value: 'markdown', label: 'Markdown', icon: FileText },
   { value: 'docx', label: 'DOCX', icon: FileType },
   { value: 'pptx', label: 'PPTX', icon: Presentation },
+  { value: 'pdf', label: 'PDF', icon: FileText },
 ] as const
 
 export default function AnalyzePage() {

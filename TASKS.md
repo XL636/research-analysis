@@ -288,6 +288,12 @@
   - 验收：新分析文档详情页出现两个 Tab，旧文档无 Tab 向后兼容，下载使用存储报告
   - 依赖：T-45
 
+- [x] **T-47: PPTX 重写 + PDF 输出 + 上传格式扩展**
+  - 目标：① PPTX 学术简洁风重写 ② 新增 PDF 输出（weasyprint） ③ 前端 .docx 上传支持
+  - 步骤：① pptx_writer.py 全部重写（封面页/章节页/内容页，蓝白配色，智能拆分） → ② 新建 pdf_writer.py（Markdown→HTML→PDF，A4 学术排版） → ③ pyproject.toml + Dockerfile 添加 pdf 依赖 → ④ engine/API/CLI 全链路接入 pdf 格式 → ⑤ 前端 FileDropzone 添加 .docx MIME → ⑥ 前端格式选择器添加 PDF → ⑦ i18n 更新
+  - 验收：PPTX 蓝白配色有 bullet 列表，PDF A4 中文正常，前端支持 .docx 上传和 PDF 下载
+  - 依赖：T-46
+
 ---
 
 ## Backlog（想法池）
