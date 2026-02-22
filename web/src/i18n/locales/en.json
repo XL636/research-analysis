@@ -60,6 +60,7 @@
   "detail.limitationsCard": "Limitations",
   "detail.futureWork": "Future Work",
   "detail.relevanceScore": "Relevance Score",
+  "detail.relevanceScoreTooltip": "AI-assessed score (1-10) evaluating research innovation and importance, considering creativity, significance, and contribution to the field",
   "detail.outOf10": "out of 10",
   "table.title": "Title",
   "table.type": "Type",

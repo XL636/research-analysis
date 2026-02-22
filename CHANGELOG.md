@@ -7,7 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- Parser: PPTX 解析不再因非占位符 shape 抛出 "shape is not a placeholder" 错误 (T-43)
+- Store: 知识库日期默认存储北京时间（UTC+8），列表/搜索显示 `YYYY-MM-DD HH:MM` 格式 (T-43)
+
 ### Added
+- Web: 相关性评分旁添加 HelpCircle tooltip，悬停显示评分说明（中英双语）(T-43)
 - Web: Settings 页 Per-Agent 模型选择 — 5 个 Agent 卡片各带模型下拉框，即时保存到 settings.yaml (T-42)
 - Web: 内联 API Key 提示 — 当所选模型缺少 API Key 时，在卡片内直接输入保存 (T-42)
 - API: GET/PUT /api/settings/agent-models 端点，支持查询和更新 Agent-模型分配 (T-42)

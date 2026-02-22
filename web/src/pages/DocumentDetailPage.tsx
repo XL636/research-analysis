@@ -8,6 +8,7 @@ import {
   AlertTriangle,
   ArrowRight,
   BarChart3,
+  HelpCircle,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useDocument } from '../hooks/useDocuments'
@@ -201,6 +202,16 @@ function AnalysisCards({ analysis }: { analysis: AnalysisResult }) {
             <h2 className="font-heading text-lg font-semibold text-primary-950">
               {t('detail.relevanceScore')}
             </h2>
+            <div className="relative group">
+              <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2
+                              hidden group-hover:block w-56 p-2 text-xs text-white
+                              bg-gray-800 rounded-lg shadow-lg z-10">
+                {t('detail.relevanceScoreTooltip')}
+                <div className="absolute top-full left-1/2 -translate-x-1/2
+                                border-4 border-transparent border-t-gray-800" />
+              </div>
+            </div>
           </div>
           <ScoreIndicator score={analysis.relevance_score} />
         </div>

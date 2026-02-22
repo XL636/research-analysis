@@ -38,11 +38,12 @@ def parse_pptx(file_path: str) -> ParsedDocument:
                 slide_texts.append(text)
 
             # 尝试从标题占位符获取标题
-            if shape.has_text_frame and hasattr(shape, "placeholder_format"):
-                if shape.placeholder_format is not None:
-                    idx = shape.placeholder_format.idx
-                    if idx == 0:  # 标题占位符
-                        slide_title = shape.text_frame.text.strip()
+            try:
+                ph_format = shape.placeholder_format
+                if ph_format is not None and ph_format.idx == 0:
+                    slide_title = shape.text_frame.text.strip()
+            except ValueError:
+                pass  # 非占位符 shape，跳过
 
         # 第一页标题作为文档标题
         if slide_num == 1 and slide_title and not title:

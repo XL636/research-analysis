@@ -46,8 +46,8 @@ class KnowledgeBase:
                     summary TEXT,
                     content TEXT,
                     analysis_json TEXT,
-                    created_at TEXT DEFAULT (datetime('now')),
-                    updated_at TEXT DEFAULT (datetime('now'))
+                    created_at TEXT DEFAULT (datetime('now', '+8 hours')),
+                    updated_at TEXT DEFAULT (datetime('now', '+8 hours'))
                 );
 
                 CREATE TABLE IF NOT EXISTS tags (
@@ -126,7 +126,8 @@ class KnowledgeBase:
         """
         with self._connect() as conn:
             rows = conn.execute(
-                """SELECT d.id, d.title, d.file_type, d.summary, d.created_at,
+                """SELECT d.id, d.title, d.file_type, d.summary,
+                          strftime('%Y-%m-%d %H:%M', d.created_at) as created_at,
                           GROUP_CONCAT(t.name, ', ') as tags
                    FROM documents_fts fts
                    JOIN documents d ON d.id = fts.rowid
@@ -164,7 +165,8 @@ class KnowledgeBase:
         with self._connect() as conn:
             if tag:
                 rows = conn.execute(
-                    """SELECT d.id, d.title, d.file_type, d.created_at,
+                    """SELECT d.id, d.title, d.file_type,
+                              strftime('%Y-%m-%d %H:%M', d.created_at) as created_at,
                               GROUP_CONCAT(t.name, ', ') as tags
                        FROM documents d
                        JOIN document_tags dt ON dt.document_id = d.id
@@ -177,7 +179,8 @@ class KnowledgeBase:
                 ).fetchall()
             else:
                 rows = conn.execute(
-                    """SELECT d.id, d.title, d.file_type, d.created_at,
+                    """SELECT d.id, d.title, d.file_type,
+                              strftime('%Y-%m-%d %H:%M', d.created_at) as created_at,
                               GROUP_CONCAT(t.name, ', ') as tags
                        FROM documents d
                        LEFT JOIN document_tags dt ON dt.document_id = d.id

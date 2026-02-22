@@ -264,6 +264,12 @@
   - 验收：5 个 Agent 卡片显示模型下拉框，切换模型即时保存到 settings.yaml，缺少 Key 时内联输入并保存
   - 依赖：T-41
 
+- [x] **T-43: 修复 PPTX 解析错误 + 时区修复 + 相关性评分 Tooltip**
+  - 目标：修复三个 bug/改进
+  - 步骤：① PPT 解析器 try-except 修复非占位符 shape 报错 → ② SQLite 默认时间改为北京时区 + strftime 格式化 → ③ 相关性评分添加 HelpCircle tooltip + i18n
+  - 验收：PPTX 含非占位符 shape 不报错，新记录显示北京时间，tooltip 悬停显示评分说明
+  - 依赖：T-13, T-19, T-30
+
 ---
 
 ## Backlog（想法池）

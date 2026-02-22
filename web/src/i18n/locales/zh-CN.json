@@ -60,6 +60,7 @@
   "detail.limitationsCard": "局限性",
   "detail.futureWork": "未来工作",
   "detail.relevanceScore": "相关性评分",
+  "detail.relevanceScoreTooltip": "由 AI 评估的研究创新性和重要性评分（1-10 分），综合考量研究的创造性、重要性及对领域的贡献",
   "detail.outOf10": "满分 10",
   "table.title": "标题",
   "table.type": "类型",
