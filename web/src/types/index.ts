@@ -167,3 +167,70 @@ export interface AgentModelsSaveResponse {
   agent_models: AgentModelAssignment[]
   available_models: ModelInfo[]
 }
+
+// Paper Writing
+export interface PaperProjectSummary {
+  id: string
+  name: string
+  status: string
+  created_at: string
+  updated_at: string
+}
+
+export interface PaperSectionResponse {
+  id: string
+  title: string
+  level: number
+  outline_points: string[]
+  content: string
+  word_count: number
+  status: string
+  citations: string[]
+}
+
+export interface PaperOutlineResponse {
+  abstract_draft: string
+  sections: PaperSectionResponse[]
+  estimated_word_count: number
+}
+
+export interface CitationRefResponse {
+  key: string
+  title: string
+  authors: string
+  year: string
+  venue: string
+  source: string
+}
+
+export interface PaperProjectResponse {
+  id: string
+  name: string
+  status: string
+  language: string
+  venue: string
+  topic: string
+  research_question: string
+  key_contributions: string[]
+  target_word_count: number
+  outline: PaperOutlineResponse | null
+  draft_title: string
+  draft_abstract: string
+  draft_sections: PaperSectionResponse[]
+  draft_total_word_count: number
+  citations: CitationRefResponse[]
+  created_at: string
+  updated_at: string
+}
+
+export interface CreatePaperRequest {
+  name: string
+  topic?: string
+  language?: string
+  venue?: string
+  research_question?: string
+  key_contributions?: string[]
+  target_word_count?: number
+  reference_doc_ids?: number[]
+  additional_context?: string
+}

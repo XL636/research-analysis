@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Web: 论文写作页面 — PaperListPage(项目列表/创建) + PaperProjectPage(大纲/写作/导出) + 中英双语 (T-57)
 - Paper: 交互式论文写作功能 — 从主题到完整论文的全流程支持 (T-48~56)
 - Paper: 4 个新 Agent — OutlineAgent(大纲)、WriterAgent(写作)、CitationAgent(引用)、PolishAgent(润色) (T-49~52)
 - Paper: WriterPipeline 状态机引擎 — 创建→大纲→写作→润色→导出，支持跨会话恢复 (T-53)

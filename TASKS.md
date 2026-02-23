@@ -350,7 +350,7 @@
   - 验收：API /docs 中 Paper 路由可调用
   - 依赖：T-53, T-54
 
-- [ ] **T-57: 前端页面（PaperListPage + PaperProjectPage）**
+- [x] **T-57: 前端页面（PaperListPage + PaperProjectPage）**
   - 目标：论文写作 Web UI
   - 步骤：① PaperListPage 列表 → ② PaperProjectPage 详情（大纲/写作/导出） → ③ 路由 + 侧边栏
   - 验收：前端可创建项目、查看大纲、触发写作、导出
