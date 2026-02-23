@@ -295,6 +295,252 @@ def import_kb(
     console.print(f"[bold green]✅ 导入完成: {count} 篇文档[/bold green]")
 
 
+# ── Paper 子命令组 ──
+
+paper_app = typer.Typer(name="paper", help="论文写作工具 - 交互式生成学术论文")
+app.add_typer(paper_app, name="paper")
+
+
+@paper_app.command(name="new")
+def paper_new(
+    name: str = typer.Argument(..., help="论文名称/标题"),
+    topic: str = typer.Option("", "--topic", "-t", help="研究主题"),
+    lang: str = typer.Option("zh", "--lang", "-l", help="语言: zh/en"),
+    venue: str = typer.Option("generic", "--venue", help="目标会议: generic/neurips/icml/iclr/acl/aaai/colm/chinese_journal"),
+    question: str = typer.Option("", "--question", "-q", help="研究问题"),
+    words: int = typer.Option(8000, "--words", "-w", help="目标字数"),
+    ref: Optional[list[int]] = typer.Option(None, "--ref", "-r", help="引用的知识库文档 ID"),
+    context: str = typer.Option("", "--context", "-c", help="补充说明"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="显示详细日志"),
+) -> None:
+    """创建论文项目并自动生成大纲."""
+    _setup_logging(verbose)
+
+    from src.core.paper_models import PaperLanguage, PaperVenue
+    from src.core.writer_engine import WriterPipeline
+
+    wp = WriterPipeline()
+    project = wp.create_project(
+        name=name,
+        topic=topic,
+        language=PaperLanguage(lang),
+        venue=PaperVenue(venue),
+        research_question=question,
+        target_word_count=words,
+        reference_doc_ids=ref or [],
+        additional_context=context,
+    )
+    console.print(f"\n[bold green]项目已创建: {project.id}[/bold green]")
+
+    # 自动生成大纲
+    project = wp.generate_outline(project)
+    _print_outline(project)
+    console.print(f"\n[dim]使用 'paper outline {project.id} --action confirm' 确认大纲[/dim]")
+
+
+@paper_app.command(name="outline")
+def paper_outline(
+    project_id: str = typer.Argument(..., help="项目 ID"),
+    action: str = typer.Option("show", "--action", "-a", help="操作: show/revise/confirm"),
+    feedback: str = typer.Option("", "--feedback", "-f", help="修改反馈（revise 时使用）"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="显示详细日志"),
+) -> None:
+    """查看/修改/确认论文大纲."""
+    _setup_logging(verbose)
+
+    from src.core.writer_engine import WriterPipeline
+
+    wp = WriterPipeline()
+    project = wp.store.load(project_id)
+    if not project:
+        console.print(f"[red]项目不存在: {project_id}[/red]")
+        raise typer.Exit(1)
+
+    if action == "show":
+        _print_outline(project)
+    elif action == "revise":
+        if not feedback:
+            console.print("[red]修改大纲需要 --feedback 参数[/red]")
+            raise typer.Exit(1)
+        project = wp.revise_outline(project, feedback)
+        _print_outline(project)
+    elif action == "confirm":
+        project = wp.confirm_outline(project)
+        console.print("[bold green]大纲已确认，可以开始写作[/bold green]")
+        console.print(f"[dim]使用 'paper write {project.id}' 开始写作[/dim]")
+    else:
+        console.print(f"[red]未知操作: {action}[/red]")
+        raise typer.Exit(1)
+
+
+@paper_app.command(name="write")
+def paper_write(
+    project_id: str = typer.Argument(..., help="项目 ID"),
+    section: Optional[str] = typer.Option(None, "--section", "-s", help="指定章节 ID（不指定则写全部）"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="显示详细日志"),
+) -> None:
+    """写作论文章节."""
+    _setup_logging(verbose)
+
+    from src.core.writer_engine import WriterPipeline
+
+    wp = WriterPipeline()
+    project = wp.store.load(project_id)
+    if not project:
+        console.print(f"[red]项目不存在: {project_id}[/red]")
+        raise typer.Exit(1)
+
+    if section:
+        project = wp.write_section(project, section)
+        console.print(f"[bold green]章节 {section} 写作完成[/bold green]")
+    else:
+        project = wp.write_all_sections(project)
+        console.print("[bold green]全部章节写作完成[/bold green]")
+
+    console.print(f"[dim]使用 'paper status {project.id}' 查看进度[/dim]")
+
+
+@paper_app.command(name="revise")
+def paper_revise(
+    project_id: str = typer.Argument(..., help="项目 ID"),
+    section_id: str = typer.Argument(..., help="章节 ID"),
+    feedback: str = typer.Option(..., "--feedback", "-f", help="修改要求"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="显示详细日志"),
+) -> None:
+    """修改论文章节."""
+    _setup_logging(verbose)
+
+    from src.core.writer_engine import WriterPipeline
+
+    wp = WriterPipeline()
+    project = wp.store.load(project_id)
+    if not project:
+        console.print(f"[red]项目不存在: {project_id}[/red]")
+        raise typer.Exit(1)
+
+    project = wp.revise_section(project, section_id, feedback)
+    console.print(f"[bold green]章节 {section_id} 修改完成[/bold green]")
+
+
+@paper_app.command(name="polish")
+def paper_polish(
+    project_id: str = typer.Argument(..., help="项目 ID"),
+    instructions: str = typer.Option("", "--instructions", "-i", help="特别润色要求"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="显示详细日志"),
+) -> None:
+    """全文润色."""
+    _setup_logging(verbose)
+
+    from src.core.writer_engine import WriterPipeline
+
+    wp = WriterPipeline()
+    project = wp.store.load(project_id)
+    if not project:
+        console.print(f"[red]项目不存在: {project_id}[/red]")
+        raise typer.Exit(1)
+
+    project = wp.polish(project, instructions)
+    console.print("[bold green]全文润色完成[/bold green]")
+
+
+@paper_app.command(name="export")
+def paper_export(
+    project_id: str = typer.Argument(..., help="项目 ID"),
+    format: str = typer.Option("markdown", "--format", "-f", help="输出格式: markdown/docx/pdf/latex"),
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="输出路径"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="显示详细日志"),
+) -> None:
+    """导出论文."""
+    _setup_logging(verbose)
+
+    from src.core.writer_engine import WriterPipeline
+
+    wp = WriterPipeline()
+    project = wp.store.load(project_id)
+    if not project:
+        console.print(f"[red]项目不存在: {project_id}[/red]")
+        raise typer.Exit(1)
+
+    result = wp.export(project, fmt=format, output_path=output or "")
+    console.print(f"[bold green]论文已导出: {result}[/bold green]")
+
+
+@paper_app.command(name="list")
+def paper_list(
+    limit: int = typer.Option(20, "--limit", "-n", help="最大结果数"),
+) -> None:
+    """列出所有论文项目."""
+    from src.store.paper_store import PaperStore
+
+    store = PaperStore()
+    projects = store.list_projects(limit=limit)
+
+    if not projects:
+        console.print("[yellow]暂无论文项目[/yellow]")
+        return
+
+    table = Table(title="论文项目")
+    table.add_column("ID", style="dim")
+    table.add_column("名称", style="cyan")
+    table.add_column("状态", style="green")
+    table.add_column("更新时间", style="dim")
+
+    for p in projects:
+        table.add_row(p["id"], p["name"], p["status"], p["updated_at"])
+
+    console.print(table)
+
+
+@paper_app.command(name="status")
+def paper_status(
+    project_id: str = typer.Argument(..., help="项目 ID"),
+) -> None:
+    """查看论文项目状态."""
+    from src.store.paper_store import PaperStore
+
+    store = PaperStore()
+    project = store.load(project_id)
+    if not project:
+        console.print(f"[red]项目不存在: {project_id}[/red]")
+        raise typer.Exit(1)
+
+    console.print(f"\n[bold]{project.name}[/bold]")
+    console.print(f"  ID: {project.id}")
+    console.print(f"  状态: {project.status.value}")
+    console.print(f"  语言: {project.language.value}")
+    console.print(f"  目标字数: {project.target_word_count}")
+    console.print(f"  引用数: {len(project.citations)}")
+
+    if project.draft:
+        console.print(f"  当前字数: {project.draft.total_word_count}")
+        console.print(f"\n  [bold]章节进度:[/bold]")
+        for s in project.draft.sections:
+            status_icon = {"pending": "⏳", "writing": "✏️", "draft": "📝", "revising": "🔄", "done": "✅"}.get(s.status.value, "❓")
+            console.print(f"    {status_icon} [{s.id}] {s.title} ({s.word_count} 字)")
+
+
+def _print_outline(project) -> None:
+    """打印论文大纲."""
+    if not project.outline:
+        console.print("[yellow]暂无大纲[/yellow]")
+        return
+
+    outline = project.outline
+    console.print(f"\n[bold]论文大纲: {project.name}[/bold]")
+
+    if outline.abstract_draft:
+        console.print(f"\n[dim]摘要草稿:[/dim]\n{outline.abstract_draft}")
+
+    console.print(f"\n[dim]预估字数: {outline.estimated_word_count}[/dim]")
+    console.print(f"\n[bold]章节结构:[/bold]")
+
+    for s in outline.sections:
+        indent = "  " * s.level
+        console.print(f"{indent}[cyan]{s.id}[/cyan] {s.title} ({s.word_count} 字)")
+        for point in s.outline_points:
+            console.print(f"{indent}  - {point}")
+
+
 @app.command()
 def serve(
     host: str = typer.Option("0.0.0.0", "--host", "-h", help="绑定地址"),

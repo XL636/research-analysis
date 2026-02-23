@@ -171,3 +171,91 @@ class AgentModelsSaveResponse(BaseModel):
     success: bool
     agent_models: list[AgentModelAssignment]
     available_models: list[ModelInfo]
+
+
+# --- Paper Writing ---
+
+class CreatePaperRequest(BaseModel):
+    name: str
+    topic: str = ""
+    language: str = "zh"
+    venue: str = "generic"
+    research_question: str = ""
+    key_contributions: list[str] = Field(default_factory=list)
+    target_word_count: int = 8000
+    reference_doc_ids: list[int] = Field(default_factory=list)
+    additional_context: str = ""
+
+
+class PaperProjectSummary(BaseModel):
+    id: str
+    name: str
+    status: str = ""
+    created_at: str = ""
+    updated_at: str = ""
+
+
+class PaperSectionResponse(BaseModel):
+    id: str = ""
+    title: str = ""
+    level: int = 1
+    outline_points: list[str] = Field(default_factory=list)
+    content: str = ""
+    word_count: int = 0
+    status: str = "pending"
+    citations: list[str] = Field(default_factory=list)
+
+
+class PaperOutlineResponse(BaseModel):
+    abstract_draft: str = ""
+    sections: list[PaperSectionResponse] = Field(default_factory=list)
+    estimated_word_count: int = 0
+
+
+class CitationRefResponse(BaseModel):
+    key: str = ""
+    title: str = ""
+    authors: str = ""
+    year: str = ""
+    venue: str = ""
+    source: str = ""
+
+
+class PaperProjectResponse(BaseModel):
+    id: str
+    name: str
+    status: str = ""
+    language: str = "zh"
+    venue: str = "generic"
+    topic: str = ""
+    research_question: str = ""
+    key_contributions: list[str] = Field(default_factory=list)
+    target_word_count: int = 8000
+    outline: PaperOutlineResponse | None = None
+    draft_title: str = ""
+    draft_abstract: str = ""
+    draft_sections: list[PaperSectionResponse] = Field(default_factory=list)
+    draft_total_word_count: int = 0
+    citations: list[CitationRefResponse] = Field(default_factory=list)
+    created_at: str = ""
+    updated_at: str = ""
+
+
+class OutlineReviseRequest(BaseModel):
+    feedback: str
+
+
+class SectionWriteRequest(BaseModel):
+    section_id: str = ""  # 空则写全部
+
+
+class SectionReviseRequest(BaseModel):
+    feedback: str
+
+
+class PolishRequest(BaseModel):
+    instructions: str = ""
+
+
+class PaperExportRequest(BaseModel):
+    format: str = "markdown"  # markdown/docx/pdf/latex

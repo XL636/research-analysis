@@ -63,6 +63,7 @@ def create_app() -> FastAPI:
     from src.api.routes.knowledge import router as knowledge_router
     from src.api.routes.pipeline import router as pipeline_router
     from src.api.routes.reports import router as reports_router
+    from src.api.routes.paper import router as paper_router
     from src.api.routes.settings import router as settings_router
 
     app.include_router(pipeline_router, prefix="/api/pipeline", tags=["Pipeline"])
@@ -70,6 +71,7 @@ def create_app() -> FastAPI:
     app.include_router(dashboard_router, prefix="/api/dashboard", tags=["Dashboard"])
     app.include_router(reports_router, prefix="/api/reports", tags=["Reports"])
     app.include_router(settings_router, prefix="/api/settings", tags=["Settings"])
+    app.include_router(paper_router, prefix="/api/paper", tags=["Paper"])
 
     # Serve static frontend (production build)
     dist_dir = Path("web/dist")

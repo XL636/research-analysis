@@ -294,6 +294,68 @@
   - 验收：PPTX 蓝白配色有 bullet 列表，PDF A4 中文正常，前端支持 .docx 上传和 PDF 下载
   - 依赖：T-46
 
+## Phase 7: 论文写作功能 `[进行中]`
+
+- [x] **T-48: 论文数据模型 + 持久化**
+  - 目标：PaperProject, PaperOutline, PaperSection, PaperDraft, CitationRef 模型 + SQLite 存储
+  - 步骤：① paper_models.py 数据模型 → ② paper_store.py SQLite 持久化
+  - 验收：模型创建/序列化/反序列化正常，CRUD 操作通过
+  - 依赖：无
+
+- [x] **T-49: OutlineAgent + outline_system.txt**
+  - 目标：大纲生成/修改 Agent
+  - 步骤：① outline_system.txt prompt → ② OutlineAgent process/revise 方法
+  - 验收：生成结构合理的论文大纲 JSON
+  - 依赖：T-48
+
+- [x] **T-50: WriterAgent + writer_system.txt**
+  - 目标：逐章节写作/修改 Agent
+  - 步骤：① writer_system.txt prompt → ② WriterAgent process/revise 方法
+  - 验收：按大纲要点生成章节内容
+  - 依赖：T-48
+
+- [x] **T-51: CitationAgent + citation_system.txt**
+  - 目标：从知识库收集引用 Agent
+  - 步骤：① citation_system.txt prompt → ② CitationAgent 知识库搜索 + LLM 关键词推荐
+  - 验收：从知识库加载文献 + 搜索补充引用
+  - 依赖：T-48
+
+- [x] **T-52: PolishAgent + polish_system.txt**
+  - 目标：全文润色 Agent
+  - 步骤：① polish_system.txt prompt → ② PolishAgent 全文润色
+  - 验收：润色后论文语言质量、术语统一性提升
+  - 依赖：T-48
+
+- [x] **T-53: WriterPipeline 引擎**
+  - 目标：交互式状态机引擎，每步暂停等待用户
+  - 步骤：① 初始化 4 个 Agent → ② create/outline/write/revise/polish/export 步骤方法 → ③ PaperStore 持久化
+  - 验收：完整 Pipeline 可逐步执行，跨会话恢复
+  - 依赖：T-49, T-50, T-51, T-52
+
+- [x] **T-54: LaTeX 输出 + 论文适配器**
+  - 目标：LaTeX 导出（.tex + .bib）+ PaperDraft → Report 适配
+  - 步骤：① latex_writer.py（Markdown→LaTeX, BibTeX） → ② paper_adapters.py（复用 docx/pdf writer）
+  - 验收：生成可编译的 LaTeX 文件
+  - 依赖：T-48
+
+- [x] **T-55: CLI 集成 + settings.yaml 更新**
+  - 目标：main.py paper 子命令组 + 模型配置
+  - 步骤：① paper_app Typer 子命令 → ② 8 个命令实现 → ③ settings.yaml 新增 agent_models + paper 配置
+  - 验收：`paper new/outline/write/revise/polish/export/list/status` 全部可用
+  - 依赖：T-53, T-54
+
+- [x] **T-56: Web API routes + schemas**
+  - 目标：paper API 路由 + Pydantic schema + app.py 注册
+  - 步骤：① schemas.py 新增 Paper schema → ② routes/paper.py 全部端点 → ③ app.py 注册 paper_router
+  - 验收：API /docs 中 Paper 路由可调用
+  - 依赖：T-53, T-54
+
+- [ ] **T-57: 前端页面（PaperListPage + PaperProjectPage）**
+  - 目标：论文写作 Web UI
+  - 步骤：① PaperListPage 列表 → ② PaperProjectPage 详情（大纲/写作/导出） → ③ 路由 + 侧边栏
+  - 验收：前端可创建项目、查看大纲、触发写作、导出
+  - 依赖：T-56
+
 ---
 
 ## Backlog（想法池）
