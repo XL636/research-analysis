@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Paper: CitationAgent 接入外部学术搜索 — Semantic Scholar / OpenAlex / arXiv 三源插件式架构，自动补充论文引用 (T-60)
+- Core: src/core/search_client.py — SearchProvider ABC + SemanticScholarProvider / OpenAlexProvider / ArxivProvider + SearchManager 聚合去重 (T-60)
+- Web: Settings 页学术搜索源管理区块 — SearchProviderCard 组件，启用/禁用开关，API Key 输入 (T-60)
+- API: GET/PUT /api/settings/search-providers 端点 — 查询和更新搜索源配置 (T-60)
+- Config: settings.yaml 新增 search_providers 配置段（3 个搜索源，独立 timeout/max_results）(T-60)
+- Deps: httpx 从 dev 移至主依赖 (T-60)
 - Paper: Pipeline Prompt 融入学术写作知识 — citation（关键词维度覆盖+粒度控制+引用质量标准）、outline（叙事三支柱+5 句摘要公式+会议适配表）、writer（章节结构模板+Gopen&Swan 7 原则+词汇规则）、polish（四维评估框架+叙事连贯性检查+预提交清单）(T-59)
 - Web: 侧边栏折叠功能 — 点击收起为图标模式(64px)，展开恢复(256px)，动画过渡，localStorage 持久化
 - Web: 论文写作页面 — PaperListPage(项目列表/创建) + PaperProjectPage(大纲/写作/导出) + 中英双语 (T-57)

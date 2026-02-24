@@ -370,6 +370,12 @@
   - 验收：4 个 prompt 文件更新，JSON schema 与 Agent 代码完全匹配，不改任何 Python 代码
   - 依赖：T-49, T-50, T-51, T-52
 
+- [x] **T-60: CitationAgent 接入外部学术文献搜索**
+  - 目标：插件式接入 Semantic Scholar / OpenAlex / arXiv 外部学术搜索 API，补充论文引用
+  - 步骤：① settings.yaml 新增 search_providers 配置 → ② pyproject.toml httpx 移至主依赖 → ③ src/core/search_client.py（Provider ABC + 3 实现 + SearchManager） → ④ CitationAgent 新增 _search_external() → ⑤ API schemas + GET/PUT /search-providers 端点 → ⑥ 前端 SearchProviderCard 组件 + SettingsPage 搜索源区块 + i18n
+  - 验收：Settings 页显示 3 个搜索源卡片，可切换启用/禁用，论文写作 Pipeline 自动从外部 API 补充引用
+  - 依赖：T-51
+
 ---
 
 ## Backlog（想法池）

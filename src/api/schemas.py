@@ -150,6 +150,32 @@ class ModelInfo(BaseModel):
     api_key_configured: bool
 
 
+# --- Search Providers ---
+
+class SearchProviderStatus(BaseModel):
+    name: str  # "semantic_scholar" | "openalex" | "arxiv"
+    enabled: bool = True
+    api_key_env: str = ""
+    api_key_configured: bool = False
+    masked_key: str = ""
+
+
+class SearchProvidersResponse(BaseModel):
+    providers: list[SearchProviderStatus]
+
+
+class SearchProviderSaveRequest(BaseModel):
+    providers: dict[str, dict] = Field(default_factory=dict)  # {"semantic_scholar": {"enabled": true}}
+    keys: dict[str, str] = Field(default_factory=dict)  # {"SEMANTIC_SCHOLAR_API_KEY": "xxx"}
+
+
+class SearchProviderSaveResponse(BaseModel):
+    success: bool
+    providers: list[SearchProviderStatus]
+
+
+# --- Agent Model Assignment ---
+
 class AgentModelAssignment(BaseModel):
     agent: str
     model: str

@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Settings, Save, Eye, EyeOff, CheckCircle, ChevronDown, ChevronRight, Cpu } from 'lucide-react'
+import { Settings, Save, Eye, EyeOff, CheckCircle, ChevronDown, ChevronRight, Cpu, Globe } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { getApiKeyStatus, saveApiKeys, getAgentModels, saveAgentModels } from '../api/settings'
+import { getApiKeyStatus, saveApiKeys, getAgentModels, saveAgentModels, getSearchProviders, saveSearchProviders } from '../api/settings'
 import Badge from '../components/ui/Badge'
 import AgentModelCard from '../components/settings/AgentModelCard'
+import SearchProviderCard from '../components/settings/SearchProviderCard'
 import type { ProviderStatus } from '../types'
 
 export default function SettingsPage() {
@@ -15,6 +16,12 @@ export default function SettingsPage() {
   const { data: agentData, isLoading: agentLoading } = useQuery({
     queryKey: ['agent-models'],
     queryFn: getAgentModels,
+  })
+
+  // Search providers query
+  const { data: searchData, isLoading: searchLoading } = useQuery({
+    queryKey: ['search-providers'],
+    queryFn: getSearchProviders,
   })
 
   // API keys query
@@ -49,8 +56,30 @@ export default function SettingsPage() {
     },
   })
 
+  // Save search providers mutation
+  const searchProviderMutation = useMutation({
+    mutationFn: saveSearchProviders,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['search-providers'] })
+    },
+  })
+
   const handleModelChange = (agent: string, model: string) => {
     agentModelMutation.mutate({ agent_models: { [agent]: model } })
+  }
+
+  const handleSearchProviderToggle = (name: string, enabled: boolean) => {
+    searchProviderMutation.mutate({
+      providers: { [name]: { enabled } },
+      keys: {},
+    })
+  }
+
+  const handleSearchProviderKeySave = async (envVar: string, key: string) => {
+    await searchProviderMutation.mutateAsync({
+      providers: {},
+      keys: { [envVar]: key },
+    })
   }
 
   const handleInlineKeySave = async (envVar: string, key: string) => {
@@ -67,7 +96,7 @@ export default function SettingsPage() {
 
   const hasChanges = Object.values(keyInputs).some((v) => v.trim())
 
-  if (agentLoading || apiKeyLoading) {
+  if (agentLoading || apiKeyLoading || searchLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <p className="text-gray-500">{t('common.loading')}</p>
@@ -78,6 +107,7 @@ export default function SettingsPage() {
   const agentModels = agentData?.agent_models ?? []
   const availableModels = agentData?.available_models ?? []
   const providers = apiKeyData?.providers ?? []
+  const searchProviders = searchData?.providers ?? []
 
   return (
     <div className="space-y-6">
@@ -108,6 +138,30 @@ export default function SettingsPage() {
               onModelChange={handleModelChange}
               onSaveKey={handleInlineKeySave}
               isSaving={apiKeyMutation.isPending}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Search Providers */}
+      <div>
+        <div className="flex items-center gap-2 mb-4">
+          <Globe className="h-5 w-5 text-blue-500" />
+          <h2 className="text-lg font-semibold text-gray-900">
+            {t('settings.searchProviders')}
+          </h2>
+        </div>
+        <p className="text-sm text-gray-500 mb-4">
+          {t('settings.searchProvidersDesc')}
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {searchProviders.map((sp) => (
+            <SearchProviderCard
+              key={sp.name}
+              provider={sp}
+              onToggle={handleSearchProviderToggle}
+              onSaveKey={handleSearchProviderKeySave}
+              isSaving={searchProviderMutation.isPending}
             />
           ))}
         </div>

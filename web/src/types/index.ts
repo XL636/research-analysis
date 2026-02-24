@@ -137,6 +137,29 @@ export interface ApiKeySaveResponse {
   providers: ProviderStatus[]
 }
 
+// Search Providers
+export interface SearchProviderStatus {
+  name: string  // "semantic_scholar" | "openalex" | "arxiv"
+  enabled: boolean
+  api_key_env: string
+  api_key_configured: boolean
+  masked_key: string
+}
+
+export interface SearchProvidersResponse {
+  providers: SearchProviderStatus[]
+}
+
+export interface SearchProviderSaveRequest {
+  providers: Record<string, Record<string, unknown>>
+  keys: Record<string, string>
+}
+
+export interface SearchProviderSaveResponse {
+  success: boolean
+  providers: SearchProviderStatus[]
+}
+
 // Agent Model Assignment
 export interface ModelInfo {
   name: string

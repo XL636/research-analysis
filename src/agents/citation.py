@@ -70,8 +70,61 @@ class CitationAgent(BaseAgent):
                 except Exception as e:
                     logger.warning(f"KB search failed for '{kw}': {e}")
 
+        # 4. 外部学术搜索（如果配置了搜索源）
+        self._search_external(keywords, citations, seen_titles)
+
         logger.info(f"Collected {len(citations)} citations for project '{project.name}'")
         return citations
+
+    def _search_external(
+        self,
+        keywords: list[str],
+        citations: list[CitationRef],
+        seen_titles: set[str],
+    ) -> None:
+        """从外部学术搜索 API 补充引用."""
+        try:
+            from src.core.search_client import SearchManager
+
+            manager = SearchManager()
+            if not manager.has_providers:
+                logger.debug("No external search providers available, skipping")
+                return
+
+            provider_names = [p.name for p in manager.available_providers]
+            logger.info(f"Searching external sources: {provider_names}")
+
+            search_keywords = keywords[:3]
+            ext_index = 0
+
+            for kw in search_keywords:
+                try:
+                    results = manager.search(kw, max_results=3)
+                    for r in results:
+                        title_key = r.title.lower().strip()
+                        if title_key and title_key not in seen_titles:
+                            seen_titles.add(title_key)
+                            ext_index += 1
+                            citations.append(CitationRef(
+                                key=f"{r.source}-{ext_index}",
+                                title=r.title,
+                                authors=r.authors,
+                                year=r.year,
+                                venue=r.venue,
+                                doi=r.doi,
+                                url=r.url,
+                                abstract=r.abstract[:300],
+                                source=r.source,
+                            ))
+                except Exception as e:
+                    logger.warning(f"External search failed for '{kw}': {e}")
+
+            manager.close()
+            if ext_index > 0:
+                logger.info(f"Added {ext_index} citations from external search")
+
+        except Exception as e:
+            logger.warning(f"External search initialization failed: {e}")
 
     def _get_search_keywords(self, project: PaperProject) -> list[str]:
         """用 LLM 推荐搜索关键词."""

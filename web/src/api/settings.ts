@@ -6,6 +6,9 @@ import type {
   ApiKeyStatusResponse,
   ApiKeySaveRequest,
   ApiKeySaveResponse,
+  SearchProvidersResponse,
+  SearchProviderSaveRequest,
+  SearchProviderSaveResponse,
 } from '../types'
 
 export async function getApiKeyStatus(): Promise<ApiKeyStatusResponse> {
@@ -25,5 +28,15 @@ export async function getAgentModels(): Promise<AgentModelsResponse> {
 
 export async function saveAgentModels(req: AgentModelsSaveRequest): Promise<AgentModelsSaveResponse> {
   const { data } = await api.put<AgentModelsSaveResponse>('/settings/agent-models', req)
+  return data
+}
+
+export async function getSearchProviders(): Promise<SearchProvidersResponse> {
+  const { data } = await api.get<SearchProvidersResponse>('/settings/search-providers')
+  return data
+}
+
+export async function saveSearchProviders(req: SearchProviderSaveRequest): Promise<SearchProviderSaveResponse> {
+  const { data } = await api.put<SearchProviderSaveResponse>('/settings/search-providers', req)
   return data
 }

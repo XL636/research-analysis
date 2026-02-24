@@ -1349,6 +1349,7 @@ name = "research-analysis"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "httpx" },
     { name = "loguru" },
     { name = "openai" },
     { name = "pydantic" },
@@ -1383,7 +1384,6 @@ web = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "httpx" },
     { name = "pytest" },
     { name = "ruff" },
 ]
@@ -1392,6 +1392,7 @@ dev = [
 requires-dist = [
     { name = "fastapi", marker = "extra == 'web'", specifier = ">=0.115" },
     { name = "faster-whisper", marker = "extra == 'audio'", specifier = ">=1.0" },
+    { name = "httpx", specifier = ">=0.28.1" },
     { name = "loguru", specifier = ">=0.7" },
     { name = "markdown2", marker = "extra == 'pdf'", specifier = ">=2.4" },
     { name = "openai", specifier = ">=1.0" },
@@ -1413,7 +1414,6 @@ provides-extras = ["audio", "docx", "web", "pdf", "dev"]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "httpx", specifier = ">=0.28.1" },
     { name = "pytest", specifier = ">=9.0.2" },
     { name = "ruff", specifier = ">=0.15.2" },
 ]

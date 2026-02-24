@@ -19,6 +19,10 @@ from src.api.schemas import (
     ApiKeyStatusResponse,
     ModelInfo,
     ProviderStatus,
+    SearchProviderSaveRequest,
+    SearchProviderSaveResponse,
+    SearchProviderStatus,
+    SearchProvidersResponse,
 )
 
 router = APIRouter()
@@ -224,4 +228,69 @@ async def save_agent_models(req: AgentModelsSaveRequest):
     assignments, models = _build_agent_model_data()
     return AgentModelsSaveResponse(
         success=True, agent_models=assignments, available_models=models
+    )
+
+
+# --- Search Providers ---
+
+
+def _build_search_provider_list() -> list[SearchProviderStatus]:
+    """Build search provider status list from settings.yaml + env."""
+    config = _load_full_config()
+    providers_conf = config.get("search_providers", {})
+    statuses = []
+    for name, conf in providers_conf.items():
+        api_key_env = conf.get("api_key_env", "")
+        current_key = os.environ.get(api_key_env, "") if api_key_env else ""
+        configured = bool(current_key)
+        masked = f"****{current_key[-4:]}" if len(current_key) >= 4 else ""
+        statuses.append(
+            SearchProviderStatus(
+                name=name,
+                enabled=conf.get("enabled", True),
+                api_key_env=api_key_env,
+                api_key_configured=configured,
+                masked_key=masked,
+            )
+        )
+    return statuses
+
+
+@router.get("/search-providers", response_model=SearchProvidersResponse)
+async def get_search_providers():
+    """Get current search provider configuration status."""
+    return SearchProvidersResponse(providers=_build_search_provider_list())
+
+
+@router.put("/search-providers", response_model=SearchProviderSaveResponse)
+async def save_search_providers(req: SearchProviderSaveRequest):
+    """Update search provider settings and save API keys."""
+    config = _load_full_config()
+    providers_conf = config.setdefault("search_providers", {})
+
+    # Update enabled/disabled status
+    for name, updates in req.providers.items():
+        if name in providers_conf:
+            for key, value in updates.items():
+                if key in ("enabled",):
+                    providers_conf[name][key] = value
+
+    _save_config(config)
+
+    # Save API keys to .env and os.environ
+    if req.keys:
+        valid_env_vars = {
+            conf.get("api_key_env")
+            for conf in providers_conf.values()
+            if conf.get("api_key_env")
+        }
+        env_data = _read_env_file()
+        for key, value in req.keys.items():
+            if key in valid_env_vars and value:
+                env_data[key] = value
+                os.environ[key] = value
+        _write_env_file(env_data)
+
+    return SearchProviderSaveResponse(
+        success=True, providers=_build_search_provider_list()
     )
