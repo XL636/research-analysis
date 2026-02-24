@@ -70,7 +70,7 @@ async def run_pipeline(
             try:
                 from src.store.knowledge_base import KnowledgeBase
                 kb = KnowledgeBase()
-                doc_id = kb.store_analysis(analysis, file_path=doc.file_path, file_type=doc.file_type.value)
+                doc_id = kb.store_analysis(analysis, file_path=doc.file_path, file_type=doc.file_type.value, source_type="user_upload")
                 stored_doc_ids.append(doc_id)
             except Exception:
                 pass

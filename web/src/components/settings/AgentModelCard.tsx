@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Eye, EyeOff, Save, CheckCircle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import Badge from '../ui/Badge'
@@ -25,6 +25,40 @@ export default function AgentModelCard({
   const [keySaved, setKeySaved] = useState(false)
 
   const needsKey = !assignment.api_key_configured
+
+  // Group models by provider
+  const modelsByProvider = useMemo(() => {
+    const grouped: Record<string, ModelInfo[]> = {}
+    for (const m of availableModels) {
+      if (!grouped[m.provider]) grouped[m.provider] = []
+      grouped[m.provider].push(m)
+    }
+    return grouped
+  }, [availableModels])
+
+  // Derive current provider from the assigned model
+  const currentProvider = useMemo(() => {
+    const match = availableModels.find((m) => m.name === assignment.model)
+    return match?.provider ?? Object.keys(modelsByProvider)[0] ?? ''
+  }, [assignment.model, availableModels, modelsByProvider])
+
+  const [selectedProvider, setSelectedProvider] = useState(currentProvider)
+
+  // Sync selectedProvider when external model changes
+  useEffect(() => {
+    setSelectedProvider(currentProvider)
+  }, [currentProvider])
+
+  const providerModels = modelsByProvider[selectedProvider] ?? []
+
+  const handleProviderChange = (provider: string) => {
+    setSelectedProvider(provider)
+    // Auto-select first model of the new provider
+    const first = modelsByProvider[provider]?.[0]
+    if (first) {
+      onModelChange(assignment.agent, first.name)
+    }
+  }
 
   const handleSaveKey = async () => {
     if (!keyInput.trim()) return
@@ -53,22 +87,43 @@ export default function AgentModelCard({
         )}
       </div>
 
-      {/* Model dropdown */}
-      <div>
-        <label className="block text-xs font-medium text-gray-500 mb-1">
-          {t('settings.modelLabel')}
-        </label>
-        <select
-          value={assignment.model}
-          onChange={(e) => onModelChange(assignment.agent, e.target.value)}
-          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
-        >
-          {availableModels.map((m) => (
-            <option key={m.name} value={m.name}>
-              {m.name} ({m.provider})
-            </option>
-          ))}
-        </select>
+      {/* Two-level model selection */}
+      <div className="space-y-3">
+        {/* Provider dropdown */}
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1">
+            {t('settings.providerLabel')}
+          </label>
+          <select
+            value={selectedProvider}
+            onChange={(e) => handleProviderChange(e.target.value)}
+            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none capitalize"
+          >
+            {Object.keys(modelsByProvider).map((provider) => (
+              <option key={provider} value={provider}>
+                {provider}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Model dropdown (filtered by provider) */}
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1">
+            {t('settings.modelLabel')}
+          </label>
+          <select
+            value={assignment.model}
+            onChange={(e) => onModelChange(assignment.agent, e.target.value)}
+            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+          >
+            {providerModels.map((m) => (
+              <option key={m.name} value={m.name}>
+                {m.name}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Inline API key prompt (only when key is missing) */}

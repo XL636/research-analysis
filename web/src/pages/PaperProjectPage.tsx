@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import {
   ArrowLeft,
   FileText,
@@ -28,6 +28,7 @@ import {
 import Badge from '../components/ui/Badge'
 import EmptyState from '../components/ui/EmptyState'
 import MarkdownRenderer from '../components/ui/MarkdownRenderer'
+import { usePaperOperation } from '../contexts/PaperOperationContext'
 import type { PaperSectionResponse } from '../types'
 
 type ActiveTab = 'research' | 'outline' | 'draft' | 'export'
@@ -72,12 +73,15 @@ export default function PaperProjectPage() {
   const researchPapersMut = useResearchPapers()
   const { data: referencesData } = useReferences(id || '')
 
+  const { startOperation, clearOperation } = usePaperOperation()
+
   const [activeTab, setActiveTab] = useState<ActiveTab>('research')
   const [feedback, setFeedback] = useState('')
   const [selectedSection, setSelectedSection] = useState<string | null>(null)
   const [sectionFeedback, setSectionFeedback] = useState('')
   const [polishInstructions, setPolishInstructions] = useState('')
   const [exportFormat, setExportFormat] = useState('markdown')
+  const [showResearchConfirm, setShowResearchConfirm] = useState(false)
 
   const isAnyMutating =
     reviseOutline.isPending ||
@@ -127,35 +131,56 @@ export default function PaperProjectPage() {
 
   const handleReviseOutline = () => {
     if (!feedback.trim()) return
-    reviseOutline.mutate({ id: project.id, feedback: feedback.trim() })
+    startOperation(project.id, project.name, 'revise')
+    reviseOutline.mutate(
+      { id: project.id, feedback: feedback.trim() },
+      { onSettled: () => clearOperation() },
+    )
     setFeedback('')
   }
 
   const handleConfirmOutline = () => {
-    confirmOutlineMut.mutate(project.id)
+    startOperation(project.id, project.name, 'outline')
+    confirmOutlineMut.mutate(project.id, { onSettled: () => clearOperation() })
   }
 
   const handleWriteAll = () => {
-    writeSections.mutate({ id: project.id })
+    startOperation(project.id, project.name, 'write')
+    writeSections.mutate(
+      { id: project.id },
+      { onSettled: () => clearOperation() },
+    )
   }
 
   const handleWriteSection = (sectionId: string) => {
-    writeSections.mutate({ id: project.id, sectionId })
+    startOperation(project.id, project.name, 'write')
+    writeSections.mutate(
+      { id: project.id, sectionId },
+      { onSettled: () => clearOperation() },
+    )
   }
 
   const handleReviseSection = () => {
     if (!selectedSection || !sectionFeedback.trim()) return
-    reviseSectionMut.mutate({
-      id: project.id,
-      sectionId: selectedSection,
-      feedback: sectionFeedback.trim(),
-    })
+    startOperation(project.id, project.name, 'revise')
+    reviseSectionMut.mutate(
+      {
+        id: project.id,
+        sectionId: selectedSection,
+        feedback: sectionFeedback.trim(),
+      },
+      { onSettled: () => clearOperation() },
+    )
     setSectionFeedback('')
     setSelectedSection(null)
   }
 
   const handlePolish = () => {
-    polishPaper.mutate({ id: project.id, instructions: polishInstructions.trim() || undefined })
+    startOperation(project.id, project.name, 'polish')
+    polishPaper.mutate(
+      { id: project.id, instructions: polishInstructions.trim() || undefined },
+      { onSettled: () => clearOperation() },
+    )
     setPolishInstructions('')
   }
 
@@ -171,7 +196,21 @@ export default function PaperProjectPage() {
   }
 
   const handleStartResearch = () => {
-    researchPapersMut.mutate({ id: project.id })
+    // If already researched or has references, show confirm dialog
+    if (project.status === 'researched' || (referencesData && referencesData.references.length > 0)) {
+      setShowResearchConfirm(true)
+      return
+    }
+    doResearch()
+  }
+
+  const doResearch = () => {
+    setShowResearchConfirm(false)
+    startOperation(project.id, project.name, 'research')
+    researchPapersMut.mutate(
+      { id: project.id },
+      { onSettled: () => clearOperation() },
+    )
   }
 
   const tabs: { key: ActiveTab; labelKey: string }[] = [
@@ -283,6 +322,27 @@ export default function PaperProjectPage() {
                 })}
               </div>
             )}
+
+            {/* Research confirm dialog */}
+            {showResearchConfirm && (
+              <div className="px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800 space-y-3">
+                <p>{t('paper.researchAlreadyDone')}</p>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={doResearch}
+                    className="px-3 py-1.5 text-sm text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors duration-200"
+                  >
+                    {t('paper.researchContinue')}
+                  </button>
+                  <button
+                    onClick={() => setShowResearchConfirm(false)}
+                    className="px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+                  >
+                    {t('common.cancel')}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* References list */}
@@ -299,12 +359,31 @@ export default function PaperProjectPage() {
                     className="border border-gray-200 rounded-lg p-4"
                   >
                     <div className="flex items-center justify-between mb-1">
-                      <span className="font-medium text-primary-950 text-sm">
-                        {ref.title}
-                      </span>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
                         {ref.has_analysis ? (
-                          <Badge variant="success">{t('paper.refAnalyzed')}</Badge>
+                          <Link
+                            to={`/knowledge/${ref.doc_id}`}
+                            className="font-medium text-primary-600 hover:text-primary-800 text-sm underline underline-offset-2 truncate"
+                          >
+                            {ref.title}
+                          </Link>
+                        ) : (
+                          <span className="font-medium text-primary-950 text-sm truncate">
+                            {ref.title}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {ref.has_analysis ? (
+                          <>
+                            <Badge variant="success">{t('paper.refAnalyzed')}</Badge>
+                            <Link
+                              to={`/knowledge/${ref.doc_id}`}
+                              className="text-xs text-primary-600 hover:text-primary-800 underline"
+                            >
+                              {t('paper.viewDetail')}
+                            </Link>
+                          </>
                         ) : (
                           <Badge variant="warning">{t('paper.refMetadataOnly')}</Badge>
                         )}
@@ -322,6 +401,11 @@ export default function PaperProjectPage() {
                     {ref.summary && (
                       <p className="text-xs text-gray-500 mt-1 line-clamp-2">
                         {ref.summary}
+                      </p>
+                    )}
+                    {!ref.has_analysis && (
+                      <p className="text-xs text-amber-600 mt-1">
+                        {t('paper.metadataOnlyHint')}
                       </p>
                     )}
                   </div>

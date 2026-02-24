@@ -8,6 +8,9 @@ import AgentModelCard from '../components/settings/AgentModelCard'
 import SearchProviderCard from '../components/settings/SearchProviderCard'
 import type { ProviderStatus } from '../types'
 
+const ANALYSIS_AGENTS = ['parser', 'analyzer', 'synthesizer', 'generator', 'reviewer']
+const PAPER_AGENTS = ['outline', 'writer', 'citation', 'research', 'polish']
+
 export default function SettingsPage() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
@@ -126,20 +129,46 @@ export default function SettingsPage() {
             {t('settings.agentModels')}
           </h2>
         </div>
-        <p className="text-sm text-gray-500 mb-4">
+        <p className="text-sm text-gray-500 mb-6">
           {t('settings.agentModelsDesc')}
         </p>
+
+        {/* Analysis Workflow Agents */}
+        <h3 className="text-md font-semibold text-gray-800 mb-3">
+          {t('settings.agentGroupAnalysis')}
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">
+          {agentModels
+            .filter((a) => ANALYSIS_AGENTS.includes(a.agent))
+            .map((a) => (
+              <AgentModelCard
+                key={a.agent}
+                assignment={a}
+                availableModels={availableModels}
+                onModelChange={handleModelChange}
+                onSaveKey={handleInlineKeySave}
+                isSaving={apiKeyMutation.isPending}
+              />
+            ))}
+        </div>
+
+        {/* Paper Writing Workflow Agents */}
+        <h3 className="text-md font-semibold text-gray-800 mb-3">
+          {t('settings.agentGroupPaper')}
+        </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {agentModels.map((a) => (
-            <AgentModelCard
-              key={a.agent}
-              assignment={a}
-              availableModels={availableModels}
-              onModelChange={handleModelChange}
-              onSaveKey={handleInlineKeySave}
-              isSaving={apiKeyMutation.isPending}
-            />
-          ))}
+          {agentModels
+            .filter((a) => PAPER_AGENTS.includes(a.agent))
+            .map((a) => (
+              <AgentModelCard
+                key={a.agent}
+                assignment={a}
+                availableModels={availableModels}
+                onModelChange={handleModelChange}
+                onSaveKey={handleInlineKeySave}
+                isSaving={apiKeyMutation.isPending}
+              />
+            ))}
         </div>
       </div>
 

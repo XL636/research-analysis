@@ -87,8 +87,14 @@ class WriterPipeline:
             "max_papers": 10,
         })
 
-        # 将调研结果的 doc_ids 存入 project
-        project.research_doc_ids = result.researched_doc_ids
+        # 将调研结果的 doc_ids 合并到 project（去重，支持多次调研追加）
+        existing = set(project.research_doc_ids)
+        merged = list(project.research_doc_ids)
+        for doc_id in result.researched_doc_ids:
+            if doc_id not in existing:
+                merged.append(doc_id)
+                existing.add(doc_id)
+        project.research_doc_ids = merged
         project.status = ProjectStatus.RESEARCHED
         self.store.save(project)
 

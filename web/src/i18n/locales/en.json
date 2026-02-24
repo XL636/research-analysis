@@ -226,5 +226,31 @@
   "knowledge.sourceAll": "All Sources",
   "knowledge.sourceUserUpload": "User Upload",
   "knowledge.sourceAutoResearch": "Auto Research",
-  "knowledge.sourceManualRef": "Manual Reference"
+  "knowledge.sourceManualRef": "Manual Reference",
+
+  "paper.viewDetail": "View",
+  "paper.metadataOnlyHint": "Metadata only — full analysis is not available",
+  "paper.researchAlreadyDone": "Research already conducted. Running again will add new papers (no duplicates).",
+  "paper.researchContinue": "Continue Research",
+  "paper.globalProgress": "{{name}}: {{operation}} in progress...",
+  "paper.goToProject": "Go to project",
+  "paper.op.research": "Literature research",
+  "paper.op.write": "Writing sections",
+  "paper.op.polish": "Polishing",
+  "paper.op.outline": "Generating outline",
+  "paper.op.revise": "Revising",
+
+  "settings.agentGroupAnalysis": "Analysis Workflow",
+  "settings.agentGroupPaper": "Paper Writing Workflow",
+  "settings.agent.outline": "Outline",
+  "settings.agent.writer": "Writer",
+  "settings.agent.citation": "Citation",
+  "settings.agent.research": "Research",
+  "settings.agent.polish": "Polish",
+  "settings.agentDesc.outline": "Generates paper outline structure",
+  "settings.agentDesc.writer": "Writes individual paper sections",
+  "settings.agentDesc.citation": "Collects and formats citations",
+  "settings.agentDesc.research": "Automatic literature research",
+  "settings.agentDesc.polish": "Full paper polishing and refinement",
+  "settings.providerLabel": "Provider"
 }

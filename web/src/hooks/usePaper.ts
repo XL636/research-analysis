@@ -118,6 +118,7 @@ export function useResearchPapers() {
       researchPapers(id, maxPapers),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['paperProject', variables.id] })
+      queryClient.invalidateQueries({ queryKey: ['paperReferences', variables.id] })
     },
   })
 }

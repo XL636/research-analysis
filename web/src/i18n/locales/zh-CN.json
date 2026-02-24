@@ -226,5 +226,31 @@
   "knowledge.sourceAll": "全部来源",
   "knowledge.sourceUserUpload": "用户上传",
   "knowledge.sourceAutoResearch": "自动调研",
-  "knowledge.sourceManualRef": "手动参考"
+  "knowledge.sourceManualRef": "手动参考",
+
+  "paper.viewDetail": "查看",
+  "paper.metadataOnlyHint": "仅元数据 — 该论文无完整分析内容",
+  "paper.researchAlreadyDone": "已完成文献调研。再次运行将把新论文追加到现有结果中（不会重复）。",
+  "paper.researchContinue": "继续调研",
+  "paper.globalProgress": "{{name}}: {{operation}}进行中...",
+  "paper.goToProject": "前往项目",
+  "paper.op.research": "文献调研",
+  "paper.op.write": "章节写作",
+  "paper.op.polish": "全文润色",
+  "paper.op.outline": "生成大纲",
+  "paper.op.revise": "修改中",
+
+  "settings.agentGroupAnalysis": "分析工作流",
+  "settings.agentGroupPaper": "论文写作工作流",
+  "settings.agent.outline": "大纲生成器",
+  "settings.agent.writer": "写作器",
+  "settings.agent.citation": "引用收集器",
+  "settings.agent.research": "文献调研器",
+  "settings.agent.polish": "润色器",
+  "settings.agentDesc.outline": "生成论文章节大纲结构",
+  "settings.agentDesc.writer": "逐章撰写论文内容",
+  "settings.agentDesc.citation": "收集并格式化参考文献",
+  "settings.agentDesc.research": "自动搜索和分析相关文献",
+  "settings.agentDesc.polish": "全文润色和优化",
+  "settings.providerLabel": "服务商"
 }
