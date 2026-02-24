@@ -163,6 +163,18 @@ async def delete_project(project_id: str):
     return DeleteResponse(success=True, message="Project deleted")
 
 
+@router.post("/projects/{project_id}/outline/regenerate", response_model=PaperProjectResponse)
+async def regenerate_outline(project_id: str):
+    """重新生成大纲（纳入最新调研结果）."""
+    wp = _get_pipeline()
+    project = wp.store.load(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    project = await asyncio.to_thread(wp.generate_outline, project)
+    return _project_to_response(project)
+
+
 @router.post("/projects/{project_id}/outline/revise", response_model=PaperProjectResponse)
 async def revise_outline(project_id: str, body: OutlineReviseRequest):
     """修改论文大纲."""

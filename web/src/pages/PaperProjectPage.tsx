@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -12,10 +12,15 @@ import {
   Loader,
   Search,
   BookOpen,
+  Rocket,
+  Check,
+  X,
+  AlertCircle,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import {
   usePaperProject,
+  useRegenerateOutline,
   useReviseOutline,
   useConfirmOutline,
   useWriteSections,
@@ -25,10 +30,18 @@ import {
   useResearchPapers,
   useReferences,
 } from '../hooks/usePaper'
+import {
+  regenerateOutline as apiRegenerateOutline,
+  confirmOutline as apiConfirmOutline,
+  writeSections as apiWriteSections,
+  polishPaper as apiPolishPaper,
+  researchPapers as apiResearchPapers,
+} from '../api/paper'
 import Badge from '../components/ui/Badge'
 import EmptyState from '../components/ui/EmptyState'
 import MarkdownRenderer from '../components/ui/MarkdownRenderer'
 import { usePaperOperation } from '../contexts/PaperOperationContext'
+import { useQueryClient } from '@tanstack/react-query'
 import type { PaperSectionResponse } from '../types'
 
 type ActiveTab = 'research' | 'outline' | 'draft' | 'export'
@@ -64,6 +77,7 @@ export default function PaperProjectPage() {
   const { t } = useTranslation()
   const { data: project, isLoading } = usePaperProject(id || '')
 
+  const regenerateOutlineMut = useRegenerateOutline()
   const reviseOutline = useReviseOutline()
   const confirmOutlineMut = useConfirmOutline()
   const writeSections = useWriteSections()
@@ -72,6 +86,7 @@ export default function PaperProjectPage() {
   const exportPaper = useExportPaper()
   const researchPapersMut = useResearchPapers()
   const { data: referencesData } = useReferences(id || '')
+  const queryClient = useQueryClient()
 
   const { startOperation, clearOperation } = usePaperOperation()
 
@@ -83,6 +98,61 @@ export default function PaperProjectPage() {
   const [exportFormat, setExportFormat] = useState('markdown')
   const [showResearchConfirm, setShowResearchConfirm] = useState(false)
 
+  // 一键写作
+  type AutoWriteStep = 'research' | 'outline' | 'confirm' | 'write' | 'polish' | 'done' | 'error'
+  const [autoWriteStep, setAutoWriteStep] = useState<AutoWriteStep | null>(null)
+  const [autoWriteError, setAutoWriteError] = useState<string>('')
+
+  const autoWriteSteps: { key: AutoWriteStep; labelKey: string }[] = [
+    { key: 'research', labelKey: 'paper.awStepResearch' },
+    { key: 'outline', labelKey: 'paper.awStepOutline' },
+    { key: 'confirm', labelKey: 'paper.awStepConfirm' },
+    { key: 'write', labelKey: 'paper.awStepWrite' },
+    { key: 'polish', labelKey: 'paper.awStepPolish' },
+  ]
+
+  const handleAutoWrite = useCallback(async () => {
+    if (!project) return
+    const pid = project.id
+    setAutoWriteError('')
+    try {
+      startOperation(pid, project.name, 'research')
+
+      // Step 1: Research
+      setAutoWriteStep('research')
+      await apiResearchPapers(pid)
+
+      // Step 2: Regenerate outline with research results
+      setAutoWriteStep('outline')
+      await apiRegenerateOutline(pid)
+
+      // Step 3: Confirm outline → initialize draft
+      setAutoWriteStep('confirm')
+      await apiConfirmOutline(pid)
+
+      // Step 4: Write all sections
+      setAutoWriteStep('write')
+      await apiWriteSections(pid)
+
+      // Step 5: Polish
+      setAutoWriteStep('polish')
+      await apiPolishPaper(pid)
+
+      setAutoWriteStep('done')
+      // Refresh project data
+      queryClient.invalidateQueries({ queryKey: ['paperProject', pid] })
+      queryClient.invalidateQueries({ queryKey: ['paperReferences', pid] })
+    } catch (err: any) {
+      setAutoWriteStep('error')
+      setAutoWriteError(err?.response?.data?.detail || err?.message || String(err))
+      // Still refresh to show partial progress
+      queryClient.invalidateQueries({ queryKey: ['paperProject', pid] })
+      queryClient.invalidateQueries({ queryKey: ['paperReferences', pid] })
+    } finally {
+      clearOperation()
+    }
+  }, [project, startOperation, clearOperation, queryClient])
+
   const isAnyMutating =
     reviseOutline.isPending ||
     confirmOutlineMut.isPending ||
@@ -90,7 +160,9 @@ export default function PaperProjectPage() {
     reviseSectionMut.isPending ||
     polishPaper.isPending ||
     exportPaper.isPending ||
-    researchPapersMut.isPending
+    researchPapersMut.isPending ||
+    regenerateOutlineMut.isPending ||
+    (autoWriteStep !== null && autoWriteStep !== 'done' && autoWriteStep !== 'error')
 
   if (isLoading) {
     return (
@@ -256,7 +328,108 @@ export default function PaperProjectPage() {
             )}
           </div>
         </div>
+        {/* 一键写作 button */}
+        {project.status !== 'finished' && (
+          <button
+            onClick={handleAutoWrite}
+            disabled={isAnyMutating}
+            className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-primary-600 to-emerald-500 rounded-lg hover:from-primary-700 hover:to-emerald-600 transition-all duration-200 disabled:opacity-50 shadow-sm"
+          >
+            <Rocket className="w-4 h-4" />
+            {t('paper.autoWrite')}
+          </button>
+        )}
       </div>
+
+      {/* Auto-write progress modal */}
+      {autoWriteStep && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl shadow-xl p-8 max-w-md w-full mx-4">
+            <h3 className="text-lg font-heading font-semibold text-primary-950 mb-6 flex items-center gap-2">
+              <Rocket className="w-5 h-5 text-primary-600" />
+              {t('paper.autoWriteTitle')}
+            </h3>
+            <div className="space-y-3">
+              {autoWriteSteps.map((step, idx) => {
+                const stepKeys = autoWriteSteps.map((s) => s.key)
+                const currentIdx = autoWriteStep === 'done'
+                  ? stepKeys.length
+                  : autoWriteStep === 'error'
+                    ? stepKeys.indexOf(autoWriteStep as any)
+                    : stepKeys.indexOf(autoWriteStep)
+                const isComplete = idx < currentIdx || autoWriteStep === 'done'
+                const isCurrent = idx === currentIdx && autoWriteStep !== 'done' && autoWriteStep !== 'error'
+                const isFailed = autoWriteStep === 'error' && idx === currentIdx
+
+                return (
+                  <div
+                    key={step.key}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors duration-200 ${
+                      isCurrent
+                        ? 'bg-primary-50 border border-primary-200'
+                        : isComplete
+                          ? 'bg-emerald-50'
+                          : isFailed
+                            ? 'bg-red-50 border border-red-200'
+                            : 'bg-gray-50'
+                    }`}
+                  >
+                    {isComplete ? (
+                      <Check className="w-5 h-5 text-emerald-500 shrink-0" />
+                    ) : isCurrent ? (
+                      <Loader className="w-5 h-5 text-primary-600 animate-spin shrink-0" />
+                    ) : isFailed ? (
+                      <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
+                    ) : (
+                      <div className="w-5 h-5 rounded-full border-2 border-gray-300 shrink-0" />
+                    )}
+                    <span
+                      className={`text-sm font-medium ${
+                        isComplete
+                          ? 'text-emerald-700'
+                          : isCurrent
+                            ? 'text-primary-700'
+                            : isFailed
+                              ? 'text-red-700'
+                              : 'text-gray-400'
+                      }`}
+                    >
+                      {t(step.labelKey)}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+
+            {autoWriteStep === 'error' && autoWriteError && (
+              <div className="mt-4 px-4 py-3 bg-red-50 rounded-lg text-sm text-red-700">
+                {autoWriteError}
+              </div>
+            )}
+
+            <div className="mt-6 flex justify-end gap-3">
+              {autoWriteStep === 'done' && (
+                <button
+                  onClick={() => { setAutoWriteStep(null); setActiveTab('export') }}
+                  className="flex items-center gap-1.5 px-4 py-2 text-sm text-white bg-emerald-500 rounded-lg hover:bg-emerald-600 transition-colors duration-200"
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  {t('paper.autoWriteViewResult')}
+                </button>
+              )}
+              {autoWriteStep === 'error' && (
+                <button
+                  onClick={() => setAutoWriteStep(null)}
+                  className="flex items-center gap-1.5 px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+                >
+                  <X className="w-4 h-4" />
+                  {t('common.cancel')}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex border-b border-gray-200 mb-6">

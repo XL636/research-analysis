@@ -28,6 +28,11 @@ export async function deletePaperProject(id: string): Promise<DeleteResponse> {
   return data
 }
 
+export async function regenerateOutline(id: string): Promise<PaperProjectResponse> {
+  const { data } = await api.post(`/paper/projects/${id}/outline/regenerate`, {}, { timeout: 120000 })
+  return data
+}
+
 export async function reviseOutline(id: string, feedback: string): Promise<PaperProjectResponse> {
   const { data } = await api.post(`/paper/projects/${id}/outline/revise`, { feedback }, { timeout: 120000 })
   return data

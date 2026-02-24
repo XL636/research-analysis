@@ -244,6 +244,15 @@
   "paper.op.outline": "Generating outline",
   "paper.op.revise": "Revising",
 
+  "paper.autoWrite": "Auto Write",
+  "paper.autoWriteTitle": "Auto Write in Progress",
+  "paper.autoWriteViewResult": "View Result",
+  "paper.awStepResearch": "Literature Research",
+  "paper.awStepOutline": "Generate Outline",
+  "paper.awStepConfirm": "Confirm Outline",
+  "paper.awStepWrite": "Write All Sections",
+  "paper.awStepPolish": "Polish Paper",
+
   "settings.agentGroupAnalysis": "Analysis Workflow",
   "settings.agentGroupPaper": "Paper Writing Workflow",
   "settings.agent.outline": "Outline",

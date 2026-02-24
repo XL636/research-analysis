@@ -4,6 +4,7 @@ import {
   getPaperProject,
   createPaperProject,
   deletePaperProject,
+  regenerateOutline,
   reviseOutline,
   confirmOutline,
   writeSections,
@@ -46,6 +47,16 @@ export function useDeletePaper() {
     mutationFn: (id: string) => deletePaperProject(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['paperProjects'] })
+    },
+  })
+}
+
+export function useRegenerateOutline() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => regenerateOutline(id),
+    onSuccess: (data) => {
+      queryClient.setQueryData(['paperProject', data.id], data)
     },
   })
 }
