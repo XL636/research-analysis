@@ -8,17 +8,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Fixed
+- Web: 调研后确认大纲按钮不可见 — 大纲操作区状态判断增加 'researched' 状态 (T-64)
+- Backend: LLM 客户端添加 timeout（300s 请求/10s 连接）— 防止 API 挂起导致操作无限卡住 (T-64)
+- Backend: PolishAgent max_tokens 从 4096 提升到 16384 — 整篇论文润色输出不再被截断 (T-64)
+- Backend: polish/write_all_sections 失败时回退项目状态 — 不再永远卡在 polishing/writing 中间态 (T-64)
 - Backend: ResearchAgent 移除 metadata-only 回退 — 下载失败的论文直接跳过，不再入库 (T-63)
 - KB: 自动清理迁移 — 启动时删除所有 file_type='metadata' 的空白记录 (T-63)
 - Web: DocumentDetailPage 防御性处理 — metadata_only 文档显示 EmptyState 而非白屏 (T-63)
 - Web: AnalysisCards 空数据防御 — 无 key_findings/methodology 时显示摘要文本 (T-63)
 
 ### Changed
+- Web: 移除一键写作功能，恢复手动确认流程 (T-64)
+- Web: 调研完成后显示"前往大纲"引导按钮 + 重新生成大纲按钮 (T-64)
 - Web: PaperProjectPage 参考文献统一为可点击链接，移除 metadata-only badge 和提示 (T-63)
 - Web: 调研统计文案简化 — "已分析 X 篇 | 跳过 Y 篇" (T-63)
 - Backend: ResearchResultResponse schema 移除 metadata_only 字段 (T-63)
 
 ### Added
+- API: POST /paper/projects/{id}/outline/regenerate — 调研后重新生成大纲 (T-64)
 - Web: 调研论文可点击跳转知识库详情 + 无分析论文 amber 色元数据提示 (T-62)
 - Web: 重复调研确认对话框 — 已调研项目再次调研前弹出确认，说明追加不覆盖 (T-62)
 - Web: PaperOperationContext + GlobalProgressBanner — 跨页面固定顶部进度条，显示操作名称+计时+导航链接 (T-62)
