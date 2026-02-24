@@ -68,7 +68,7 @@ class WriterAgent(BaseAgent):
                     parts.append(f"摘要：{ref.abstract[:200]}")
 
         user_content = "\n".join(parts)
-        result = self._call_llm_json(user_content)
+        result = self._call_llm_json(user_content, max_tokens=16384)
         return self._parse_section(result, section)
 
     def revise(self, section: PaperSection, feedback: str, project_context: str = "") -> PaperSection:
@@ -84,7 +84,7 @@ class WriterAgent(BaseAgent):
         parts.append("\n请返回完整的修改后章节（JSON 格式），包含所有字段。")
 
         user_content = "\n".join(parts)
-        result = self._call_llm_json(user_content)
+        result = self._call_llm_json(user_content, max_tokens=16384)
         revised = self._parse_section(result, section)
         revised.revision_history = section.revision_history + [f"Revised: {feedback[:100]}"]
         revised.status = SectionStatus.DRAFT

@@ -69,7 +69,7 @@ class LLMClient:
         model_name: str,
         messages: list[dict[str, str]],
         temperature: float = 0.7,
-        max_tokens: int = 4096,
+        max_tokens: int = 8192,
         **kwargs: Any,
     ) -> str:
         """发送聊天请求，返回文本响应."""
@@ -106,7 +106,7 @@ class LLMClient:
         model_name: str,
         messages: list[dict[str, str]],
         temperature: float = 0.3,
-        max_tokens: int = 4096,
+        max_tokens: int = 8192,
         **kwargs: Any,
     ) -> dict:
         """发送聊天请求，返回 JSON 解析后的字典."""

@@ -122,7 +122,7 @@ class GeneratorAgent(BaseAgent):
                 user_content += "\n建议：\n" + "\n".join(f"- {s}" for s in feedback.suggestions)
 
         logger.info(f"Generating report: {title}")
-        content = self._call_llm(user_content)
+        content = self._call_llm(user_content, max_tokens=16384)
 
         return Report(
             title=title,
