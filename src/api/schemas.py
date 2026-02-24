@@ -72,6 +72,15 @@ class DeleteResponse(BaseModel):
     message: str = ""
 
 
+class BatchDeleteRequest(BaseModel):
+    ids: list[int]
+
+
+class BatchDeleteResponse(BaseModel):
+    success: bool
+    deleted_count: int = 0
+
+
 class DuplicateCheckResponse(BaseModel):
     has_duplicate: bool
     existing_documents: list[DocumentSummary] = Field(default_factory=list)

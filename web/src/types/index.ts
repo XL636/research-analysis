@@ -77,6 +77,11 @@ export interface DeleteResponse {
   message: string
 }
 
+export interface BatchDeleteResponse {
+  success: boolean
+  deleted_count: number
+}
+
 export interface DuplicateCheckResponse {
   has_duplicate: boolean
   existing_documents: DocumentSummary[]

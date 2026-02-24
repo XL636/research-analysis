@@ -5,6 +5,7 @@ import type {
   SearchResult,
   TagCount,
   DeleteResponse,
+  BatchDeleteResponse,
   DuplicateCheckResponse,
   UpdateTitleResponse,
   CollectionSummary,
@@ -33,6 +34,11 @@ export async function getDocument(id: number): Promise<DocumentDetail> {
 
 export async function deleteDocument(id: number): Promise<DeleteResponse> {
   const { data } = await api.delete(`/knowledge/documents/${id}`)
+  return data
+}
+
+export async function batchDeleteDocuments(ids: number[]): Promise<BatchDeleteResponse> {
+  const { data } = await api.post('/knowledge/documents/batch-delete', { ids })
   return data
 }
 

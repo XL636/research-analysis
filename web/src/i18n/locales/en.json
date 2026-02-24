@@ -223,6 +223,10 @@
   "paper.refSourceUser": "User Upload",
   "paper.hasDeepAnalysis": "Deep Analysis",
 
+  "knowledge.batchSelected": "{{count}} document(s) selected",
+  "knowledge.batchDelete": "Delete Selected",
+  "knowledge.batchClearSelection": "Clear Selection",
+  "knowledge.batchDeleteConfirm": "Are you sure you want to delete {{count}} selected document(s)? This action cannot be undone.",
   "knowledge.sourceAll": "All Sources",
   "knowledge.sourceUserUpload": "User Upload",
   "knowledge.sourceAutoResearch": "Auto Research",

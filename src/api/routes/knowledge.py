@@ -12,6 +12,8 @@ from fastapi.responses import FileResponse
 
 from src.api.dependencies import get_knowledge_base
 from src.api.schemas import (
+    BatchDeleteRequest,
+    BatchDeleteResponse,
     CollectionSummary,
     CreateCollectionRequest,
     DeleteResponse,
@@ -173,6 +175,16 @@ async def delete_document(
     if not success:
         raise HTTPException(status_code=404, detail="Document not found")
     return DeleteResponse(success=True, message="Document deleted")
+
+
+@router.post("/documents/batch-delete", response_model=BatchDeleteResponse)
+async def batch_delete_documents(
+    body: BatchDeleteRequest,
+    kb: KnowledgeBase = Depends(get_knowledge_base),
+):
+    """批量删除文档."""
+    deleted = kb.delete_documents(body.ids)
+    return BatchDeleteResponse(success=True, deleted_count=deleted)
 
 
 @router.patch("/documents/{doc_id}/title", response_model=UpdateTitleResponse)

@@ -604,6 +604,33 @@ class KnowledgeBase:
         logger.info(f"Deleted document id={doc_id}")
         return True
 
+    def delete_documents(self, doc_ids: list[int]) -> int:
+        """批量删除文档及其关联数据.
+
+        Returns:
+            实际删除的文档数
+        """
+        if not doc_ids:
+            return 0
+
+        with self._connect() as conn:
+            placeholders = ",".join("?" for _ in doc_ids)
+            existing = conn.execute(
+                f"SELECT id FROM documents WHERE id IN ({placeholders})", doc_ids
+            ).fetchall()
+            existing_ids = [r["id"] for r in existing]
+            if not existing_ids:
+                return 0
+
+            ph = ",".join("?" for _ in existing_ids)
+            conn.execute(f"DELETE FROM documents_fts WHERE rowid IN ({ph})", existing_ids)
+            conn.execute(f"DELETE FROM document_tags WHERE document_id IN ({ph})", existing_ids)
+            conn.execute(f"DELETE FROM documents WHERE id IN ({ph})", existing_ids)
+            conn.commit()
+
+        logger.info(f"Batch deleted {len(existing_ids)} documents: {existing_ids}")
+        return len(existing_ids)
+
     def update_title(self, doc_id: int, new_title: str) -> bool:
         """更新文档标题（含 FTS 索引重建）.
 

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, FolderOpen, Plus, Pencil, Trash2, Check, X } from 'lucide-react'
+import { Search, FolderOpen, Plus, Pencil, Trash2, Check, X, Loader } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import {
   useDocuments,
@@ -9,6 +9,7 @@ import {
   useCreateCollection,
   useRenameCollection,
   useDeleteCollection,
+  useBatchDeleteDocuments,
 } from '../hooks/useDocuments'
 import { useSearch } from '../hooks/useSearch'
 import SearchInput from '../components/ui/SearchInput'
@@ -252,6 +253,9 @@ export default function KnowledgeBasePage() {
   const [selectedCollectionId, setSelectedCollectionId] =
     useState<SelectedCollection>('all')
   const [selectedSourceType, setSelectedSourceType] = useState<string>('')
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+  const [showBatchDeleteConfirm, setShowBatchDeleteConfirm] = useState(false)
+  const batchDeleteMut = useBatchDeleteDocuments()
 
   const { query, setQuery, results: searchResults } = useSearch()
 
@@ -326,6 +330,20 @@ export default function KnowledgeBasePage() {
     setSelectedTag((prev) => (prev === tagName ? undefined : tagName))
   }
 
+  const handleBatchDelete = () => {
+    if (selectedIds.size === 0) return
+    setShowBatchDeleteConfirm(true)
+  }
+
+  const confirmBatchDelete = () => {
+    batchDeleteMut.mutate([...selectedIds], {
+      onSuccess: () => {
+        setSelectedIds(new Set())
+        setShowBatchDeleteConfirm(false)
+      },
+    })
+  }
+
   return (
     <div>
       <h1 className="text-2xl font-heading font-bold text-primary-950 mb-6">
@@ -396,6 +414,58 @@ export default function KnowledgeBasePage() {
               </div>
             )}
 
+            {/* Batch action bar */}
+            {selectedIds.size > 0 && (
+              <div className="flex items-center gap-3 px-4 py-3 bg-primary-50 rounded-lg">
+                <span className="text-sm text-primary-700">
+                  {t('knowledge.batchSelected', { count: selectedIds.size })}
+                </span>
+                <button
+                  onClick={handleBatchDelete}
+                  disabled={batchDeleteMut.isPending}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors duration-200 disabled:opacity-50"
+                >
+                  {batchDeleteMut.isPending ? (
+                    <Loader className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-3.5 h-3.5" />
+                  )}
+                  {t('knowledge.batchDelete')}
+                </button>
+                <button
+                  onClick={() => setSelectedIds(new Set())}
+                  className="text-sm text-gray-500 hover:text-gray-700"
+                >
+                  {t('knowledge.batchClearSelection')}
+                </button>
+              </div>
+            )}
+
+            {/* Batch delete confirm dialog */}
+            {showBatchDeleteConfirm && (
+              <div className="px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800 space-y-3">
+                <p>
+                  {t('knowledge.batchDeleteConfirm', { count: selectedIds.size })}
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={confirmBatchDelete}
+                    disabled={batchDeleteMut.isPending}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors duration-200 disabled:opacity-50"
+                  >
+                    {batchDeleteMut.isPending && <Loader className="w-3.5 h-3.5 animate-spin" />}
+                    {t('detail.confirmDelete')}
+                  </button>
+                  <button
+                    onClick={() => setShowBatchDeleteConfirm(false)}
+                    className="px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+                  >
+                    {t('common.cancel')}
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Document list */}
             {isLoading ? (
               <p className="text-gray-500">{t('common.loading')}</p>
@@ -414,6 +484,10 @@ export default function KnowledgeBasePage() {
                 columns={columns}
                 data={displayData}
                 onRowClick={(row) => navigate(`/knowledge/${row.id}`)}
+                selectable
+                selectedIds={selectedIds}
+                onSelectionChange={setSelectedIds}
+                getRowId={(row) => row.id}
               />
             )}
           </div>

@@ -4,6 +4,7 @@ import {
   getDocument,
   getTags,
   deleteDocument,
+  batchDeleteDocuments,
   updateDocumentTitle,
   moveDocumentToCollection,
   listCollections,
@@ -43,6 +44,19 @@ export function useDeleteDocument() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (id: number) => deleteDocument(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['documents'] })
+      queryClient.invalidateQueries({ queryKey: ['tags'] })
+      queryClient.invalidateQueries({ queryKey: ['search'] })
+      queryClient.invalidateQueries({ queryKey: ['collections'] })
+    },
+  })
+}
+
+export function useBatchDeleteDocuments() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (ids: number[]) => batchDeleteDocuments(ids),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['documents'] })
       queryClient.invalidateQueries({ queryKey: ['tags'] })

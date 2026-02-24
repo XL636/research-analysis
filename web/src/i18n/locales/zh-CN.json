@@ -223,6 +223,10 @@
   "paper.refSourceUser": "用户上传",
   "paper.hasDeepAnalysis": "深度分析",
 
+  "knowledge.batchSelected": "已选择 {{count}} 个文档",
+  "knowledge.batchDelete": "批量删除",
+  "knowledge.batchClearSelection": "取消选择",
+  "knowledge.batchDeleteConfirm": "确定要删除选中的 {{count}} 个文档吗？此操作不可恢复。",
   "knowledge.sourceAll": "全部来源",
   "knowledge.sourceUserUpload": "用户上传",
   "knowledge.sourceAutoResearch": "自动调研",
