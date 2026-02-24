@@ -73,6 +73,10 @@ def create_app() -> FastAPI:
     app.include_router(settings_router, prefix="/api/settings", tags=["Settings"])
     app.include_router(paper_router, prefix="/api/paper", tags=["Paper"])
 
+    @app.get("/api/health")
+    async def health():
+        return {"status": "ok"}
+
     # Serve static frontend (production build)
     dist_dir = Path(__file__).resolve().parent.parent.parent / "web" / "dist"
     if dist_dir.exists():
@@ -89,9 +93,5 @@ def create_app() -> FastAPI:
             if file_path.is_file():
                 return FileResponse(str(file_path))
             return FileResponse(str(dist_dir / "index.html"))
-
-    @app.get("/api/health")
-    async def health():
-        return {"status": "ok"}
 
     return app
