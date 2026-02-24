@@ -244,7 +244,7 @@
   - 验收：`python main.py analyze paper.pdf --template meeting` 输出组会格式报告
   - 依赖：T-09
 
-## Phase 6: 国际化 + 优化 `[进行中]`
+## Phase 6: 国际化 + 优化 `[完成]`
 
 - [x] **T-40: Web UI i18n 双语支持（zh-CN + en）**
   - 目标：Web UI 支持中英双语切换
@@ -294,7 +294,7 @@
   - 验收：PPTX 蓝白配色有 bullet 列表，PDF A4 中文正常，前端支持 .docx 上传和 PDF 下载
   - 依赖：T-46
 
-## Phase 7: 论文写作功能 `[进行中]`
+## Phase 7: 论文写作功能 `[完成]`
 
 - [x] **T-48: 论文数据模型 + 持久化**
   - 目标：PaperProject, PaperOutline, PaperSection, PaperDraft, CitationRef 模型 + SQLite 存储

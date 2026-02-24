@@ -18,8 +18,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - API: Paper Writing REST API — 完整 CRUD + 大纲修改/确认 + 章节写作/修改 + 润色 + 导出 (T-56)
 - Config: agent_models 新增 outline/writer/citation/polish 模型配置 (T-55)
 - Store: paper_projects SQLite 表，PaperProject JSON 序列化持久化 (T-48)
-
-### Added
 - Output: PDF 报告输出 — Markdown→HTML→PDF (weasyprint)，A4 学术排版，CJK 字体支持 (T-47)
 - Output: PPTX 学术简洁风重写 — 封面页/章节页/内容页，蓝白配色，Bullet 列表，智能分页 (T-47)
 - Web: FileDropzone 添加 .docx MIME type 上传支持 (T-47)
@@ -27,14 +25,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Docker: weasyprint 系统依赖 + CJK 字体 (fonts-noto-cjk) (T-47)
 - CLI: analyze/batch 命令 --format 添加 pdf 选项 (T-47)
 - API: 报告下载端点支持 PDF 格式 (T-47)
-
-### Fixed
-- API: 静态文件 dist_dir 路径改为绝对路径，修复工作目录不同时前端 404 问题
-- Store: 时区根因修复 — `_beijing_now()` 显式传入时间戳，`_meta` 表一次性迁移旧 UTC 数据 (T-44)
-- Parser: PPTX 解析不再因非占位符 shape 抛出 "shape is not a placeholder" 错误 (T-43)
-- Store: 知识库日期默认存储北京时间（UTC+8），列表/搜索显示 `YYYY-MM-DD HH:MM` 格式 (T-43)
-
-### Added
 - Web: 知识库详情页「完整报告」Tab — 当存在 report_content 时显示 Tab 切换（分析卡片 / 完整报告）(T-46)
 - Store: documents 表新增 report_content 列 + 自动迁移，Pipeline 分析后自动存储完整报告 (T-46)
 - API: get_document 返回 report_content，下载端点优先使用存储的原始报告 (T-46)
@@ -58,6 +48,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - API: GET/PUT /api/settings/agent-models 端点，支持查询和更新 Agent-模型分配 (T-42)
 - Web: Settings 页面 — API Key 管理（GET/PUT /api/settings/api-keys），支持保存到 config/.env + 自动同步 os.environ (T-41)
 - Web: i18n 双语支持 zh-CN + en，react-i18next + 语言切换按钮 + localStorage 持久化 (T-40)
+
+### Fixed
+- API: /api/health 端点移至 SPA catch-all 之前，修复路由被遮蔽返回 HTML 而非 JSON 的问题
+- API: 静态文件 dist_dir 路径改为绝对路径，修复工作目录不同时前端 404 问题
+- Store: 时区根因修复 — `_beijing_now()` 显式传入时间戳，`_meta` 表一次性迁移旧 UTC 数据 (T-44)
+- Parser: PPTX 解析不再因非占位符 shape 抛出 "shape is not a placeholder" 错误 (T-43)
+- Store: 知识库日期默认存储北京时间（UTC+8），列表/搜索显示 `YYYY-MM-DD HH:MM` 格式 (T-43)
 
 ### Previously Added
 - API: FastAPI backend with CORS, lifespan, health endpoint (T-22)
