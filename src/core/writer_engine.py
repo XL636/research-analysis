@@ -35,11 +35,13 @@ class WriterPipeline:
         from src.agents.citation import CitationAgent
         from src.agents.outline import OutlineAgent
         from src.agents.polish import PolishAgent
+        from src.agents.research import ResearchAgent
         from src.agents.writer import WriterAgent
 
         self.outline_agent = OutlineAgent(self.llm, config_path)
         self.writer_agent = WriterAgent(self.llm, config_path)
         self.citation_agent = CitationAgent(self.llm, config_path)
+        self.research_agent = ResearchAgent(self.llm, config_path)
         self.polish_agent = PolishAgent(self.llm, config_path)
 
     def create_project(
@@ -70,6 +72,30 @@ class WriterPipeline:
 
         self.store.save(project)
         logger.info(f"Created paper project: {name} (id={project.id})")
+        return project
+
+    def research_papers(self, project: PaperProject) -> PaperProject:
+        """Step 1.5: 全自动文献调研 → 充实知识库."""
+        kb = self._get_kb()
+        if not kb:
+            logger.warning("KnowledgeBase unavailable, skipping research step")
+            return project
+
+        result = self.research_agent.process({
+            "project": project,
+            "kb": kb,
+            "max_papers": 10,
+        })
+
+        # 将调研结果的 doc_ids 存入 project
+        project.research_doc_ids = result.researched_doc_ids
+        project.status = ProjectStatus.RESEARCHED
+        self.store.save(project)
+
+        logger.info(
+            f"Research complete: {result.analyzed} analyzed, "
+            f"{result.metadata_only} metadata-only, {result.failed} failed"
+        )
         return project
 
     def generate_outline(self, project: PaperProject) -> PaperProject:

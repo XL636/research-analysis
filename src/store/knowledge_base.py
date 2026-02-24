@@ -130,13 +130,39 @@ class KnowledgeBase:
                 conn.commit()
                 logger.info("report_content migration completed")
 
+            # source_type 迁移 (T-61)
+            source_type_migrated = conn.execute(
+                "SELECT value FROM _meta WHERE key = 'source_type_migrated'"
+            ).fetchone()
+            if not source_type_migrated:
+                cols = [r[1] for r in conn.execute("PRAGMA table_info(documents)").fetchall()]
+                if "source_type" not in cols:
+                    conn.execute("ALTER TABLE documents ADD COLUMN source_type TEXT DEFAULT 'user_upload'")
+                conn.execute(
+                    "INSERT OR REPLACE INTO _meta (key, value) VALUES ('source_type_migrated', '1')"
+                )
+                conn.commit()
+                logger.info("source_type migration completed")
+
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
         return conn
 
-    def store_analysis(self, analysis: AnalysisResult, file_path: str = "", file_type: str = "") -> int:
+    def store_analysis(
+        self,
+        analysis: AnalysisResult,
+        file_path: str = "",
+        file_type: str = "",
+        source_type: str = "user_upload",
+    ) -> int:
         """存储分析结果到知识库.
+
+        Args:
+            analysis: 分析结果
+            file_path: 文件路径
+            file_type: 文件类型
+            source_type: 来源类型 (user_upload | auto_research | manual_reference)
 
         Returns:
             文档 ID
@@ -153,9 +179,9 @@ class KnowledgeBase:
 
         with self._connect() as conn:
             cursor = conn.execute(
-                """INSERT INTO documents (title, file_path, file_type, summary, content, analysis_json, created_at, updated_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-                (analysis.document_title, file_path, file_type, analysis.summary, content, analysis_json, beijing_now, beijing_now),
+                """INSERT INTO documents (title, file_path, file_type, summary, content, analysis_json, source_type, created_at, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (analysis.document_title, file_path, file_type, analysis.summary, content, analysis_json, source_type, beijing_now, beijing_now),
             )
             doc_id = cursor.lastrowid
 
@@ -179,6 +205,90 @@ class KnowledgeBase:
 
         logger.info(f"Stored analysis: {analysis.document_title} (id={doc_id})")
         return doc_id
+
+    def store_metadata_only(
+        self,
+        title: str,
+        summary: str = "",
+        doi: str = "",
+        url: str = "",
+        authors: str = "",
+        year: str = "",
+        source_type: str = "auto_research",
+    ) -> int:
+        """仅存元数据记录（无完整分析），用于下载失败的论文.
+
+        Returns:
+            文档 ID
+        """
+        beijing_now = self._beijing_now()
+        content = summary
+
+        # 构造简要的 metadata JSON
+        metadata_json = json.dumps({
+            "document_title": title,
+            "summary": summary,
+            "doi": doi,
+            "url": url,
+            "authors": authors,
+            "year": year,
+            "metadata_only": True,
+        }, ensure_ascii=False)
+
+        with self._connect() as conn:
+            cursor = conn.execute(
+                """INSERT INTO documents (title, file_path, file_type, summary, content, analysis_json, source_type, created_at, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (title, url or "", "metadata", summary, content, metadata_json, source_type, beijing_now, beijing_now),
+            )
+            doc_id = cursor.lastrowid
+
+            # 同步 FTS 索引
+            conn.execute(
+                "INSERT INTO documents_fts (rowid, title, summary, content) VALUES (?, ?, ?, ?)",
+                (doc_id, title, summary, content),
+            )
+            conn.commit()
+
+        logger.info(f"Stored metadata-only: {title} (id={doc_id})")
+        return doc_id
+
+    def get_research_papers(self, doc_ids: list[int]) -> list[dict]:
+        """批量获取论文的完整分析数据（用于深度引用）.
+
+        Returns:
+            包含 doc_id, title, analysis_json, source_type 的字典列表
+        """
+        if not doc_ids:
+            return []
+
+        placeholders = ",".join("?" for _ in doc_ids)
+        with self._connect() as conn:
+            rows = conn.execute(
+                f"""SELECT id, title, summary, analysis_json, source_type
+                    FROM documents
+                    WHERE id IN ({placeholders})""",
+                doc_ids,
+            ).fetchall()
+
+        results = []
+        for row in rows:
+            analysis = None
+            if row["analysis_json"]:
+                try:
+                    raw = json.loads(row["analysis_json"])
+                    if not raw.get("metadata_only"):
+                        analysis = AnalysisResult.model_validate(raw)
+                except Exception:
+                    pass
+            results.append({
+                "id": row["id"],
+                "title": row["title"],
+                "summary": row["summary"] or "",
+                "analysis": analysis,
+                "source_type": row["source_type"] or "user_upload",
+            })
+        return results
 
     def search(self, query: str, limit: int = 10) -> list[dict]:
         """全文搜索知识库.
@@ -224,6 +334,7 @@ class KnowledgeBase:
         limit: int = 20,
         collection_id: int | None = None,
         uncategorized: bool = False,
+        source_type: str | None = None,
     ) -> list[dict]:
         """列出知识库中的文档.
 
@@ -232,6 +343,7 @@ class KnowledgeBase:
             limit: 最大结果数
             collection_id: 按分组筛选（可选）
             uncategorized: 只显示未分类文档
+            source_type: 按来源类型筛选（可选）
 
         Returns:
             文档列表
@@ -250,7 +362,11 @@ class KnowledgeBase:
             elif uncategorized:
                 where_clauses.append("d.collection_id IS NULL")
 
-            base_select = """SELECT d.id, d.title, d.file_type, d.collection_id,
+            if source_type:
+                where_clauses.append("d.source_type = ?")
+                params.append(source_type)
+
+            base_select = """SELECT d.id, d.title, d.file_type, d.collection_id, d.source_type,
                               strftime('%Y-%m-%d %H:%M', d.created_at) as created_at,
                               GROUP_CONCAT(t.name, ', ') as tags
                        FROM documents d
@@ -259,7 +375,7 @@ class KnowledgeBase:
 
             if tag:
                 # 用 JOIN 而非 LEFT JOIN 来筛选标签
-                base_select = """SELECT d.id, d.title, d.file_type, d.collection_id,
+                base_select = """SELECT d.id, d.title, d.file_type, d.collection_id, d.source_type,
                               strftime('%Y-%m-%d %H:%M', d.created_at) as created_at,
                               GROUP_CONCAT(t.name, ', ') as tags
                        FROM documents d
@@ -283,6 +399,7 @@ class KnowledgeBase:
                 "tags": row["tags"] or "",
                 "date": row["created_at"] or "",
                 "collection_id": row["collection_id"],
+                "source_type": row["source_type"] or "user_upload",
             }
             for row in rows
         ]

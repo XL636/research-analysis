@@ -35,9 +35,10 @@ agent_models:
   synthesizer: glm-4-plus
   generator: glm-4-plus
   reviewer: glm-4-plus
-  outline: deepseek-chat
-  writer: deepseek-chat
+  outline: glm-4-plus
+  writer: glm-4-plus
   citation: glm-4-flash
+  research: deepseek-chat
   polish: glm-4-plus
 pipeline:
   max_review_retries: 2

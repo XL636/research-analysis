@@ -55,8 +55,17 @@ class WriterAgent(BaseAgent):
 
         if citations:
             parts.append("\n## 可用引用")
-            for ref in citations[:30]:
-                parts.append(f"- [{ref.key}] {ref.title} ({ref.year})")
+            for ref in citations[:20]:
+                parts.append(f"\n### [{ref.key}] {ref.title} ({ref.year})")
+                if ref.has_full_analysis:
+                    if ref.summary:
+                        parts.append(f"摘要：{ref.summary[:200]}")
+                    if ref.key_findings_text:
+                        parts.append(f"关键发现：{ref.key_findings_text[:300]}")
+                    if ref.methodology_text:
+                        parts.append(f"方法：{ref.methodology_text[:200]}")
+                elif ref.abstract:
+                    parts.append(f"摘要：{ref.abstract[:200]}")
 
         user_content = "\n".join(parts)
         result = self._call_llm_json(user_content)

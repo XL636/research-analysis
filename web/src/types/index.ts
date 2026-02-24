@@ -27,6 +27,7 @@ export interface DocumentSummary {
   tags: string
   date: string
   collection_id: number | null
+  source_type?: string
 }
 
 export interface DocumentDetail {
@@ -224,6 +225,7 @@ export interface CitationRefResponse {
   year: string
   venue: string
   source: string
+  has_full_analysis: boolean
 }
 
 export interface PaperProjectResponse {
@@ -256,4 +258,25 @@ export interface CreatePaperRequest {
   target_word_count?: number
   reference_doc_ids?: number[]
   additional_context?: string
+}
+
+// Research
+export interface ResearchResultResponse {
+  researched_doc_ids: number[]
+  downloaded: number
+  analyzed: number
+  metadata_only: number
+  failed: number
+}
+
+export interface ReferenceItem {
+  doc_id: number
+  title: string
+  summary: string
+  source_type: string
+  has_analysis: boolean
+}
+
+export interface ReferencesResponse {
+  references: ReferenceItem[]
 }

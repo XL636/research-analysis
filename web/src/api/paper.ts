@@ -4,6 +4,8 @@ import type {
   PaperProjectResponse,
   CreatePaperRequest,
   DeleteResponse,
+  ResearchResultResponse,
+  ReferencesResponse,
 } from '../types'
 
 export async function listPaperProjects(limit = 20): Promise<PaperProjectSummary[]> {
@@ -54,5 +56,15 @@ export async function polishPaper(id: string, instructions?: string): Promise<Pa
 
 export async function exportPaper(id: string, format: string): Promise<{ success: boolean; output_path: string }> {
   const { data } = await api.get(`/paper/projects/${id}/export`, { params: { format } })
+  return data
+}
+
+export async function researchPapers(id: string, maxPapers = 10): Promise<ResearchResultResponse> {
+  const { data } = await api.post(`/paper/projects/${id}/research`, { max_papers: maxPapers }, { timeout: 300000 })
+  return data
+}
+
+export async function getReferences(id: string): Promise<ReferencesResponse> {
+  const { data } = await api.get(`/paper/projects/${id}/references`)
   return data
 }

@@ -33,6 +33,7 @@ class ProjectStatus(str, Enum):
     """论文项目状态."""
 
     CREATED = "created"
+    RESEARCHED = "researched"
     OUTLINE_DRAFT = "outline_draft"
     OUTLINE_CONFIRMED = "outline_confirmed"
     WRITING = "writing"
@@ -63,6 +64,13 @@ class CitationRef(BaseModel):
     url: str = ""
     abstract: str = ""
     source: str = "manual"  # "knowledge_base" | "semantic_scholar" | "manual"
+
+    # 深度分析字段（来自 KB 的完整 AnalysisResult）
+    summary: str = ""
+    key_findings_text: str = ""
+    methodology_text: str = ""
+    contributions_text: str = ""
+    has_full_analysis: bool = False
 
 
 class PaperSection(BaseModel):
@@ -151,6 +159,9 @@ class PaperProject(BaseModel):
     target_word_count: int = 8000
     reference_doc_ids: list[int] = Field(default_factory=list)
     additional_context: str = ""
+
+    # 自动调研结果
+    research_doc_ids: list[int] = Field(default_factory=list)
 
     # 生成物
     outline: PaperOutline | None = None

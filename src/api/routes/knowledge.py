@@ -96,10 +96,14 @@ async def list_documents(
     limit: int = Query(20, ge=1, le=200),
     collection_id: int | None = Query(None, description="按分组筛选"),
     uncategorized: bool = Query(False, description="只显示未分类文档"),
+    source_type: str | None = Query(None, description="按来源类型筛选"),
     kb: KnowledgeBase = Depends(get_knowledge_base),
 ):
     """列出知识库文档."""
-    docs = kb.list_documents(tag=tag, limit=limit, collection_id=collection_id, uncategorized=uncategorized)
+    docs = kb.list_documents(
+        tag=tag, limit=limit, collection_id=collection_id,
+        uncategorized=uncategorized, source_type=source_type,
+    )
     return [DocumentSummary(**d) for d in docs]
 
 

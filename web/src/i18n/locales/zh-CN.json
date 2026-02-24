@@ -164,6 +164,7 @@
   "paper.wordTarget": "目标字数",
   "paper.currentWords": "当前字数",
   "paper.words": "字",
+  "paper.tabResearch": "文献调研",
   "paper.tabOutline": "大纲",
   "paper.tabDraft": "草稿",
   "paper.tabExport": "导出",
@@ -204,5 +205,26 @@
   "paper.sectionStatus.writing": "写作中",
   "paper.sectionStatus.draft": "草稿",
   "paper.sectionStatus.revising": "修改中",
-  "paper.sectionStatus.done": "完成"
+  "paper.sectionStatus.done": "完成",
+
+  "paper.statusLabel.researched": "调研完成",
+  "paper.researchTitle": "文献调研",
+  "paper.startResearch": "开始文献调研",
+  "paper.researching": "调研中...",
+  "paper.researchComplete": "调研完成",
+  "paper.researchStats": "已分析 {{analyzed}} 篇 | 仅元数据 {{metadataOnly}} 篇 | 失败 {{failed}} 篇",
+  "paper.researchEmpty": "尚未进行文献调研",
+  "paper.researchEmptyDesc": "点击「开始文献调研」按钮，自动搜索、下载和分析相关论文。",
+  "paper.referencesList": "参考文献列表",
+  "paper.refAnalyzed": "已分析",
+  "paper.refMetadataOnly": "仅摘要",
+  "paper.refSourceAuto": "自动调研",
+  "paper.refSourceManual": "手动上传",
+  "paper.refSourceUser": "用户上传",
+  "paper.hasDeepAnalysis": "深度分析",
+
+  "knowledge.sourceAll": "全部来源",
+  "knowledge.sourceUserUpload": "用户上传",
+  "knowledge.sourceAutoResearch": "自动调研",
+  "knowledge.sourceManualRef": "手动参考"
 }

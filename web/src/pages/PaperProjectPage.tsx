@@ -10,6 +10,8 @@ import {
   RefreshCw,
   Send,
   Loader,
+  Search,
+  BookOpen,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import {
@@ -20,13 +22,15 @@ import {
   useReviseSection,
   usePolishPaper,
   useExportPaper,
+  useResearchPapers,
+  useReferences,
 } from '../hooks/usePaper'
 import Badge from '../components/ui/Badge'
 import EmptyState from '../components/ui/EmptyState'
 import MarkdownRenderer from '../components/ui/MarkdownRenderer'
 import type { PaperSectionResponse } from '../types'
 
-type ActiveTab = 'outline' | 'draft' | 'export'
+type ActiveTab = 'research' | 'outline' | 'draft' | 'export'
 
 const sectionStatusIcon: Record<string, string> = {
   pending: '⏳',
@@ -38,12 +42,19 @@ const sectionStatusIcon: Record<string, string> = {
 
 const statusVariant: Record<string, 'default' | 'primary' | 'accent' | 'success' | 'warning'> = {
   created: 'default',
+  researched: 'accent',
   outline_draft: 'primary',
   outline_confirmed: 'primary',
   writing: 'warning',
   draft_complete: 'accent',
   polishing: 'warning',
   finished: 'success',
+}
+
+const sourceTypeBadgeVariant: Record<string, 'default' | 'primary' | 'accent' | 'success' | 'warning'> = {
+  user_upload: 'default',
+  auto_research: 'primary',
+  manual_reference: 'accent',
 }
 
 export default function PaperProjectPage() {
@@ -58,8 +69,10 @@ export default function PaperProjectPage() {
   const reviseSectionMut = useReviseSection()
   const polishPaper = usePolishPaper()
   const exportPaper = useExportPaper()
+  const researchPapersMut = useResearchPapers()
+  const { data: referencesData } = useReferences(id || '')
 
-  const [activeTab, setActiveTab] = useState<ActiveTab>('outline')
+  const [activeTab, setActiveTab] = useState<ActiveTab>('research')
   const [feedback, setFeedback] = useState('')
   const [selectedSection, setSelectedSection] = useState<string | null>(null)
   const [sectionFeedback, setSectionFeedback] = useState('')
@@ -72,7 +85,8 @@ export default function PaperProjectPage() {
     writeSections.isPending ||
     reviseSectionMut.isPending ||
     polishPaper.isPending ||
-    exportPaper.isPending
+    exportPaper.isPending ||
+    researchPapersMut.isPending
 
   if (isLoading) {
     return (
@@ -156,7 +170,12 @@ export default function PaperProjectPage() {
     )
   }
 
+  const handleStartResearch = () => {
+    researchPapersMut.mutate({ id: project.id })
+  }
+
   const tabs: { key: ActiveTab; labelKey: string }[] = [
+    { key: 'research', labelKey: 'paper.tabResearch' },
     { key: 'outline', labelKey: 'paper.tabOutline' },
     { key: 'draft', labelKey: 'paper.tabDraft' },
     { key: 'export', labelKey: 'paper.tabExport' },
@@ -222,6 +241,100 @@ export default function PaperProjectPage() {
         <div className="flex items-center gap-2 mb-4 px-4 py-3 bg-primary-50 rounded-lg text-sm text-primary-700">
           <Loader className="w-4 h-4 animate-spin" />
           {t('paper.processing')}
+        </div>
+      )}
+
+      {/* Tab: Research */}
+      {effectiveTab === 'research' && (
+        <div className="space-y-6">
+          {/* Research action */}
+          <div className="bg-surface-card rounded-xl shadow-sm p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-heading text-lg font-semibold text-primary-950 flex items-center gap-2">
+                <Search className="w-5 h-5" />
+                {t('paper.researchTitle')}
+              </h3>
+              <button
+                onClick={handleStartResearch}
+                disabled={researchPapersMut.isPending}
+                className="flex items-center gap-1.5 px-4 py-2 text-sm text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors duration-200 disabled:opacity-50"
+              >
+                {researchPapersMut.isPending ? (
+                  <>
+                    <Loader className="w-4 h-4 animate-spin" />
+                    {t('paper.researching')}
+                  </>
+                ) : (
+                  <>
+                    <Search className="w-4 h-4" />
+                    {t('paper.startResearch')}
+                  </>
+                )}
+              </button>
+            </div>
+
+            {researchPapersMut.isSuccess && (
+              <div className="px-4 py-3 bg-emerald-50 rounded-lg text-sm text-emerald-700">
+                {t('paper.researchComplete')} —{' '}
+                {t('paper.researchStats', {
+                  analyzed: researchPapersMut.data?.analyzed || 0,
+                  metadataOnly: researchPapersMut.data?.metadata_only || 0,
+                  failed: researchPapersMut.data?.failed || 0,
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* References list */}
+          {referencesData && referencesData.references.length > 0 ? (
+            <div className="bg-surface-card rounded-xl shadow-sm p-6">
+              <h3 className="font-heading text-lg font-semibold text-primary-950 mb-4 flex items-center gap-2">
+                <BookOpen className="w-5 h-5" />
+                {t('paper.referencesList')} ({referencesData.references.length})
+              </h3>
+              <div className="space-y-3">
+                {referencesData.references.map((ref) => (
+                  <div
+                    key={ref.doc_id}
+                    className="border border-gray-200 rounded-lg p-4"
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-medium text-primary-950 text-sm">
+                        {ref.title}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        {ref.has_analysis ? (
+                          <Badge variant="success">{t('paper.refAnalyzed')}</Badge>
+                        ) : (
+                          <Badge variant="warning">{t('paper.refMetadataOnly')}</Badge>
+                        )}
+                        <Badge
+                          variant={sourceTypeBadgeVariant[ref.source_type] || 'default'}
+                        >
+                          {ref.source_type === 'auto_research'
+                            ? t('paper.refSourceAuto')
+                            : ref.source_type === 'manual_reference'
+                              ? t('paper.refSourceManual')
+                              : t('paper.refSourceUser')}
+                        </Badge>
+                      </div>
+                    </div>
+                    {ref.summary && (
+                      <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                        {ref.summary}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <EmptyState
+              icon={Search}
+              title={t('paper.researchEmpty')}
+              description={t('paper.researchEmptyDesc')}
+            />
+          )}
         </div>
       )}
 
@@ -342,9 +455,13 @@ export default function PaperProjectPage() {
                         <span className="font-medium">{ref.title}</span>
                         {ref.venue && <span className="text-gray-500">. {ref.venue}</span>}
                         {ref.year && <span className="text-gray-500">, {ref.year}</span>}
+                        {' '}
                         <Badge variant={ref.source === 'knowledge_base' ? 'accent' : 'default'}>
                           {ref.source}
                         </Badge>
+                        {ref.has_full_analysis && (
+                          <Badge variant="success">{t('paper.hasDeepAnalysis')}</Badge>
+                        )}
                       </div>
                     ))}
                   </div>

@@ -51,9 +51,17 @@ class OutlineAgent(BaseAgent):
                 parts.append(f"{i}. {c}")
 
         if project.citations:
-            parts.append("\n## 可用参考文献摘要")
+            parts.append("\n## 可用参考文献")
             for ref in project.citations[:20]:  # 限制数量避免过长
-                parts.append(f"- [{ref.key}] {ref.title} ({ref.year}): {ref.abstract[:200]}")
+                entry = f"- [{ref.key}] {ref.title} ({ref.year})"
+                if ref.has_full_analysis:
+                    if ref.summary:
+                        entry += f"\n  摘要：{ref.summary[:200]}"
+                    if ref.key_findings_text:
+                        entry += f"\n  关键发现：{ref.key_findings_text[:200]}"
+                elif ref.abstract:
+                    entry += f": {ref.abstract[:200]}"
+                parts.append(entry)
 
         if project.additional_context:
             parts.append(f"\n## 补充说明\n{project.additional_context}")

@@ -8,6 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Paper: 全自动文献调研 ResearchAgent — 搜索→下载→解析→分析→入库，5 阶段全自动 pipeline (T-61)
+- Paper: PaperDownloader 论文下载器 — 支持 arXiv PDF、Unpaywall OA、直接 URL 三种来源 (T-61)
+- Paper: CitationRef 深度分析字段 — summary/key_findings_text/methodology_text/contributions_text/has_full_analysis (T-61)
+- Paper: WriterAgent/OutlineAgent 深度引用 — 有完整分析的引用传递摘要/关键发现/方法给 LLM (T-61)
+- Paper: WriterPipeline 新增 research_papers() 步骤 + RESEARCHED 项目状态 (T-61)
+- KB: documents 表新增 source_type 列 — user_upload/auto_research/manual_reference 三种来源 (T-61)
+- KB: store_metadata_only() 方法 — 仅存元数据记录（下载失败时使用）(T-61)
+- KB: get_research_papers() 方法 — 批量获取完整分析数据 (T-61)
+- KB: list_documents() 支持 source_type 筛选 (T-61)
+- API: POST /paper/projects/{id}/research — 触发自动文献调研 (T-61)
+- API: GET /paper/projects/{id}/references — 获取项目所有参考文献 (T-61)
+- Web: PaperProjectPage 新增 Research Tab — 文献调研按钮 + 进度显示 + 参考文献列表 (T-61)
+- Web: 知识库页面 source_type 筛选 — 全部/用户上传/自动调研/手动参考 (T-61)
+- Config: agent_models 新增 research: deepseek-chat (T-61)
 - Paper: CitationAgent 接入外部学术搜索 — Semantic Scholar / OpenAlex / arXiv 三源插件式架构，自动补充论文引用 (T-60)
 - Core: src/core/search_client.py — SearchProvider ABC + SemanticScholarProvider / OpenAlexProvider / ArxivProvider + SearchManager 聚合去重 (T-60)
 - Web: Settings 页学术搜索源管理区块 — SearchProviderCard 组件，启用/禁用开关，API Key 输入 (T-60)

@@ -10,6 +10,8 @@ import {
   reviseSection,
   polishPaper,
   exportPaper,
+  researchPapers,
+  getReferences,
 } from '../api/paper'
 import type { CreatePaperRequest } from '../types'
 
@@ -106,5 +108,24 @@ export function useExportPaper() {
   return useMutation({
     mutationFn: ({ id, format }: { id: string; format: string }) =>
       exportPaper(id, format),
+  })
+}
+
+export function useResearchPapers() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, maxPapers }: { id: string; maxPapers?: number }) =>
+      researchPapers(id, maxPapers),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['paperProject', variables.id] })
+    },
+  })
+}
+
+export function useReferences(id: string) {
+  return useQuery({
+    queryKey: ['paperReferences', id],
+    queryFn: () => getReferences(id),
+    enabled: !!id,
   })
 }

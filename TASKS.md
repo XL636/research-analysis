@@ -376,6 +376,12 @@
   - 验收：Settings 页显示 3 个搜索源卡片，可切换启用/禁用，论文写作 Pipeline 自动从外部 API 补充引用
   - 依赖：T-51
 
+- [x] **T-61: 全自动文献调研 + 深度引用**
+  - 目标：新建 ResearchAgent 实现全自动文献调研（搜索→下载→解析→分析→入库），WriterAgent 基于知识库完整分析结果深度引用
+  - 步骤：① KB 迁移 source_type 字段 → ② PaperDownloader（arXiv/Unpaywall/直接URL） → ③ ResearchAgent（5阶段流程：关键词→搜索→筛选→下载分析→入库） → ④ CitationRef 新增深度分析字段 → ⑤ CitationAgent 加载完整 AnalysisResult → ⑥ WriterAgent/OutlineAgent 使用丰富引用 → ⑦ WriterPipeline 新增 research_papers 步骤 → ⑧ API 端点（research/references） → ⑨ 前端 Research Tab + KB source_type 筛选
+  - 验收：创建论文项目→自动调研→KB 中有 auto_research 文献→写作引用具体发现→KB 页按来源筛选
+  - 依赖：T-60
+
 ---
 
 ## Backlog（想法池）

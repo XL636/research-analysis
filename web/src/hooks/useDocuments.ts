@@ -16,6 +16,7 @@ export function useDocuments(params?: {
   tag?: string
   collection_id?: number
   uncategorized?: boolean
+  source_type?: string
 }) {
   return useQuery({
     queryKey: ['documents', params],

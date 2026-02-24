@@ -164,6 +164,7 @@
   "paper.wordTarget": "Target",
   "paper.currentWords": "Current",
   "paper.words": "words",
+  "paper.tabResearch": "Research",
   "paper.tabOutline": "Outline",
   "paper.tabDraft": "Draft",
   "paper.tabExport": "Export",
@@ -204,5 +205,26 @@
   "paper.sectionStatus.writing": "Writing",
   "paper.sectionStatus.draft": "Draft",
   "paper.sectionStatus.revising": "Revising",
-  "paper.sectionStatus.done": "Done"
+  "paper.sectionStatus.done": "Done",
+
+  "paper.statusLabel.researched": "Researched",
+  "paper.researchTitle": "Literature Research",
+  "paper.startResearch": "Start Research",
+  "paper.researching": "Researching...",
+  "paper.researchComplete": "Research Complete",
+  "paper.researchStats": "Analyzed {{analyzed}} | Metadata only {{metadataOnly}} | Failed {{failed}}",
+  "paper.researchEmpty": "No research conducted yet",
+  "paper.researchEmptyDesc": "Click 'Start Research' to automatically search, download, and analyze related papers.",
+  "paper.referencesList": "References List",
+  "paper.refAnalyzed": "Analyzed",
+  "paper.refMetadataOnly": "Metadata Only",
+  "paper.refSourceAuto": "Auto Research",
+  "paper.refSourceManual": "Manual Upload",
+  "paper.refSourceUser": "User Upload",
+  "paper.hasDeepAnalysis": "Deep Analysis",
+
+  "knowledge.sourceAll": "All Sources",
+  "knowledge.sourceUserUpload": "User Upload",
+  "knowledge.sourceAutoResearch": "Auto Research",
+  "knowledge.sourceManualRef": "Manual Reference"
 }

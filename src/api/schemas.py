@@ -245,6 +245,7 @@ class CitationRefResponse(BaseModel):
     year: str = ""
     venue: str = ""
     source: str = ""
+    has_full_analysis: bool = False
 
 
 class PaperProjectResponse(BaseModel):
@@ -285,3 +286,30 @@ class PolishRequest(BaseModel):
 
 class PaperExportRequest(BaseModel):
     format: str = "markdown"  # markdown/docx/pdf/latex
+
+
+# --- Research ---
+
+class ResearchRequest(BaseModel):
+    max_papers: int = 10
+    download_enabled: bool = True
+
+
+class ResearchResultResponse(BaseModel):
+    researched_doc_ids: list[int] = Field(default_factory=list)
+    downloaded: int = 0
+    analyzed: int = 0
+    metadata_only: int = 0
+    failed: int = 0
+
+
+class ReferenceItem(BaseModel):
+    doc_id: int
+    title: str = ""
+    summary: str = ""
+    source_type: str = ""
+    has_analysis: bool = False
+
+
+class ReferencesResponse(BaseModel):
+    references: list[ReferenceItem] = Field(default_factory=list)

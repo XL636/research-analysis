@@ -32,13 +32,32 @@ class CitationAgent(BaseAgent):
         citations: list[CitationRef] = []
         seen_titles: set[str] = set()
 
-        # 1. 从知识库加载指定文档
-        if kb and project.reference_doc_ids:
-            for doc_id in project.reference_doc_ids:
+        # 1. 从知识库加载指定文档（含自动调研结果）
+        all_doc_ids = list(set(project.reference_doc_ids + project.research_doc_ids))
+        if kb and all_doc_ids:
+            for doc_id in all_doc_ids:
                 try:
                     analysis = kb.get_analysis(doc_id)
                     if analysis and analysis.document_title not in seen_titles:
                         seen_titles.add(analysis.document_title)
+                        # 构建深度引用信息
+                        key_findings_text = ""
+                        methodology_text = ""
+                        contributions_text = ""
+                        has_full = False
+
+                        if analysis.key_findings:
+                            key_findings_text = "; ".join(
+                                kf.finding for kf in analysis.key_findings[:5]
+                            )
+                            has_full = True
+                        if analysis.methodology:
+                            methodology_text = analysis.methodology.approach
+                            has_full = True
+                        if analysis.contributions:
+                            contributions_text = "; ".join(analysis.contributions[:5])
+                            has_full = True
+
                         citations.append(CitationRef(
                             key=f"kb-{doc_id}",
                             title=analysis.document_title,
@@ -46,6 +65,11 @@ class CitationAgent(BaseAgent):
                             year="",
                             abstract=analysis.summary[:300],
                             source="knowledge_base",
+                            summary=analysis.summary[:500],
+                            key_findings_text=key_findings_text[:500],
+                            methodology_text=methodology_text[:300],
+                            contributions_text=contributions_text[:500],
+                            has_full_analysis=has_full,
                         ))
                 except Exception as e:
                     logger.warning(f"Failed to load doc {doc_id}: {e}")
@@ -61,12 +85,33 @@ class CitationAgent(BaseAgent):
                     for r in results:
                         if r["title"] not in seen_titles:
                             seen_titles.add(r["title"])
-                            citations.append(CitationRef(
+                            # 尝试加载完整分析
+                            ref = CitationRef(
                                 key=f"kb-{r['id']}",
                                 title=r["title"],
                                 abstract=r.get("summary", "")[:300],
                                 source="knowledge_base",
-                            ))
+                            )
+                            try:
+                                analysis = kb.get_analysis(r["id"])
+                                if analysis:
+                                    ref.summary = analysis.summary[:500]
+                                    if analysis.key_findings:
+                                        ref.key_findings_text = "; ".join(
+                                            kf.finding for kf in analysis.key_findings[:5]
+                                        )[:500]
+                                        ref.has_full_analysis = True
+                                    if analysis.methodology:
+                                        ref.methodology_text = analysis.methodology.approach[:300]
+                                        ref.has_full_analysis = True
+                                    if analysis.contributions:
+                                        ref.contributions_text = "; ".join(
+                                            analysis.contributions[:5]
+                                        )[:500]
+                                        ref.has_full_analysis = True
+                            except Exception:
+                                pass
+                            citations.append(ref)
                 except Exception as e:
                     logger.warning(f"KB search failed for '{kw}': {e}")
 

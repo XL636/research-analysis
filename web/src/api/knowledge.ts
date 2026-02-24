@@ -20,6 +20,7 @@ export async function listDocuments(params?: {
   limit?: number
   collection_id?: number
   uncategorized?: boolean
+  source_type?: string
 }): Promise<DocumentSummary[]> {
   const { data } = await api.get('/knowledge/documents', { params })
   return data

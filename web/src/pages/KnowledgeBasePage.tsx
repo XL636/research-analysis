@@ -238,22 +238,34 @@ function CollectionsPanel({
   )
 }
 
+const sourceTypeOptions = [
+  { value: '', labelKey: 'knowledge.sourceAll' },
+  { value: 'user_upload', labelKey: 'knowledge.sourceUserUpload' },
+  { value: 'auto_research', labelKey: 'knowledge.sourceAutoResearch' },
+  { value: 'manual_reference', labelKey: 'knowledge.sourceManualRef' },
+]
+
 export default function KnowledgeBasePage() {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const [selectedTag, setSelectedTag] = useState<string | undefined>(undefined)
   const [selectedCollectionId, setSelectedCollectionId] =
     useState<SelectedCollection>('all')
+  const [selectedSourceType, setSelectedSourceType] = useState<string>('')
 
   const { query, setQuery, results: searchResults } = useSearch()
 
-  const docParams = selectedTag
+  const baseParams = selectedTag
     ? { tag: selectedTag }
     : selectedCollectionId === 'all'
       ? undefined
       : selectedCollectionId === 'uncategorized'
         ? { uncategorized: true }
         : { collection_id: selectedCollectionId as number }
+
+  const docParams = selectedSourceType
+    ? { ...baseParams, source_type: selectedSourceType }
+    : baseParams
 
   const { data: documents, isLoading: docsLoading } = useDocuments(docParams)
   const { data: tags } = useTags()
@@ -291,6 +303,20 @@ export default function KnowledgeBasePage() {
       ),
     },
     {
+      key: 'source_type',
+      header: t('table.type'),
+      render: (row) => {
+        const st = ('source_type' in row ? (row as DocumentSummary).source_type : undefined) || 'user_upload'
+        const label = st === 'auto_research'
+          ? t('knowledge.sourceAutoResearch')
+          : st === 'manual_reference'
+            ? t('knowledge.sourceManualRef')
+            : t('knowledge.sourceUserUpload')
+        const variant = st === 'auto_research' ? 'primary' : st === 'manual_reference' ? 'accent' : 'default'
+        return <Badge variant={variant as 'default' | 'primary' | 'accent'}>{label}</Badge>
+      },
+    },
+    {
       key: 'date',
       header: t('table.date'),
     },
@@ -324,6 +350,23 @@ export default function KnowledgeBasePage() {
               onChange={setQuery}
               placeholder={t('knowledge.searchPlaceholder')}
             />
+
+            {/* Source type filter */}
+            <div className="flex flex-wrap gap-2">
+              {sourceTypeOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setSelectedSourceType(opt.value)}
+                  className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
+                    selectedSourceType === opt.value
+                      ? 'bg-primary-500 text-white'
+                      : 'bg-white border border-gray-300 text-gray-700 hover:border-primary-300'
+                  }`}
+                >
+                  {t(opt.labelKey)}
+                </button>
+              ))}
+            </div>
 
             {/* Tag filter */}
             {tags && tags.length > 0 && (

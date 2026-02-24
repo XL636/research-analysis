@@ -18,6 +18,10 @@ from src.api.schemas import (
     PaperProjectSummary,
     PaperSectionResponse,
     PolishRequest,
+    ReferenceItem,
+    ReferencesResponse,
+    ResearchRequest,
+    ResearchResultResponse,
     SectionReviseRequest,
     SectionWriteRequest,
 )
@@ -72,6 +76,7 @@ def _project_to_response(project) -> PaperProjectResponse:
         CitationRefResponse(
             key=c.key, title=c.title, authors=c.authors,
             year=c.year, venue=c.venue, source=c.source,
+            has_full_analysis=c.has_full_analysis,
         )
         for c in project.citations
     ]
@@ -277,3 +282,73 @@ async def export_paper(
         raise HTTPException(status_code=400, detail=str(e))
 
     return {"success": True, "output_path": output_path, "format": format}
+
+
+@router.post("/projects/{project_id}/research", response_model=ResearchResultResponse)
+async def research_papers(project_id: str, body: ResearchRequest | None = None):
+    """触发自动文献调研."""
+    wp = _get_pipeline()
+    project = wp.store.load(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    project = await asyncio.to_thread(wp.research_papers, project)
+
+    # 获取调研统计
+    total = len(project.research_doc_ids)
+    return ResearchResultResponse(
+        researched_doc_ids=project.research_doc_ids,
+        analyzed=total,
+    )
+
+
+@router.post("/projects/{project_id}/upload-reference")
+async def upload_reference(project_id: str):
+    """手动上传参考 PDF — 暂未实现，使用 /pipeline/upload 替代."""
+    from src.store.paper_store import PaperStore
+
+    store = PaperStore()
+    project = store.load(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    raise HTTPException(
+        status_code=501,
+        detail="Upload reference via POST /pipeline/upload with source_type=manual_reference, "
+               "then add doc_id to project.reference_doc_ids"
+    )
+
+
+@router.get("/projects/{project_id}/references", response_model=ReferencesResponse)
+async def get_references(project_id: str):
+    """获取项目的所有参考文献."""
+    from src.store.paper_store import PaperStore
+
+    store = PaperStore()
+    project = store.load(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    references: list[ReferenceItem] = []
+
+    kb = None
+    try:
+        from src.store.knowledge_base import KnowledgeBase
+        kb = KnowledgeBase()
+    except Exception:
+        pass
+
+    if kb:
+        all_ids = list(set(project.reference_doc_ids + project.research_doc_ids))
+        if all_ids:
+            papers = kb.get_research_papers(all_ids)
+            for p in papers:
+                references.append(ReferenceItem(
+                    doc_id=p["id"],
+                    title=p["title"],
+                    summary=p["summary"][:200],
+                    source_type=p["source_type"],
+                    has_analysis=p["analysis"] is not None,
+                ))
+
+    return ReferencesResponse(references=references)
