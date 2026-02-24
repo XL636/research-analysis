@@ -364,6 +364,12 @@
   - 验收：点击折叠按钮侧边栏收起为 64px 图标模式，展开恢复 256px，刷新后保持状态
   - 依赖：T-27
 
+- [x] **T-59: 融入学术写作知识到 Pipeline Prompt**
+  - 目标：将 ml-paper-writing skill 中的关键知识精炼后融入 4 个 prompt 模板
+  - 步骤：① citation_system.txt 关键词维度覆盖+粒度控制+引用质量标准 → ② outline_system.txt 叙事三支柱+5 句摘要公式+会议适配表 → ③ writer_system.txt 章节结构模板+7 原则+词汇规则 → ④ polish_system.txt 四维评估+叙事连贯性检查+预提交清单
+  - 验收：4 个 prompt 文件更新，JSON schema 与 Agent 代码完全匹配，不改任何 Python 代码
+  - 依赖：T-49, T-50, T-51, T-52
+
 ---
 
 ## Backlog（想法池）
