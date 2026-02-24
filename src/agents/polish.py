@@ -49,7 +49,7 @@ class PolishAgent(BaseAgent):
         parts.append("\n请返回润色后的完整论文（JSON 格式），包含 title, abstract, sections, acknowledgments。")
 
         user_content = "\n".join(parts)
-        result = self._call_llm_json(user_content)
+        result = self._call_llm_json(user_content, max_tokens=16384)
         return self._parse_draft(result, draft)
 
     @staticmethod

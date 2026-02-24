@@ -8,6 +8,7 @@ from typing import Any
 
 import yaml
 from loguru import logger
+from httpx import Timeout
 from openai import OpenAI
 from pydantic import BaseModel
 
@@ -57,6 +58,7 @@ class LLMClient:
             self._clients[model_name] = OpenAI(
                 api_key=api_key,
                 base_url=model_config.base_url,
+                timeout=Timeout(300.0, connect=10.0),
             )
             logger.debug(f"Initialized client for {model_name} ({model_config.provider})")
 

@@ -194,27 +194,44 @@ class WriterPipeline:
         if not project.draft:
             raise ValueError("No draft initialized. Confirm outline first.")
 
+        prev_status = project.status
         project.status = ProjectStatus.WRITING
         self.store.save(project)
 
         pending = [s for s in project.draft.sections if s.status == SectionStatus.PENDING]
 
-        for section in pending:
-            section.status = SectionStatus.WRITING
-            context = self._build_writing_context(project, section.id)
+        try:
+            for section in pending:
+                section.status = SectionStatus.WRITING
+                context = self._build_writing_context(project, section.id)
 
-            with Progress(SpinnerColumn(), TextColumn("{task.description}"), console=console) as progress:
-                progress.add_task(f"撰写: {section.title}...", total=None)
-                written = self.writer_agent.process({
-                    "section": section,
-                    "project_context": context,
-                    "citations": project.citations,
-                    "language": project.language.value,
-                    "venue": project.venue.value,
-                })
+                with Progress(SpinnerColumn(), TextColumn("{task.description}"), console=console) as progress:
+                    progress.add_task(f"撰写: {section.title}...", total=None)
+                    written = self.writer_agent.process({
+                        "section": section,
+                        "project_context": context,
+                        "citations": project.citations,
+                        "language": project.language.value,
+                        "venue": project.venue.value,
+                    })
 
-            self._update_section(project.draft, written)
+                self._update_section(project.draft, written)
+                self.store.save(project)
+        except Exception:
+            logger.exception("write_all_sections failed, saving partial progress")
+            # 已写完的章节保留，未完成的标记回 pending
+            for s in project.draft.sections:
+                if s.status == SectionStatus.WRITING:
+                    s.status = SectionStatus.PENDING
+            # 如果有任何章节已完成，标记 draft_complete；否则回退
+            if any(s.status in (SectionStatus.DRAFT, SectionStatus.DONE) for s in project.draft.sections):
+                project.status = ProjectStatus.DRAFT_COMPLETE if all(
+                    s.status in (SectionStatus.DRAFT, SectionStatus.DONE) for s in project.draft.sections
+                ) else prev_status
+            else:
+                project.status = prev_status
             self.store.save(project)
+            raise
 
         project.status = ProjectStatus.DRAFT_COMPLETE
         self.store.save(project)
@@ -245,17 +262,24 @@ class WriterPipeline:
         if not project.draft:
             raise ValueError("No draft to polish.")
 
+        prev_status = project.status
         project.status = ProjectStatus.POLISHING
         self.store.save(project)
 
-        with Progress(SpinnerColumn(), TextColumn("{task.description}"), console=console) as progress:
-            progress.add_task("全文润色中...", total=None)
-            project.draft = self.polish_agent.process({
-                "draft": project.draft,
-                "language": project.language.value,
-                "venue": project.venue.value,
-                "polish_instructions": instructions,
-            })
+        try:
+            with Progress(SpinnerColumn(), TextColumn("{task.description}"), console=console) as progress:
+                progress.add_task("全文润色中...", total=None)
+                project.draft = self.polish_agent.process({
+                    "draft": project.draft,
+                    "language": project.language.value,
+                    "venue": project.venue.value,
+                    "polish_instructions": instructions,
+                })
+        except Exception:
+            logger.exception("Polish failed, reverting status")
+            project.status = prev_status
+            self.store.save(project)
+            raise
 
         project.status = ProjectStatus.FINISHED
         self.store.save(project)
