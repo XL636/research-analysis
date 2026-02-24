@@ -244,14 +244,8 @@
   "paper.op.outline": "生成大纲",
   "paper.op.revise": "修改中",
 
-  "paper.autoWrite": "一键写作",
-  "paper.autoWriteTitle": "一键写作进行中",
-  "paper.autoWriteViewResult": "查看结果",
-  "paper.awStepResearch": "文献调研",
-  "paper.awStepOutline": "生成大纲",
-  "paper.awStepConfirm": "确认大纲",
-  "paper.awStepWrite": "撰写全文",
-  "paper.awStepPolish": "全文润色",
+  "paper.researchNextStep": "下一步：前往大纲页确认并开始写作 →",
+  "paper.regenerateOutline": "重新生成大纲（纳入调研结果）",
 
   "settings.agentGroupAnalysis": "分析工作流",
   "settings.agentGroupPaper": "论文写作工作流",
