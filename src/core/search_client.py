@@ -95,7 +95,7 @@ class SemanticScholarProvider(SearchProvider):
                 f"{self.config.base_url}/paper/search",
                 params={
                     "query": query,
-                    "fields": "title,authors,year,venue,abstract,externalIds",
+                    "fields": "title,authors,year,venue,abstract,externalIds,openAccessPdf",
                     "limit": min(max_results, self.config.max_results),
                 },
                 headers=headers,
@@ -115,9 +115,17 @@ class SemanticScholarProvider(SearchProvider):
                 ext_ids = paper.get("externalIds") or {}
                 doi = ext_ids.get("DOI", "")
                 arxiv_id = ext_ids.get("ArXiv", "")
-                url = f"https://doi.org/{doi}" if doi else ""
+
+                # Prefer direct OA PDF URL from Semantic Scholar
+                oa_pdf = paper.get("openAccessPdf") or {}
+                pdf_url = oa_pdf.get("url", "")
+
+                # Fallback to arxiv or DOI URL
+                url = pdf_url or ""
                 if not url and arxiv_id:
                     url = f"https://arxiv.org/abs/{arxiv_id}"
+                if not url and doi:
+                    url = f"https://doi.org/{doi}"
 
                 results.append(ExternalSearchResult(
                     title=paper.get("title", ""),
@@ -165,6 +173,7 @@ class OpenAlexProvider(SearchProvider):
                 params={
                     "search": query,
                     "per_page": min(max_results, self.config.max_results),
+                    "select": "id,title,authorships,publication_year,primary_location,doi,abstract_inverted_index,open_access,best_oa_url",
                 },
                 headers=headers,
             )
@@ -201,13 +210,18 @@ class OpenAlexProvider(SearchProvider):
                     work.get("abstract_inverted_index")
                 )
 
+                # Prefer OA PDF URL from OpenAlex
+                oa_info = work.get("open_access") or {}
+                oa_url = oa_info.get("oa_url", "") or ""
+                url = oa_url if oa_url else (work.get("doi", "") or "")
+
                 results.append(ExternalSearchResult(
                     title=work.get("title", "") or "",
                     authors=author_str,
                     year=str(year) if year else "",
                     venue=venue,
                     doi=doi,
-                    url=work.get("doi", "") or "",
+                    url=url,
                     abstract=abstract,
                     source="openalex",
                 ))

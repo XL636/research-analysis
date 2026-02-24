@@ -48,13 +48,14 @@ class PaperDownloader:
             if result:
                 return result
 
-        if doi:
-            result = self._download_unpaywall(doi)
+        # Try direct URL download (PDF links from Semantic Scholar / OpenAlex OA)
+        if url and url != f"https://doi.org/{doi}" if doi else True:
+            result = self._download_direct(url)
             if result:
                 return result
 
-        if url and url.lower().endswith(".pdf"):
-            result = self._download_direct(url)
+        if doi:
+            result = self._download_unpaywall(doi)
             if result:
                 return result
 
@@ -91,10 +92,12 @@ class PaperDownloader:
             return None
 
     def _download_direct(self, url: str) -> Path | None:
-        """直接下载 PDF URL."""
+        """直接下载 PDF URL（支持非 .pdf 结尾的 OA 链接）."""
         filename = Path(url.split("?")[0].split("/")[-1]).name
         if not filename.endswith(".pdf"):
-            filename += ".pdf"
+            # Generate a safe filename from URL
+            safe_name = url.split("//")[-1].replace("/", "_").replace("?", "_")[:80]
+            filename = f"{safe_name}.pdf"
         return self._fetch_pdf(url, filename, source="direct")
 
     def _fetch_pdf(self, url: str, filename: str, source: str = "") -> Path | None:
