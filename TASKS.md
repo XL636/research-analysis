@@ -382,6 +382,12 @@
   - 验收：创建论文项目→自动调研→KB 中有 auto_research 文献→写作引用具体发现→KB 页按来源筛选
   - 依赖：T-60
 
+- [x] **T-62: 论文写作 5 项 UX 优化**
+  - 目标：修复 source_type 显式声明、调研论文可点击、重复调研保护、全局持久进度条、设置页 agent 分组、两级模型选择
+  - 步骤：① pipeline_runner 显式传 source_type → ② 调研论文 Link + 元数据提示 → ③ writer_engine 合并 doc_ids → ④ 重复调研确认对话框 + invalidate references → ⑤ PaperOperationContext + GlobalProgressBanner → ⑥ 设置页分"分析/论文写作"两组 → ⑦ AgentModelCard 两级下拉框 → ⑧ i18n 26 个新 key
+  - 验收：调研论文可跳转详情，连续调研不覆盖，全局进度 banner 跨页可见，设置页分组清晰，模型两级联动
+  - 依赖：T-61
+
 ---
 
 ## Backlog（想法池）

@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Web: 调研论文可点击跳转知识库详情 + 无分析论文 amber 色元数据提示 (T-62)
+- Web: 重复调研确认对话框 — 已调研项目再次调研前弹出确认，说明追加不覆盖 (T-62)
+- Web: PaperOperationContext + GlobalProgressBanner — 跨页面固定顶部进度条，显示操作名称+计时+导航链接 (T-62)
+- Web: 设置页 Agent 分两组 — "分析工作流"(5个) + "论文写作工作流"(5个) (T-62)
+- Web: AgentModelCard 两级下拉框 — 先选服务商再选模型，切换服务商自动选首个模型 (T-62)
+- Backend: pipeline_runner 显式传 source_type="user_upload" (T-62)
+- Backend: writer_engine 重复调研合并 doc_ids 而非覆盖 (T-62)
+- Web: usePaper.ts 调研成功后同时刷新引用列表 (T-62)
+- i18n: zh-CN/en 新增 26 个翻译 key (T-62)
 - Paper: 全自动文献调研 ResearchAgent — 搜索→下载→解析→分析→入库，5 阶段全自动 pipeline (T-61)
 - Paper: PaperDownloader 论文下载器 — 支持 arXiv PDF、Unpaywall OA、直接 URL 三种来源 (T-61)
 - Paper: CitationRef 深度分析字段 — summary/key_findings_text/methodology_text/contributions_text/has_full_analysis (T-61)
