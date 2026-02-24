@@ -74,7 +74,7 @@ def create_app() -> FastAPI:
     app.include_router(paper_router, prefix="/api/paper", tags=["Paper"])
 
     # Serve static frontend (production build)
-    dist_dir = Path("web/dist")
+    dist_dir = Path(__file__).resolve().parent.parent.parent / "web" / "dist"
     if dist_dir.exists():
         # Serve static assets
         app.mount("/assets", StaticFiles(directory=str(dist_dir / "assets")), name="assets")
