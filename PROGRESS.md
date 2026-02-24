@@ -7,8 +7,8 @@
 | 指标 | 值 |
 |------|-----|
 | 当前阶段 | Phase 8 进行中 |
-| 总任务数 | 62 |
-| 已完成 | 62 |
+| 总任务数 | 63 |
+| 已完成 | 63 |
 | 进行中 | 0 |
 | 完成率 | 100% |
 
@@ -20,6 +20,7 @@
 
 | 日期 | Task | 说明 |
 |------|------|------|
+| 2026-02-24 | T-63 | 移除元数据记录 + 知识库批量删除 — metadata fallback 移除/DB 清理迁移/前端防御 |
 | 2026-02-24 | T-62 | 论文写作 5 项 UX 优化 — source_type/调研保护/全局进度/agent 分组/两级选模型 |
 | 2026-02-24 | T-61 | 全自动文献调研 + 深度引用 — ResearchAgent + PaperDownloader + 深度 CitationRef + KB source_type |
 | 2026-02-24 | T-60 | CitationAgent 接入外部学术搜索 — Semantic Scholar / OpenAlex / arXiv + Settings UI |

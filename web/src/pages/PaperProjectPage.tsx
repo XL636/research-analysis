@@ -317,7 +317,6 @@ export default function PaperProjectPage() {
                 {t('paper.researchComplete')} —{' '}
                 {t('paper.researchStats', {
                   analyzed: researchPapersMut.data?.analyzed || 0,
-                  metadataOnly: researchPapersMut.data?.metadata_only || 0,
                   failed: researchPapersMut.data?.failed || 0,
                 })}
               </div>
@@ -360,33 +359,21 @@ export default function PaperProjectPage() {
                   >
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-2 min-w-0">
-                        {ref.has_analysis ? (
-                          <Link
-                            to={`/knowledge/${ref.doc_id}`}
-                            className="font-medium text-primary-600 hover:text-primary-800 text-sm underline underline-offset-2 truncate"
-                          >
-                            {ref.title}
-                          </Link>
-                        ) : (
-                          <span className="font-medium text-primary-950 text-sm truncate">
-                            {ref.title}
-                          </span>
-                        )}
+                        <Link
+                          to={`/knowledge/${ref.doc_id}`}
+                          className="font-medium text-primary-600 hover:text-primary-800 text-sm underline underline-offset-2 truncate"
+                        >
+                          {ref.title}
+                        </Link>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
-                        {ref.has_analysis ? (
-                          <>
-                            <Badge variant="success">{t('paper.refAnalyzed')}</Badge>
-                            <Link
-                              to={`/knowledge/${ref.doc_id}`}
-                              className="text-xs text-primary-600 hover:text-primary-800 underline"
-                            >
-                              {t('paper.viewDetail')}
-                            </Link>
-                          </>
-                        ) : (
-                          <Badge variant="warning">{t('paper.refMetadataOnly')}</Badge>
-                        )}
+                        <Badge variant="success">{t('paper.refAnalyzed')}</Badge>
+                        <Link
+                          to={`/knowledge/${ref.doc_id}`}
+                          className="text-xs text-primary-600 hover:text-primary-800 underline"
+                        >
+                          {t('paper.viewDetail')}
+                        </Link>
                         <Badge
                           variant={sourceTypeBadgeVariant[ref.source_type] || 'default'}
                         >
@@ -401,11 +388,6 @@ export default function PaperProjectPage() {
                     {ref.summary && (
                       <p className="text-xs text-gray-500 mt-1 line-clamp-2">
                         {ref.summary}
-                      </p>
-                    )}
-                    {!ref.has_analysis && (
-                      <p className="text-xs text-amber-600 mt-1">
-                        {t('paper.metadataOnlyHint')}
                       </p>
                     )}
                   </div>

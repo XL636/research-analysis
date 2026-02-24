@@ -22,7 +22,6 @@ class ResearchResult:
     researched_doc_ids: list[int] = field(default_factory=list)
     downloaded: int = 0
     analyzed: int = 0
-    metadata_only: int = 0
     failed: int = 0
 
 
@@ -98,8 +97,7 @@ class ResearchAgent(BaseAgent):
         console.print(
             f"[bold green]调研完成:[/] "
             f"已分析 {result.analyzed} 篇 | "
-            f"仅元数据 {result.metadata_only} 篇 | "
-            f"失败 {result.failed} 篇"
+            f"跳过 {result.failed} 篇"
         )
         return result
 
@@ -235,23 +233,10 @@ class ResearchAgent(BaseAgent):
             except Exception as e:
                 logger.warning(f"Download/analyze failed for '{title}': {e}")
 
-        # 下载失败或禁用下载：仅存元数据
-        try:
-            doc_id = kb.store_metadata_only(
-                title=title,
-                summary=paper.get("abstract", "")[:500],
-                doi=paper.get("doi", ""),
-                url=paper.get("url", ""),
-                authors=paper.get("authors", ""),
-                year=paper.get("year", ""),
-                source_type="auto_research",
-            )
-            result.metadata_only += 1
-            return doc_id
-        except Exception as e:
-            logger.warning(f"Failed to store metadata for '{title}': {e}")
-            result.failed += 1
-            return None
+        # 下载失败：跳过，不存元数据
+        logger.info(f"Skipping paper (download failed): {title}")
+        result.failed += 1
+        return None
 
     def _try_download(self, paper: dict) -> str | None:
         """尝试下载论文 PDF."""

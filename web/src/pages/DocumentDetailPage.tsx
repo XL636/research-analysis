@@ -84,6 +84,15 @@ function ScoreIndicator({ score }: { score: number }) {
 function AnalysisCards({ analysis }: { analysis: AnalysisResult }) {
   const { t } = useTranslation()
 
+  // 防御性处理：metadata-only 或空分析数据
+  if (!analysis.key_findings?.length && !analysis.methodology?.approach) {
+    return (
+      <div className="bg-surface-card rounded-xl shadow-sm p-6">
+        <p className="text-gray-500">{analysis.summary || t('detail.noAnalysisDesc')}</p>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {/* Summary */}
@@ -484,7 +493,7 @@ export default function DocumentDetailPage() {
       )}
 
       {/* Analysis content or empty state */}
-      {doc.analysis ? (
+      {doc.analysis && !(doc.analysis as any).metadata_only ? (
         activeTab === 'report' && doc.report_content ? (
           <div className="bg-surface-card rounded-xl shadow-sm p-8">
             <MarkdownRenderer content={doc.report_content} />

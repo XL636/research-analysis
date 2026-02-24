@@ -308,7 +308,6 @@ class ResearchResultResponse(BaseModel):
     researched_doc_ids: list[int] = Field(default_factory=list)
     downloaded: int = 0
     analyzed: int = 0
-    metadata_only: int = 0
     failed: int = 0
 
 

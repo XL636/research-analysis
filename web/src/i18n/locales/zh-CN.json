@@ -212,7 +212,7 @@
   "paper.startResearch": "开始文献调研",
   "paper.researching": "调研中...",
   "paper.researchComplete": "调研完成",
-  "paper.researchStats": "已分析 {{analyzed}} 篇 | 仅元数据 {{metadataOnly}} 篇 | 失败 {{failed}} 篇",
+  "paper.researchStats": "已分析 {{analyzed}} 篇 | 跳过 {{failed}} 篇",
   "paper.researchEmpty": "尚未进行文献调研",
   "paper.researchEmptyDesc": "点击「开始文献调研」按钮，自动搜索、下载和分析相关论文。",
   "paper.referencesList": "参考文献列表",

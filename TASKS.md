@@ -388,6 +388,12 @@
   - 验收：调研论文可跳转详情，连续调研不覆盖，全局进度 banner 跨页可见，设置页分组清晰，模型两级联动
   - 依赖：T-61
 
+- [x] **T-63: 移除元数据记录 + 知识库批量删除**
+  - 目标：① 知识库批量删除功能 ② 移除 metadata-only 回退，下载失败直接跳过不入库 ③ 清理已有 metadata 记录
+  - 步骤：① ResearchAgent 移除 metadata fallback → ② KB 添加清理迁移 → ③ writer_engine/schemas 清理 → ④ 前端防御性处理 + 移除 metadata UI → ⑤ i18n 更新统计文案
+  - 验收：下载失败论文不入库，旧 metadata 记录自动清理，DocumentDetailPage 不白屏
+  - 依赖：T-61
+
 ---
 
 ## Backlog（想法池）

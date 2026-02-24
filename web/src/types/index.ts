@@ -270,7 +270,6 @@ export interface ResearchResultResponse {
   researched_doc_ids: number[]
   downloaded: number
   analyzed: number
-  metadata_only: number
   failed: number
 }
 

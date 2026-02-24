@@ -212,7 +212,7 @@
   "paper.startResearch": "Start Research",
   "paper.researching": "Researching...",
   "paper.researchComplete": "Research Complete",
-  "paper.researchStats": "Analyzed {{analyzed}} | Metadata only {{metadataOnly}} | Failed {{failed}}",
+  "paper.researchStats": "Analyzed {{analyzed}} | Skipped {{failed}}",
   "paper.researchEmpty": "No research conducted yet",
   "paper.researchEmptyDesc": "Click 'Start Research' to automatically search, download, and analyze related papers.",
   "paper.referencesList": "References List",

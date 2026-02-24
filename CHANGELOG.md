@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- Backend: ResearchAgent 移除 metadata-only 回退 — 下载失败的论文直接跳过，不再入库 (T-63)
+- KB: 自动清理迁移 — 启动时删除所有 file_type='metadata' 的空白记录 (T-63)
+- Web: DocumentDetailPage 防御性处理 — metadata_only 文档显示 EmptyState 而非白屏 (T-63)
+- Web: AnalysisCards 空数据防御 — 无 key_findings/methodology 时显示摘要文本 (T-63)
+
+### Changed
+- Web: PaperProjectPage 参考文献统一为可点击链接，移除 metadata-only badge 和提示 (T-63)
+- Web: 调研统计文案简化 — "已分析 X 篇 | 跳过 Y 篇" (T-63)
+- Backend: ResearchResultResponse schema 移除 metadata_only 字段 (T-63)
+
 ### Added
 - Web: 调研论文可点击跳转知识库详情 + 无分析论文 amber 色元数据提示 (T-62)
 - Web: 重复调研确认对话框 — 已调研项目再次调研前弹出确认，说明追加不覆盖 (T-62)

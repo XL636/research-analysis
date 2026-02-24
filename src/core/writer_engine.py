@@ -100,7 +100,7 @@ class WriterPipeline:
 
         logger.info(
             f"Research complete: {result.analyzed} analyzed, "
-            f"{result.metadata_only} metadata-only, {result.failed} failed"
+            f"{result.failed} failed"
         )
         return project
 

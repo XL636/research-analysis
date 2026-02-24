@@ -144,6 +144,26 @@ class KnowledgeBase:
                 conn.commit()
                 logger.info("source_type migration completed")
 
+            # metadata_only 清理迁移：删除所有仅元数据记录
+            metadata_cleaned = conn.execute(
+                "SELECT value FROM _meta WHERE key = 'metadata_only_cleaned'"
+            ).fetchone()
+            if not metadata_cleaned:
+                meta_rows = conn.execute(
+                    "SELECT id FROM documents WHERE file_type = 'metadata'"
+                ).fetchall()
+                meta_ids = [r["id"] for r in meta_rows]
+                if meta_ids:
+                    ph = ",".join("?" for _ in meta_ids)
+                    conn.execute(f"DELETE FROM documents_fts WHERE rowid IN ({ph})", meta_ids)
+                    conn.execute(f"DELETE FROM document_tags WHERE document_id IN ({ph})", meta_ids)
+                    conn.execute(f"DELETE FROM documents WHERE id IN ({ph})", meta_ids)
+                    logger.info(f"Cleaned up {len(meta_ids)} metadata-only records")
+                conn.execute(
+                    "INSERT OR REPLACE INTO _meta (key, value) VALUES ('metadata_only_cleaned', '1')"
+                )
+                conn.commit()
+
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
