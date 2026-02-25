@@ -364,6 +364,12 @@
   - 验收：CLI --mode quick/deep/meeting 各走对应 prompt，Web 4 个模式卡片可选，--template 向后兼容
   - 依赖：T-39
 
+- [x] **T-66: Claude Code Skills — 分析论文 + 论文写作**
+  - 目标：新增两个 Claude Code Skill，让用户可以用 Claude 直接分析论文/写论文，作为现有 Pipeline 的高质量替代路径
+  - 步骤：① main.py 新增 store-analysis/get-analysis 命令 + search --json 增强 → ② analyze-paper Skill（8 维深度分析 + 知识库存储 + Markdown 报告） → ③ write-paper Skill（5 阶段交互式流程：需求→文献→大纲→写作→导出）
+  - 验收：Claude Code 中说"分析论文"或"写论文"触发对应 Skill，分析结果存入知识库，论文写作集成知识库引用
+  - 依赖：T-19, T-55
+
 - [x] **T-58: 侧边栏折叠功能**
   - 目标：侧边栏支持折叠/展开，收起后仅显示图标
   - 步骤：① Sidebar 组件添加 collapsed 状态 → ② 收起模式仅显示图标 + hover tooltip → ③ AppLayout main 区域动态调整 margin → ④ localStorage 持久化折叠状态

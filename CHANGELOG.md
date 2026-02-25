@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Skill: analyze-paper — Claude Code Skill，用 Claude 200K 上下文直接读 PDF 全文进行 8 维深度分析，单次调用替代多步 Agent Pipeline (T-66)
+- Skill: write-paper — Claude Code Skill，5 阶段交互式论文写作流程（需求收集→文献检索→大纲生成→逐章写作→润色导出），集成知识库深度引用 (T-66)
+- CLI: `store-analysis` 命令 — 将 AnalysisResult JSON 文件存入知识库，供 Skill 调用 (T-66)
+- CLI: `get-analysis` 命令 — 获取单篇文档的完整分析 JSON 输出，供 Skill 调用 (T-66)
+- CLI: `search --json` 参数 — JSON 格式输出搜索结果，供 Skill 程序化读取 (T-66)
 - Core: 分析模式功能 — 4 种预设模式（快速摘要/标准分析/深度研究/会议报告），各自定义 analyzer/generator prompt、文本上限、是否跳过评审 (T-65)
 - Config: settings.yaml 新增 analysis_modes 配置区块，支持按模式分发 prompt 和行为参数 (T-65)
 - Config: 4 个新 prompt 文件 — analyzer_quick.txt、analyzer_deep.txt、generator_quick.txt、generator_deep.txt (T-65)
