@@ -260,7 +260,7 @@ async def delete_collection(
 async def download_document_report(
     doc_id: int,
     background_tasks: BackgroundTasks,
-    format: str = Query("markdown", regex="^(markdown|docx|pptx|pdf)$"),
+    format: str = Query("markdown", pattern="^(markdown|docx|pptx|pdf)$"),
     kb: KnowledgeBase = Depends(get_knowledge_base),
 ):
     """下载文档分析报告（支持 markdown / docx / pptx）."""
