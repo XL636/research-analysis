@@ -32,18 +32,25 @@ class GeneratorAgent(BaseAgent):
 
     @property
     def system_prompt(self) -> str:
-        """根据模板选择加载对应的 Prompt."""
+        """根据模板选择加载对应的 Prompt. prompt_override 优先于 TEMPLATES."""
         if self._system_prompt is None:
-            template_path = TEMPLATES.get(self._template)
-            if template_path and Path(template_path).exists():
-                self._system_prompt = Path(template_path).read_text(encoding="utf-8")
-            else:
-                # fallback: 尝试默认路径
-                prompt_path = Path(f"config/prompts/{self.agent_type}_system.txt")
-                if prompt_path.exists():
-                    self._system_prompt = prompt_path.read_text(encoding="utf-8")
+            # 优先使用 prompt_override（来自分析模式配置）
+            if self._prompt_override:
+                override_path = Path(self._prompt_override)
+                if override_path.exists():
+                    self._system_prompt = override_path.read_text(encoding="utf-8")
+            # 其次使用 TEMPLATES 字典（来自 --template 参数）
+            if self._system_prompt is None:
+                template_path = TEMPLATES.get(self._template)
+                if template_path and Path(template_path).exists():
+                    self._system_prompt = Path(template_path).read_text(encoding="utf-8")
                 else:
-                    self._system_prompt = self._default_system_prompt()
+                    # fallback: 尝试默认路径
+                    prompt_path = Path(f"config/prompts/{self.agent_type}_system.txt")
+                    if prompt_path.exists():
+                        self._system_prompt = prompt_path.read_text(encoding="utf-8")
+                    else:
+                        self._system_prompt = self._default_system_prompt()
         return self._system_prompt
 
     def _default_system_prompt(self) -> str:

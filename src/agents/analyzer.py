@@ -19,6 +19,10 @@ class AnalyzerAgent(BaseAgent):
 
     agent_type = "analyzer"
 
+    def __init__(self, *args, max_text_length: int = 8000, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._max_text_length = max_text_length
+
     def _default_system_prompt(self) -> str:
         return """你是一位资深的学术论文分析专家。你的任务是对学术论文或研究材料进行深度分析。
 
@@ -65,7 +69,7 @@ class AnalyzerAgent(BaseAgent):
 {input_data.abstract or '无'}
 
 正文：
-{input_data.full_text[:8000]}"""  # 限制长度避免超出上下文
+{input_data.full_text[:self._max_text_length]}"""  # 限制长度避免超出上下文
 
         result = self._call_llm_json(user_content)
 

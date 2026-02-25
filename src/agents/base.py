@@ -17,11 +17,12 @@ class BaseAgent(ABC):
 
     agent_type: str = "base"  # 子类覆盖，用于从配置获取模型名
 
-    def __init__(self, llm_client: LLMClient, config_path: str = "config/settings.yaml"):
+    def __init__(self, llm_client: LLMClient, config_path: str = "config/settings.yaml", prompt_override: str | None = None):
         self.llm = llm_client
         self._config_path = config_path
         self._model_name: str | None = None
         self._system_prompt: str | None = None
+        self._prompt_override = prompt_override
 
     @property
     def model_name(self) -> str:
@@ -37,11 +38,16 @@ class BaseAgent(ABC):
     def system_prompt(self) -> str:
         """加载 System Prompt 模板."""
         if self._system_prompt is None:
-            prompt_path = Path(f"config/prompts/{self.agent_type}_system.txt")
-            if prompt_path.exists():
-                self._system_prompt = prompt_path.read_text(encoding="utf-8")
-            else:
-                self._system_prompt = self._default_system_prompt()
+            if self._prompt_override:
+                override_path = Path(self._prompt_override)
+                if override_path.exists():
+                    self._system_prompt = override_path.read_text(encoding="utf-8")
+            if self._system_prompt is None:
+                prompt_path = Path(f"config/prompts/{self.agent_type}_system.txt")
+                if prompt_path.exists():
+                    self._system_prompt = prompt_path.read_text(encoding="utf-8")
+                else:
+                    self._system_prompt = self._default_system_prompt()
         return self._system_prompt
 
     def _default_system_prompt(self) -> str:

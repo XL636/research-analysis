@@ -23,9 +23,10 @@ console = Console()
 class Pipeline:
     """分析 Pipeline：Parse → Analyze → [Synthesize] → Generate → [Review]."""
 
-    def __init__(self, config_path: str = "config/settings.yaml", template: str = "default"):
+    def __init__(self, config_path: str = "config/settings.yaml", template: str = "default", mode: str | None = None):
         self.config_path = config_path
         self.llm = LLMClient(config_path)
+        self.mode = mode
 
         # 加载 pipeline 配置
         with open(config_path, encoding="utf-8") as f:
@@ -34,10 +35,28 @@ class Pipeline:
         self.max_review_retries = pipeline_conf.get("max_review_retries", 2)
         self.output_dir = pipeline_conf.get("output_dir", "./output")
 
+        # 分析模式配置
+        analyzer_prompt = None
+        generator_prompt = None
+        max_text_length = 8000
+
+        if mode:
+            modes_conf = config.get("analysis_modes", {})
+            mode_conf = modes_conf.get(mode, {})
+            if mode_conf:
+                analyzer_prompt = mode_conf.get("analyzer_prompt")
+                generator_prompt = mode_conf.get("generator_prompt")
+                max_text_length = mode_conf.get("max_text_length", 8000)
+                if mode_conf.get("skip_review", False):
+                    self.max_review_retries = -1
+
         # 初始化 Agent
         self.parser = ParserAgent(self.llm, config_path)
-        self.analyzer = AnalyzerAgent(self.llm, config_path)
-        self.generator = GeneratorAgent(self.llm, config_path, template=template)
+        self.analyzer = AnalyzerAgent(self.llm, config_path, prompt_override=analyzer_prompt, max_text_length=max_text_length)
+        if mode and generator_prompt:
+            self.generator = GeneratorAgent(self.llm, config_path, template=template, prompt_override=generator_prompt)
+        else:
+            self.generator = GeneratorAgent(self.llm, config_path, template=template)
 
     def run(
         self,
@@ -110,35 +129,36 @@ class Pipeline:
             ctx.report = self.generator.process(generator_input)
             progress.update(task, description="✅ 报告生成完成")
 
-            # Step 5: Review (optional)
-            try:
-                from src.agents.reviewer import ReviewerAgent
-                reviewer = ReviewerAgent(self.llm, self.config_path)
+            # Step 5: Review (optional, skipped when max_review_retries < 0)
+            if self.max_review_retries >= 0:
+                try:
+                    from src.agents.reviewer import ReviewerAgent
+                    reviewer = ReviewerAgent(self.llm, self.config_path)
 
-                for attempt in range(self.max_review_retries + 1):
-                    task = progress.add_task(
-                        f"🔎 质量评审 (第 {attempt + 1} 轮)...", total=None,
-                    )
-                    ctx.review = reviewer.process(ctx.report)
+                    for attempt in range(self.max_review_retries + 1):
+                        task = progress.add_task(
+                            f"🔎 质量评审 (第 {attempt + 1} 轮)...", total=None,
+                        )
+                        ctx.review = reviewer.process(ctx.report)
 
-                    if ctx.review.approved:
+                        if ctx.review.approved:
+                            progress.update(
+                                task,
+                                description=f"✅ 评审通过 (评分: {ctx.review.overall_score})",
+                            )
+                            break
+
                         progress.update(
                             task,
-                            description=f"✅ 评审通过 (评分: {ctx.review.overall_score})",
+                            description=f"🔄 评审未通过 (评分: {ctx.review.overall_score})，重新生成...",
                         )
-                        break
 
-                    progress.update(
-                        task,
-                        description=f"🔄 评审未通过 (评分: {ctx.review.overall_score})，重新生成...",
-                    )
-
-                    if attempt < self.max_review_retries:
-                        ctx.report = self.generator.process(
-                            generator_input, feedback=ctx.review,
-                        )
-            except ImportError:
-                pass  # Reviewer 未实现时跳过
+                        if attempt < self.max_review_retries:
+                            ctx.report = self.generator.process(
+                                generator_input, feedback=ctx.review,
+                            )
+                except ImportError:
+                    pass  # Reviewer 未实现时跳过
 
             # Step 6: Output
             task = progress.add_task("💾 输出报告...", total=None)
