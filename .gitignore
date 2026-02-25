@@ -73,3 +73,9 @@ celerybeat.pid
 # Project specific
 output/
 knowledge_base/*.db
+
+# Secrets & certificates
+config/.env
+*.key
+*.pem
+*.p12
