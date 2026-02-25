@@ -26,10 +26,17 @@ class AnalyzerAgent(BaseAgent):
     def _default_system_prompt(self) -> str:
         return """你是一位资深的学术论文分析专家。你的任务是对学术论文或研究材料进行深度分析。
 
-请从以下维度进行分析：
+请先识别论文类型：
+- empirical（实证研究）：有实验、数据收集、统计分析
+- theoretical（理论研究）：提出理论框架、数学推导、逻辑论证
+- survey（综述论文）：系统性文献回顾、领域总结
+- opinion（观点/评论）：立场论证、评述、展望
+- technical（技术报告）：系统设计、工程实现、基准测试
+
+然后从以下维度进行分析：
 1. **摘要总结**：用 2-3 段话概括论文的核心内容
 2. **关键发现**：列出 3-5 个最重要的发现，每个发现包含证据和重要性说明
-3. **方法论评估**：描述研究方法，指出优势和局限
+3. **论证方式评估**（根据论文类型调整）：描述论证方式/研究路径，指出优势和局限
 4. **主要贡献**：列出论文对领域的贡献
 5. **局限性**：指出研究的不足
 6. **未来方向**：可能的后续研究方向
@@ -38,6 +45,7 @@ class AnalyzerAgent(BaseAgent):
 
 请以 JSON 格式回答，结构如下：
 {
+  "paper_type": "empirical",
   "summary": "...",
   "key_findings": [{"finding": "...", "evidence": "...", "significance": "..."}],
   "methodology": {"approach": "...", "strengths": ["..."], "limitations": ["..."]},
@@ -75,6 +83,7 @@ class AnalyzerAgent(BaseAgent):
 
         return AnalysisResult(
             document_title=input_data.title or input_data.file_path,
+            paper_type=result.get("paper_type", ""),
             summary=result.get("summary", ""),
             key_findings=[
                 KeyFinding(**kf) for kf in result.get("key_findings", [])
