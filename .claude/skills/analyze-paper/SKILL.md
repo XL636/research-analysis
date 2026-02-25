@@ -30,12 +30,23 @@ description: 用 Claude 直接分析论文/研究材料。触发词：分析论�
 
 ### Step 3: 深度分析
 
-阅读全文后，按以下 **8 个维度** 进行深度分析：
+阅读全文后，按以下 **9 个维度** 进行深度分析：
 
+0. **paper_type** — 先识别论文类型：
+   - `empirical`（实证研究）：有实验、数据收集、统计分析
+   - `theoretical`（理论研究）：提出理论框架、数学推导、逻辑论证
+   - `survey`（综述论文）：系统性文献回顾、领域总结
+   - `opinion`（观点/评论）：立场论证、评述、展望
+   - `technical`（技术报告）：系统设计、工程实现、基准测试
 1. **document_title** — 论文标题（提取原始标题）
 2. **summary** — 2-5 段深度摘要，涵盖研究背景、核心方法、主要结果和结论
 3. **key_findings** — 3-8 个关键发现，每个包含 finding（发现）、evidence（支撑证据）、significance（重要性）
-4. **methodology** — 方法论评估，包含 approach（方法描述）、strengths（优势列表）、limitations（局限列表）
+4. **methodology** — 论证方式评估（根据论文类型调整），包含 approach（方法/论证方式描述）、strengths（优势列表）、limitations（局限列表）：
+   - 实证研究 → 描述实验方法、数据集、评估指标
+   - 理论研究 → 描述论证逻辑、理论框架、推导方法
+   - 综述论文 → 描述文献筛选标准、分类框架、综合分析方法
+   - 观点/评论 → 描述论证结构、推理链条、支撑证据来源
+   - 技术报告 → 描述技术路线、实现方案、性能基准
 5. **contributions** — 论文核心贡献列表（对领域的推进）
 6. **limitations** — 论文局限性列表
 7. **future_work** — 未来研究方向
@@ -48,6 +59,7 @@ description: 用 Claude 直接分析论文/研究材料。触发词：分析论�
 
 ```json
 {
+  "paper_type": "empirical",
   "document_title": "论文完整标题",
   "summary": "2-5 段深度摘要文本。\n\n第二段...\n\n第三段...",
   "key_findings": [
@@ -58,7 +70,7 @@ description: 用 Claude 直接分析论文/研究材料。触发词：分析论�
     }
   ],
   "methodology": {
-    "approach": "研究方法的详细描述",
+    "approach": "论证方式/研究路径的详细描述（根据 paper_type 调整）",
     "strengths": ["方法优势1", "方法优势2"],
     "limitations": ["方法局限1", "方法局限2"]
   },
@@ -71,6 +83,7 @@ description: 用 Claude 直接分析论文/研究材料。触发词：分析论�
 ```
 
 **重要**：
+- `paper_type` 必须是以下之一：`empirical`、`theoretical`、`survey`、`opinion`、`technical`
 - `summary` 是纯文本字符串，段落间用 `\n\n` 分隔
 - `key_findings` 数组的每个元素必须有 `finding`、`evidence`、`significance` 三个字段
 - `methodology` 对象必须有 `approach`（字符串）、`strengths`（数组）、`limitations`（数组）
@@ -117,6 +130,8 @@ uv run python main.py store-analysis ./output/.tmp/analysis_{timestamp}.json --s
 # {document_title}
 
 > Claude 深度分析报告 | 生成时间: {YYYY-MM-DD HH:MM}
+>
+> 论文类型: {paper_type 对应的中文名称}
 
 ## 摘要
 
@@ -126,9 +141,9 @@ uv run python main.py store-analysis ./output/.tmp/analysis_{timestamp}.json --s
 
 {key_findings 逐项展开，含证据和重要性}
 
-## 方法论评估
+## {根据 paper_type 动态命名：empirical→方法论评估 / theoretical→论证方式 / survey→综合方法 / opinion→论证结构 / technical→技术路线}
 
-**方法**: {approach}
+**方法/论证方式**: {approach}
 
 **优势**:
 - ...

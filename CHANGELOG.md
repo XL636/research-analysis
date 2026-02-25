@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Core: 论文类型识别 — AnalysisResult 新增 paper_type 字段（empirical/theoretical/survey/opinion/technical），LLM 自动识别论文类型 (T-67)
+- Prompt: 3 个 analyzer prompt（system/deep/quick）加入类型识别步骤，方法论评估改为按类型自适应的论证方式评估 (T-67)
+- Skill: analyze-paper Skill 同步更新 — 新增 paper_type 维度，JSON schema 和报告模板自适应 (T-67)
+- Web: 文档详情页论文类型 badge — 5 种类型各有独立颜色标识 (T-67)
+- Web: 方法论区块标题按 paper_type 动态显示 — 实证→研究方法/理论→论证方式/综述→综合方法/观点→论证结构/技术→技术路线 (T-67)
+- i18n: zh-CN/en 新增 12 个论文类型相关翻译 key (T-67)
 - Skill: analyze-paper — Claude Code Skill，用 Claude 200K 上下文直接读 PDF 全文进行 8 维深度分析，单次调用替代多步 Agent Pipeline (T-66)
 - Skill: write-paper — Claude Code Skill，5 阶段交互式论文写作流程（需求收集→文献检索→大纲生成→逐章写作→润色导出），集成知识库深度引用 (T-66)
 - CLI: `store-analysis` 命令 — 将 AnalysisResult JSON 文件存入知识库，供 Skill 调用 (T-66)

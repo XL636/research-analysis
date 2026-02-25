@@ -117,6 +117,7 @@ export interface MethodologyAssessment {
 
 export interface AnalysisResult {
   document_title: string
+  paper_type?: string  // empirical / theoretical / survey / opinion / technical
   summary: string
   key_findings: KeyFinding[]
   methodology: MethodologyAssessment

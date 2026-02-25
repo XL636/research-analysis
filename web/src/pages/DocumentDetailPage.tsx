@@ -81,6 +81,36 @@ function ScoreIndicator({ score }: { score: number }) {
   )
 }
 
+function PaperTypeBadge({ paperType }: { paperType?: string }) {
+  const { t } = useTranslation()
+  if (!paperType) return null
+
+  const colorMap: Record<string, string> = {
+    empirical: 'bg-blue-100 text-blue-800',
+    theoretical: 'bg-purple-100 text-purple-800',
+    survey: 'bg-teal-100 text-teal-800',
+    opinion: 'bg-amber-100 text-amber-800',
+    technical: 'bg-slate-100 text-slate-800',
+  }
+
+  const colorClass = colorMap[paperType] || 'bg-gray-100 text-gray-800'
+  const label = t(`detail.paperType.${paperType}`, paperType)
+
+  return (
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colorClass}`}>
+      {label}
+    </span>
+  )
+}
+
+const PAPER_TYPE_METHODOLOGY_KEYS: Record<string, string> = {
+  empirical: 'detail.methodology.empirical',
+  theoretical: 'detail.methodology.theoretical',
+  survey: 'detail.methodology.survey',
+  opinion: 'detail.methodology.opinion',
+  technical: 'detail.methodology.technical',
+}
+
 function AnalysisCards({ analysis }: { analysis: AnalysisResult }) {
   const { t } = useTranslation()
 
@@ -92,6 +122,9 @@ function AnalysisCards({ analysis }: { analysis: AnalysisResult }) {
       </div>
     )
   }
+
+  const methKey = analysis.paper_type && PAPER_TYPE_METHODOLOGY_KEYS[analysis.paper_type]
+  const methodologyTitle = methKey ? t(methKey) : t('detail.methodology')
 
   return (
     <div className="space-y-6">
@@ -133,7 +166,7 @@ function AnalysisCards({ analysis }: { analysis: AnalysisResult }) {
           <div className="flex items-center gap-2 mb-4">
             <FlaskConical className="h-5 w-5 text-primary-600" />
             <h2 className="font-heading text-lg font-semibold text-primary-950">
-              {t('detail.methodology')}
+              {methodologyTitle}
             </h2>
           </div>
           <p className="text-primary-950 mb-4">{analysis.methodology.approach}</p>
@@ -409,6 +442,9 @@ export default function DocumentDetailPage() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="primary">{doc.file_type}</Badge>
+          {doc.analysis?.paper_type && (
+            <PaperTypeBadge paperType={doc.analysis.paper_type} />
+          )}
           {doc.tags
             .split(', ')
             .filter(Boolean)

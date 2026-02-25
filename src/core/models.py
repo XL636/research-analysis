@@ -76,6 +76,7 @@ class AnalysisResult(BaseModel):
     """分析 Agent 输出 - 单篇文档的深度分析."""
 
     document_title: str
+    paper_type: str = ""  # empirical / theoretical / survey / opinion / technical
     summary: str = ""
     key_findings: list[KeyFinding] = Field(default_factory=list)
     methodology: MethodologyAssessment = Field(default_factory=MethodologyAssessment)
