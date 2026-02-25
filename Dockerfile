@@ -40,6 +40,7 @@ RUN mkdir -p /app/knowledge_base /app/uploads /app/output
 RUN groupadd --gid 1000 appuser && \
     useradd --uid 1000 --gid appuser --no-create-home appuser && \
     chown -R appuser:appuser /app
+ENV UV_CACHE_DIR=/app/.uv-cache
 USER appuser
 
 EXPOSE 8000
