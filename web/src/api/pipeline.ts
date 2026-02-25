@@ -1,15 +1,22 @@
 import api from './client'
-import type { PipelineRunResponse, PipelineResultResponse } from '../types'
+import type { PipelineRunResponse, PipelineResultResponse, AnalysisModesResponse } from '../types'
+
+export async function getAnalysisModes(): Promise<AnalysisModesResponse> {
+  const { data } = await api.get('/pipeline/modes')
+  return data
+}
 
 export async function startPipeline(
   files: File[],
   format: string = 'markdown',
   synthesize: boolean = false,
+  mode: string = 'standard',
 ): Promise<PipelineRunResponse> {
   const formData = new FormData()
   files.forEach(f => formData.append('files', f))
   formData.append('format', format)
   formData.append('synthesize', String(synthesize))
+  formData.append('mode', mode)
   const { data } = await api.post('/pipeline/run', formData)
   return data
 }

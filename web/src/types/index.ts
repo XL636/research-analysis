@@ -1,3 +1,18 @@
+// Analysis Modes
+export interface AnalysisModeInfo {
+  id: string
+  label_zh: string
+  label_en: string
+  description_zh: string
+  description_en: string
+  skip_review: boolean
+  max_text_length: number
+}
+
+export interface AnalysisModesResponse {
+  modes: AnalysisModeInfo[]
+}
+
 // Pipeline
 export interface StepProgress {
   step: string

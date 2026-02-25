@@ -28,6 +28,7 @@
   "analyze.crossDocSynthesis": "跨文档综合分析",
   "analyze.crossDocDesc": "对多个文档进行比较和综合分析",
   "analyze.crossDocTooltip": "上传 2 个以上文件时，额外生成跨文档比较综述：共同主题、主要差异、研究空白及建议",
+  "analyze.analysisMode": "分析模式",
   "analyze.startAnalysis": "开始分析",
   "analyze.starting": "启动中...",
   "analyze.analysisError": "分析错误",

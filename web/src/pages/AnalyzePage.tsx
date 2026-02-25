@@ -9,6 +9,10 @@ import {
   AlertCircle,
   HelpCircle,
   Loader,
+  Zap,
+  BookOpen,
+  Microscope,
+  Users,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import FileDropzone from '../components/ui/FileDropzone'
@@ -16,11 +20,18 @@ import ProgressStepper from '../components/ui/ProgressStepper'
 import MarkdownRenderer from '../components/ui/MarkdownRenderer'
 import EmptyState from '../components/ui/EmptyState'
 import { usePipelineProgress } from '../hooks/usePipelineProgress'
-import { startPipeline, getPipelineResult, getDownloadUrl } from '../api/pipeline'
+import { startPipeline, getPipelineResult, getDownloadUrl, getAnalysisModes } from '../api/pipeline'
 import { checkDuplicate, deleteDocument } from '../api/knowledge'
-import type { DocumentSummary } from '../types'
+import type { DocumentSummary, AnalysisModeInfo } from '../types'
 
 type Phase = 'upload' | 'analyzing' | 'result'
+
+const MODE_ICONS: Record<string, typeof Zap> = {
+  quick: Zap,
+  standard: BookOpen,
+  deep: Microscope,
+  meeting: Users,
+}
 
 const FORMAT_OPTIONS = [
   { value: 'markdown', label: 'Markdown', icon: FileText },
@@ -30,10 +41,12 @@ const FORMAT_OPTIONS = [
 ] as const
 
 export default function AnalyzePage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [phase, setPhase] = useState<Phase>('upload')
   const [files, setFiles] = useState<File[]>([])
   const [format, setFormat] = useState('markdown')
+  const [mode, setMode] = useState('standard')
+  const [modes, setModes] = useState<AnalysisModeInfo[]>([])
   const [synthesize, setSynthesize] = useState(false)
   const [runId, setRunId] = useState<string | null>(null)
   const [reportContent, setReportContent] = useState('')
@@ -45,6 +58,11 @@ export default function AnalyzePage() {
   const [duplicateDocs, setDuplicateDocs] = useState<DocumentSummary[]>([])
 
   const { steps, isComplete, error } = usePipelineProgress(runId)
+
+  // Load analysis modes
+  useEffect(() => {
+    getAnalysisModes().then(res => setModes(res.modes)).catch(() => {})
+  }, [])
 
   // Watch for pipeline completion or error
   useEffect(() => {
@@ -66,7 +84,7 @@ export default function AnalyzePage() {
   const doStartPipeline = async () => {
     setIsSubmitting(true)
     try {
-      const response = await startPipeline(files, format, synthesize)
+      const response = await startPipeline(files, format, synthesize, mode)
       setRunId(response.run_id)
       setPhase('analyzing')
     } catch {
@@ -122,6 +140,7 @@ export default function AnalyzePage() {
     setPhase('upload')
     setFiles([])
     setFormat('markdown')
+    setMode('standard')
     setSynthesize(false)
     setRunId(null)
     setReportContent('')
@@ -141,6 +160,43 @@ export default function AnalyzePage() {
 
         <div className="bg-surface-card rounded-xl shadow-sm p-8">
           <FileDropzone onFilesSelected={setFiles} />
+
+          {/* Analysis mode selector */}
+          {modes.length > 0 && (
+            <div className="mt-6">
+              <label className="block text-sm font-medium text-primary-950 mb-2">
+                {t('analyze.analysisMode')}
+              </label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {modes.map(m => {
+                  const Icon = MODE_ICONS[m.id] || BookOpen
+                  const isSelected = mode === m.id
+                  const label = i18n.language.startsWith('zh') ? m.label_zh : m.label_en
+                  const desc = i18n.language.startsWith('zh') ? m.description_zh : m.description_en
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => setMode(m.id)}
+                      className={`flex flex-col items-start gap-1.5 border rounded-lg px-4 py-3 text-left transition-all duration-200 ${
+                        isSelected
+                          ? 'border-primary-500 bg-primary-50 ring-1 ring-primary-500'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Icon className={`h-4 w-4 ${isSelected ? 'text-primary-600' : 'text-gray-400'}`} />
+                        <span className={`text-sm font-medium ${isSelected ? 'text-primary-700' : 'text-primary-950'}`}>
+                          {label}
+                        </span>
+                      </div>
+                      <span className="text-xs text-gray-500 line-clamp-2">{desc}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Options section */}
           <div className="mt-6 flex flex-wrap gap-6">
@@ -334,6 +390,18 @@ export default function AnalyzePage() {
                     </li>
                   ))}
                 </ul>
+              </div>
+
+              <div className="mb-6">
+                <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-1">
+                  {t('analyze.analysisMode')}
+                </h3>
+                <p className="text-sm text-primary-950">
+                  {(() => {
+                    const m = modes.find(m => m.id === mode)
+                    return m ? (i18n.language.startsWith('zh') ? m.label_zh : m.label_en) : mode
+                  })()}
+                </p>
               </div>
 
               <div className="mb-6">
