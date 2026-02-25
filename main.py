@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json as json_lib
 from pathlib import Path
 from typing import Optional
 
@@ -88,6 +89,7 @@ def analyze(
 def search(
     query: str = typer.Argument(..., help="搜索关键词"),
     limit: int = typer.Option(10, "--limit", "-n", help="最大结果数"),
+    json_output: bool = typer.Option(False, "--json", help="JSON 格式输出（供程序化读取）"),
 ) -> None:
     """搜索知识库."""
     try:
@@ -100,7 +102,14 @@ def search(
     results = kb.search(query, limit=limit)
 
     if not results:
-        console.print(f"[yellow]未找到与 '{query}' 相关的结果[/yellow]")
+        if json_output:
+            print("[]")
+        else:
+            console.print(f"[yellow]未找到与 '{query}' 相关的结果[/yellow]")
+        return
+
+    if json_output:
+        print(json_lib.dumps(results, ensure_ascii=False, indent=2))
         return
 
     table = Table(title=f"搜索结果: {query}")
@@ -554,6 +563,51 @@ def _print_outline(project) -> None:
         console.print(f"{indent}[cyan]{s.id}[/cyan] {s.title} ({s.word_count} 字)")
         for point in s.outline_points:
             console.print(f"{indent}  - {point}")
+
+
+@app.command(name="store-analysis")
+def store_analysis_cli(
+    json_file: str = typer.Argument(..., help="AnalysisResult JSON 文件路径"),
+    source: str = typer.Option("", "--source", "-s", help="源文件路径"),
+    type: str = typer.Option("pdf", "--type", "-t", help="文件类型"),
+    source_type: str = typer.Option("claude_analysis", "--source-type", help="来源类型"),
+) -> None:
+    """将 JSON 分析结果存入知识库（供 Claude Code Skill 调用）."""
+    json_path = Path(json_file)
+    if not json_path.exists():
+        console.print(f"[red]JSON 文件不存在: {json_file}[/red]")
+        raise typer.Exit(1)
+
+    from src.core.models import AnalysisResult
+    from src.store.knowledge_base import KnowledgeBase
+
+    try:
+        raw = json_lib.loads(json_path.read_text(encoding="utf-8"))
+        analysis = AnalysisResult.model_validate(raw)
+    except Exception as e:
+        console.print(f"[red]JSON 解析失败: {e}[/red]")
+        raise typer.Exit(1)
+
+    kb = KnowledgeBase()
+    doc_id = kb.store_analysis(analysis, file_path=source, file_type=type, source_type=source_type)
+    console.print(f"[bold green]已存入知识库: doc_id={doc_id}[/bold green]")
+
+
+@app.command(name="get-analysis")
+def get_analysis_cli(
+    doc_id: int = typer.Argument(..., help="文档 ID"),
+) -> None:
+    """获取单篇文档的完整分析 JSON（供 Claude Code Skill 调用）."""
+    from src.store.knowledge_base import KnowledgeBase
+
+    kb = KnowledgeBase()
+    analysis = kb.get_analysis(doc_id)
+
+    if not analysis:
+        console.print(f"[red]未找到文档 ID={doc_id} 的分析结果[/red]")
+        raise typer.Exit(1)
+
+    print(analysis.model_dump_json(indent=2))
 
 
 @app.command()
