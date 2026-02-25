@@ -9,6 +9,20 @@ from pydantic import BaseModel, Field
 
 # --- Pipeline ---
 
+class AnalysisModeInfo(BaseModel):
+    id: str
+    label_zh: str = ""
+    label_en: str = ""
+    description_zh: str = ""
+    description_en: str = ""
+    skip_review: bool = False
+    max_text_length: int = 8000
+
+
+class AnalysisModesResponse(BaseModel):
+    modes: list[AnalysisModeInfo] = Field(default_factory=list)
+
+
 class PipelineRunResponse(BaseModel):
     run_id: str
     status: str = "started"

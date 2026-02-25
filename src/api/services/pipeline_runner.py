@@ -36,6 +36,7 @@ async def run_pipeline(
     file_paths: list[str],
     output_format: str = "markdown",
     synthesize: bool = False,
+    mode: str = "standard",
 ) -> None:
     """Run the pipeline in a background thread, pushing progress to a queue."""
     run = _runs.get(run_id)
@@ -46,7 +47,7 @@ async def run_pipeline(
     queue: asyncio.Queue = run["queue"]
 
     try:
-        pipeline = Pipeline()
+        pipeline = Pipeline(mode=mode)
 
         # Step 1: Parse
         await queue.put(StepProgress(step="parse", status="running"))
@@ -96,18 +97,21 @@ async def run_pipeline(
         report = await asyncio.to_thread(pipeline.generator.process, gen_input)
         await queue.put(StepProgress(step="generate", status="completed"))
 
-        # Step 5: Review
-        await queue.put(StepProgress(step="review", status="running"))
-        try:
-            from src.agents.reviewer import ReviewerAgent
-            reviewer = ReviewerAgent(pipeline.llm, pipeline.config_path)
-            review = await asyncio.to_thread(reviewer.process, report)
-            if not review.approved and pipeline.max_review_retries > 0:
-                report = await asyncio.to_thread(pipeline.generator.process, gen_input, review)
-            await queue.put(StepProgress(step="review", status="completed", message=f"score: {review.overall_score}"))
-        except Exception:
-            logger.debug("Review step skipped", exc_info=True)
+        # Step 5: Review (skipped when max_review_retries < 0, e.g. quick mode)
+        if pipeline.max_review_retries < 0:
             await queue.put(StepProgress(step="review", status="completed", message="skipped"))
+        else:
+            await queue.put(StepProgress(step="review", status="running"))
+            try:
+                from src.agents.reviewer import ReviewerAgent
+                reviewer = ReviewerAgent(pipeline.llm, pipeline.config_path)
+                review = await asyncio.to_thread(reviewer.process, report)
+                if not review.approved and pipeline.max_review_retries > 0:
+                    report = await asyncio.to_thread(pipeline.generator.process, gen_input, review)
+                await queue.put(StepProgress(step="review", status="completed", message=f"score: {review.overall_score}"))
+            except Exception:
+                logger.debug("Review step skipped", exc_info=True)
+                await queue.put(StepProgress(step="review", status="completed", message="skipped"))
 
         # Store report_content in knowledge base for each document
         if report and stored_doc_ids:

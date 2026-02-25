@@ -4,14 +4,42 @@ from __future__ import annotations
 
 import asyncio
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+import yaml
+from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse
 
-from src.api.schemas import PipelineResultResponse, PipelineRunResponse
+from src.api.schemas import (
+    AnalysisModeInfo,
+    AnalysisModesResponse,
+    PipelineResultResponse,
+    PipelineRunResponse,
+)
 from src.api.services.file_manager import save_upload
 from src.api.services.pipeline_runner import create_run, get_run, run_pipeline
 
 router = APIRouter()
+
+
+@router.get("/modes", response_model=AnalysisModesResponse)
+async def get_analysis_modes(request: Request):
+    """Get available analysis modes."""
+    with open("config/settings.yaml", encoding="utf-8") as f:
+        config = yaml.safe_load(f)
+
+    modes_conf = config.get("analysis_modes", {})
+    modes = []
+    for mode_id, mode_data in modes_conf.items():
+        modes.append(AnalysisModeInfo(
+            id=mode_id,
+            label_zh=mode_data.get("label_zh", mode_id),
+            label_en=mode_data.get("label_en", mode_id),
+            description_zh=mode_data.get("description_zh", ""),
+            description_en=mode_data.get("description_en", ""),
+            skip_review=mode_data.get("skip_review", False),
+            max_text_length=mode_data.get("max_text_length", 8000),
+        ))
+
+    return AnalysisModesResponse(modes=modes)
 
 
 @router.post("/run", response_model=PipelineRunResponse)
@@ -19,6 +47,7 @@ async def start_pipeline(
     files: list[UploadFile] = File(..., description="上传文件（PDF/PPTX/MD/TXT/DOCX）"),
     format: str = Form("markdown", description="输出格式: markdown/docx/pptx/pdf"),
     synthesize: bool = Form(False, description="启用跨文档综合分析"),
+    mode: str = Form("standard", description="分析模式: quick/standard/deep/meeting"),
 ):
     """Upload files and start analysis pipeline."""
     if not files:
@@ -36,7 +65,7 @@ async def start_pipeline(
             raise HTTPException(status_code=400, detail=str(e))
 
     # Start pipeline in background
-    asyncio.create_task(run_pipeline(run_id, file_paths, format, synthesize))
+    asyncio.create_task(run_pipeline(run_id, file_paths, format, synthesize, mode))
 
     return PipelineRunResponse(run_id=run_id, status="started")
 
