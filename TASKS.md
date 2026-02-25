@@ -358,6 +358,12 @@
 
 ## Phase 8: UI/UX 优化 `[进行中]`
 
+- [x] **T-65: 分析模式功能（quick/standard/deep/meeting）**
+  - 目标：用户可选择不同分析模式，影响分析深度和报告格式
+  - 步骤：① settings.yaml analysis_modes 配置 → ② 4 个新 prompt 文件 → ③ BaseAgent prompt_override + AnalyzerAgent max_text_length → ④ Pipeline mode 参数 + skip_review → ⑤ CLI --mode 参数 → ⑥ API /pipeline/modes + mode 参数 → ⑦ 前端模式选择器卡片 + i18n
+  - 验收：CLI --mode quick/deep/meeting 各走对应 prompt，Web 4 个模式卡片可选，--template 向后兼容
+  - 依赖：T-39
+
 - [x] **T-58: 侧边栏折叠功能**
   - 目标：侧边栏支持折叠/展开，收起后仅显示图标
   - 步骤：① Sidebar 组件添加 collapsed 状态 → ② 收起模式仅显示图标 + hover tooltip → ③ AppLayout main 区域动态调整 margin → ④ localStorage 持久化折叠状态

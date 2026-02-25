@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- Core: 分析模式功能 — 4 种预设模式（快速摘要/标准分析/深度研究/会议报告），各自定义 analyzer/generator prompt、文本上限、是否跳过评审 (T-65)
+- Config: settings.yaml 新增 analysis_modes 配置区块，支持按模式分发 prompt 和行为参数 (T-65)
+- Config: 4 个新 prompt 文件 — analyzer_quick.txt、analyzer_deep.txt、generator_quick.txt、generator_deep.txt (T-65)
+- Core: BaseAgent 新增 prompt_override 参数，支持按模式动态切换 system prompt (T-65)
+- Core: AnalyzerAgent 新增 max_text_length 参数，替换硬编码 8000 字符上限 (T-65)
+- Core: Pipeline 新增 mode 参数，从配置读取模式束分发给各 Agent (T-65)
+- CLI: analyze/batch 命令新增 --mode/-m 参数（quick/standard/deep/meeting），优先于 --template (T-65)
+- API: GET /pipeline/modes 端点 — 返回可用分析模式列表 (T-65)
+- API: POST /pipeline/run 新增 mode 参数 (T-65)
+- Web: 分析页新增模式选择器 — 4 个卡片含图标/名称/描述，支持中英双语 (T-65)
+- i18n: zh-CN/en 新增 analyze.analysisMode key (T-65)
+
 ### Security
 - API: SPA fallback 路径遍历修复 — resolve() + is_relative_to() 阻止 `/../` 访问 dist 目录外文件
 - API: 文件上传路径遍历修复 — Path.name 清理文件名，阻止 `../../` 逃逸上传目录
