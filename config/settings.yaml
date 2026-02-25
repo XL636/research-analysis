@@ -37,8 +37,8 @@ agent_models:
   reviewer: glm-4-plus
   outline: glm-4-plus
   writer: glm-4-plus
-  citation: glm-4-flash
-  research: deepseek-chat
+  citation: glm-4-plus
+  research: glm-4-plus
   polish: glm-4-plus
 pipeline:
   max_review_retries: 2
@@ -67,6 +67,43 @@ search_providers:
     enabled: true
     timeout: 15
     max_results: 5
+analysis_modes:
+  quick:
+    label_zh: "快速摘要"
+    label_en: "Quick Summary"
+    description_zh: "快速提取核心要点，适合快速了解文档大意"
+    description_en: "Quickly extract key points for a high-level overview"
+    analyzer_prompt: "config/prompts/analyzer_quick.txt"
+    generator_prompt: "config/prompts/generator_quick.txt"
+    skip_review: true
+    max_text_length: 4000
+  standard:
+    label_zh: "标准分析"
+    label_en: "Standard Analysis"
+    description_zh: "全面深度分析，含方法论评估和贡献评价"
+    description_en: "Comprehensive analysis with methodology assessment"
+    analyzer_prompt: "config/prompts/analyzer_system.txt"
+    generator_prompt: "config/prompts/generator_system.txt"
+    skip_review: false
+    max_text_length: 8000
+  deep:
+    label_zh: "深度研究"
+    label_en: "Deep Research"
+    description_zh: "最详尽的分析，适合重点论文的深入解读"
+    description_en: "Most thorough analysis for in-depth study of key papers"
+    analyzer_prompt: "config/prompts/analyzer_deep.txt"
+    generator_prompt: "config/prompts/generator_deep.txt"
+    skip_review: false
+    max_text_length: 16000
+  meeting:
+    label_zh: "会议报告"
+    label_en: "Meeting Report"
+    description_zh: "面向组会汇报的结构化报告格式"
+    description_en: "Structured report format for group meeting presentations"
+    analyzer_prompt: "config/prompts/analyzer_system.txt"
+    generator_prompt: "config/prompts/meeting_report.txt"
+    skip_review: false
+    max_text_length: 8000
 api:
   host: 0.0.0.0
   port: 8000
