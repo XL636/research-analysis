@@ -89,7 +89,9 @@ def create_app() -> FastAPI:
         @app.get("/{path:path}", include_in_schema=False)
         async def spa_fallback(path: str):
             # If file exists in dist, serve it; otherwise serve index.html
-            file_path = dist_dir / path
+            file_path = (dist_dir / path).resolve()
+            if not file_path.is_relative_to(dist_dir.resolve()):
+                return FileResponse(str(dist_dir / "index.html"))
             if file_path.is_file():
                 return FileResponse(str(file_path))
             return FileResponse(str(dist_dir / "index.html"))
