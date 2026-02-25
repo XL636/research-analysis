@@ -8,6 +8,7 @@ from pathlib import Path
 
 import yaml
 from fastapi import APIRouter
+from loguru import logger
 
 from src.api.schemas import (
     AgentModelAssignment,
@@ -141,7 +142,7 @@ async def save_api_keys(req: ApiKeySaveRequest):
         client = LLMClient()
         client.clear_clients()
     except Exception:
-        pass  # Non-critical — clients will rebuild on next call
+        logger.debug("Failed to clear LLM client cache", exc_info=True)
 
     return ApiKeySaveResponse(success=True, providers=_build_provider_list())
 
@@ -223,7 +224,7 @@ async def save_agent_models(req: AgentModelsSaveRequest):
         client = LLMClient()
         client.clear_clients()
     except Exception:
-        pass
+        logger.debug("Failed to clear LLM client cache", exc_info=True)
 
     assignments, models = _build_agent_model_data()
     return AgentModelsSaveResponse(

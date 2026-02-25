@@ -73,7 +73,7 @@ async def run_pipeline(
                 doc_id = kb.store_analysis(analysis, file_path=doc.file_path, file_type=doc.file_type.value, source_type="user_upload")
                 stored_doc_ids.append(doc_id)
             except Exception:
-                pass
+                logger.debug("KB store failed during pipeline", exc_info=True)
         await queue.put(StepProgress(step="analyze", status="completed", message=f"{len(analyses)} analyses"))
 
         # Step 3: Synthesize (optional)
@@ -106,6 +106,7 @@ async def run_pipeline(
                 report = await asyncio.to_thread(pipeline.generator.process, gen_input, review)
             await queue.put(StepProgress(step="review", status="completed", message=f"score: {review.overall_score}"))
         except Exception:
+            logger.debug("Review step skipped", exc_info=True)
             await queue.put(StepProgress(step="review", status="completed", message="skipped"))
 
         # Store report_content in knowledge base for each document
@@ -116,7 +117,7 @@ async def run_pipeline(
                 for did in stored_doc_ids:
                     kb.update_report_content(did, report.content)
             except Exception:
-                pass
+                logger.debug("Failed to store report_content in KB", exc_info=True)
 
         # Write output
         output_dir = Path("./output")

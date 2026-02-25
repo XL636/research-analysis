@@ -6,6 +6,7 @@ import asyncio
 
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse
+from loguru import logger
 
 from src.api.schemas import (
     CitationRefResponse,
@@ -348,7 +349,7 @@ async def get_references(project_id: str):
         from src.store.knowledge_base import KnowledgeBase
         kb = KnowledgeBase()
     except Exception:
-        pass
+        logger.debug("Failed to initialize KnowledgeBase for references", exc_info=True)
 
     if kb:
         all_ids = list(set(project.reference_doc_ids + project.research_doc_ids))

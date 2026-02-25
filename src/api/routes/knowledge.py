@@ -9,6 +9,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
+from loguru import logger
 
 from src.api.dependencies import get_knowledge_base
 from src.api.schemas import (
@@ -87,7 +88,7 @@ async def search_documents(
     try:
         results = kb.search(q, limit=limit)
     except Exception:
-        # FTS5 query syntax error etc.
+        logger.warning("FTS5 search failed", exc_info=True)
         return []
     return [SearchResult(**r) for r in results]
 
@@ -285,22 +286,26 @@ async def download_document_report(
     safe_title = "".join(c if c.isalnum() or c in " _-" else "_" for c in report.title)[:60]
     output_path = str(Path(tmp_dir) / f"{safe_title}{ext}")
 
-    if format == "markdown":
-        from src.outputs.markdown_writer import write_markdown
-        write_markdown(report, output_path)
-        media_type = "text/markdown"
-    elif format == "docx":
-        from src.outputs.docx_writer import write_docx
-        write_docx(report, output_path)
-        media_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-    elif format == "pptx":
-        from src.outputs.pptx_writer import write_pptx
-        write_pptx(report, output_path)
-        media_type = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
-    else:  # pdf
-        from src.outputs.pdf_writer import write_pdf
-        write_pdf(report, output_path)
-        media_type = "application/pdf"
+    try:
+        if format == "markdown":
+            from src.outputs.markdown_writer import write_markdown
+            write_markdown(report, output_path)
+            media_type = "text/markdown"
+        elif format == "docx":
+            from src.outputs.docx_writer import write_docx
+            write_docx(report, output_path)
+            media_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        elif format == "pptx":
+            from src.outputs.pptx_writer import write_pptx
+            write_pptx(report, output_path)
+            media_type = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+        else:  # pdf
+            from src.outputs.pdf_writer import write_pdf
+            write_pdf(report, output_path)
+            media_type = "application/pdf"
+    except Exception:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+        raise
 
     background_tasks.add_task(shutil.rmtree, tmp_dir, True)
 

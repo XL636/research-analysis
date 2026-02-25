@@ -300,7 +300,7 @@ class KnowledgeBase:
                     if not raw.get("metadata_only"):
                         analysis = AnalysisResult.model_validate(raw)
                 except Exception:
-                    pass
+                    logger.debug(f"Failed to parse analysis_json for doc id={row['id']}", exc_info=True)
             results.append({
                 "id": row["id"],
                 "title": row["title"],

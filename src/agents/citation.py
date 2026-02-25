@@ -110,7 +110,7 @@ class CitationAgent(BaseAgent):
                                         )[:500]
                                         ref.has_full_analysis = True
                             except Exception:
-                                pass
+                                logger.debug(f"Failed to load full analysis for doc {r['id']}", exc_info=True)
                             citations.append(ref)
                 except Exception as e:
                     logger.warning(f"KB search failed for '{kw}': {e}")

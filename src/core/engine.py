@@ -90,7 +90,7 @@ class Pipeline:
                     kb = KnowledgeBase()
                     kb.store_analysis(analysis, file_path=doc.file_path, file_type=doc.file_type.value)
                 except Exception:
-                    pass  # 知识库存储失败不影响主流程
+                    logger.debug("KB store failed", exc_info=True)
             progress.update(task, description=f"✅ 分析完成 ({len(ctx.analyses)} 篇)")
 
             # Step 3: Synthesize (optional)

@@ -337,8 +337,8 @@ class SearchManager:
                 provider = cls(provider_config)
                 if provider.is_available:
                     self._providers.append(provider)
-        except Exception as e:
-            logger.warning(f"Failed to load search provider config: {e}")
+        except Exception:
+            logger.warning("Failed to load search provider config", exc_info=True)
 
     @property
     def has_providers(self) -> bool:
@@ -375,6 +375,7 @@ class SearchManager:
                 config = yaml.safe_load(f) or {}
             providers_conf = config.get("search_providers", {})
         except Exception:
+            logger.warning("Search config load failed", exc_info=True)
             return []
 
         statuses = []

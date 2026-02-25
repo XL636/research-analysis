@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html as html_module
 from pathlib import Path
 
 from loguru import logger
@@ -173,12 +174,16 @@ def write_pdf(report: Report, output_path: str) -> str:
         extras=["fenced-code-blocks", "tables", "cuddled-lists"],
     )
 
-    # Build full HTML document
+    # Build full HTML document (escape user-supplied fields to prevent injection)
+    safe_title = html_module.escape(report.title)
+    safe_sources = html_module.escape(
+        ", ".join(report.source_files) if report.source_files else ""
+    )
     html = _HTML_TEMPLATE.format(
         css=_CSS,
-        title=report.title,
+        title=safe_title,
         generated_at=report.generated_at.strftime("%Y-%m-%d %H:%M"),
-        source_files=", ".join(report.source_files) if report.source_files else "",
+        source_files=safe_sources,
         body=body_html,
     )
 
