@@ -36,12 +36,17 @@ COPY --from=frontend-build /build/dist ./web/dist/
 # Create data directories
 RUN mkdir -p /app/knowledge_base /app/uploads /app/output
 
-# Run as non-root user
-RUN groupadd --gid 1000 appuser && \
+# Create non-root user
+RUN apt-get update && apt-get install -y --no-install-recommends gosu && rm -rf /var/lib/apt/lists/* && \
+    groupadd --gid 1000 appuser && \
     useradd --uid 1000 --gid appuser --no-create-home appuser && \
     chown -R appuser:appuser /app
 ENV UV_CACHE_DIR=/app/.uv-cache
-USER appuser
+
+# Entrypoint: fix volume ownership then drop to appuser
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+ENTRYPOINT ["docker-entrypoint.sh"]
 
 EXPOSE 8000
 
@@ -49,5 +54,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=10s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/api/health || exit 1
 
-# Run with uv
+# Run with uv (executed as appuser via entrypoint gosu)
 CMD ["uv", "run", "uvicorn", "src.api.app:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000"]
