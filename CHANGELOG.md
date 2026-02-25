@@ -7,7 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Security
+- API: SPA fallback 路径遍历修复 — resolve() + is_relative_to() 阻止 `/../` 访问 dist 目录外文件
+- API: 文件上传路径遍历修复 — Path.name 清理文件名，阻止 `../../` 逃逸上传目录
+- API: 文件上传大小限制 — 读取内容后检查 max_upload_size（默认 50MB）
+- Docker: 非 root 用户运行 — 添加 appuser，设置 UV_CACHE_DIR
+- API: CORS 收紧 — allow_methods/allow_headers 从 `*` 改为显式白名单
+- Output: PDF 输出 HTML 注入防护 — title/source_files 做 html.escape()
+- Git: .gitignore 追加 config/.env、*.key、*.pem、*.p12
+
 ### Fixed
+- API: 报告下载临时文件泄露 — 生成异常时 shutil.rmtree 清理 tmp_dir
+- Backend: 11 处裸 except pass 替换为 logger.debug/warning 记录异常信息
 - Web: 调研后确认大纲按钮不可见 — 大纲操作区状态判断增加 'researched' 状态 (T-64)
 - Backend: LLM 客户端添加 timeout（300s 请求/10s 连接）— 防止 API 挂起导致操作无限卡住 (T-64)
 - Backend: PolishAgent max_tokens 从 4096 提升到 16384 — 整篇论文润色输出不再被截断 (T-64)
