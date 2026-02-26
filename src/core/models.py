@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import threading
 from datetime import datetime
 from enum import Enum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, PrivateAttr
 
 
 class FileType(str, Enum):
@@ -140,8 +141,9 @@ class ModelUsage(BaseModel):
 
 
 class UsageStats(BaseModel):
-    """模型调用成本统计."""
+    """模型调用成本统计（线程安全）."""
 
+    _lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
     by_model: dict[str, ModelUsage] = Field(default_factory=dict)
 
     @property
@@ -161,13 +163,14 @@ class UsageStats(BaseModel):
         return sum(m.call_count for m in self.by_model.values())
 
     def record(self, model_name: str, prompt_tokens: int, completion_tokens: int) -> None:
-        """记录一次模型调用."""
-        if model_name not in self.by_model:
-            self.by_model[model_name] = ModelUsage(model_name=model_name)
-        usage = self.by_model[model_name]
-        usage.call_count += 1
-        usage.prompt_tokens += prompt_tokens
-        usage.completion_tokens += completion_tokens
+        """记录一次模型调用（线程安全）."""
+        with self._lock:
+            if model_name not in self.by_model:
+                self.by_model[model_name] = ModelUsage(model_name=model_name)
+            usage = self.by_model[model_name]
+            usage.call_count += 1
+            usage.prompt_tokens += prompt_tokens
+            usage.completion_tokens += completion_tokens
 
 
 class TemplateSection(BaseModel):

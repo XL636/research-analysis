@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import threading
 from typing import Any
 
 import yaml
@@ -31,6 +32,7 @@ class LLMClient:
         self._config_path = config_path
         self._models: dict[str, ModelConfig] = {}
         self._clients: dict[str, OpenAI] = {}
+        self._client_lock = threading.Lock()
         self.usage_stats = UsageStats()
         self._load_config()
 
@@ -42,25 +44,26 @@ class LLMClient:
             self._models[name] = ModelConfig(**model_conf)
 
     def _get_client(self, model_name: str) -> tuple[OpenAI, str]:
-        """懒加载并返回 (OpenAI 客户端, 模型 ID)."""
+        """懒加载并返回 (OpenAI 客户端, 模型 ID)。线程安全。"""
         if model_name not in self._models:
             raise ValueError(f"Unknown model: {model_name}. Available: {list(self._models.keys())}")
 
         model_config = self._models[model_name]
 
-        if model_name not in self._clients:
-            api_key = os.environ.get(model_config.api_key_env, "")
-            if not api_key:
-                raise ValueError(
-                    f"API key not found. Set environment variable: {model_config.api_key_env}"
-                )
+        with self._client_lock:
+            if model_name not in self._clients:
+                api_key = os.environ.get(model_config.api_key_env, "")
+                if not api_key:
+                    raise ValueError(
+                        f"API key not found. Set environment variable: {model_config.api_key_env}"
+                    )
 
-            self._clients[model_name] = OpenAI(
-                api_key=api_key,
-                base_url=model_config.base_url,
-                timeout=Timeout(300.0, connect=10.0),
-            )
-            logger.debug(f"Initialized client for {model_name} ({model_config.provider})")
+                self._clients[model_name] = OpenAI(
+                    api_key=api_key,
+                    base_url=model_config.base_url,
+                    timeout=Timeout(300.0, connect=10.0),
+                )
+                logger.debug(f"Initialized client for {model_name} ({model_config.provider})")
 
         return self._clients[model_name], model_config.model
 

@@ -6,6 +6,7 @@ import asyncio
 import uuid
 from pathlib import Path
 
+import yaml
 from loguru import logger
 
 from src.api.schemas import StepProgress
@@ -61,21 +62,62 @@ async def run_pipeline(
             return
         await queue.put(StepProgress(step="parse", status="completed", message=f"{len(parsed)} documents"))
 
-        # Step 2: Analyze
+        # Step 2: Analyze (parallel with semaphore)
         await queue.put(StepProgress(step="analyze", status="running"))
-        analyses = []
-        stored_doc_ids: list[int] = []
-        for doc in parsed:
-            analysis = await asyncio.to_thread(pipeline.analyzer.process, doc)
-            analyses.append(analysis)
-            # Store in knowledge base
-            try:
-                from src.store.knowledge_base import KnowledgeBase
-                kb = KnowledgeBase()
-                doc_id = kb.store_analysis(analysis, file_path=doc.file_path, file_type=doc.file_type.value, source_type="user_upload")
-                stored_doc_ids.append(doc_id)
-            except Exception:
-                logger.debug("KB store failed during pipeline", exc_info=True)
+        total = len(parsed)
+
+        # Load concurrency config
+        max_concurrency = 3
+        try:
+            with open("config/settings.yaml", encoding="utf-8") as f:
+                cfg = yaml.safe_load(f)
+            max_concurrency = cfg.get("pipeline", {}).get("max_concurrency", 3)
+        except Exception:
+            pass
+
+        sem = asyncio.Semaphore(max_concurrency)
+        analyses_results: list[tuple] = [None] * total  # type: ignore
+
+        async def analyze_one(index: int, doc):
+            async with sem:
+                await queue.put(StepProgress(
+                    step="analyze", status="running",
+                    message=f"[{index + 1}/{total}] {doc.title or Path(doc.file_path).name}"
+                ))
+                analysis = await asyncio.to_thread(pipeline.analyzer.process, doc)
+                doc_id = None
+                try:
+                    from src.store.knowledge_base import KnowledgeBase
+                    kb = KnowledgeBase()
+                    doc_id = kb.store_analysis(analysis, file_path=doc.file_path, file_type=doc.file_type.value, source_type="user_upload")
+                except Exception:
+                    logger.debug("KB store failed during pipeline", exc_info=True)
+                return index, analysis, doc_id
+
+        if total > 1 and max_concurrency > 1:
+            gather_results = await asyncio.gather(
+                *[analyze_one(i, doc) for i, doc in enumerate(parsed)]
+            )
+            analyses = [r[1] for r in sorted(gather_results, key=lambda x: x[0])]
+            stored_doc_ids = [r[2] for r in sorted(gather_results, key=lambda x: x[0]) if r[2] is not None]
+        else:
+            analyses = []
+            stored_doc_ids: list[int] = []
+            for i, doc in enumerate(parsed):
+                await queue.put(StepProgress(
+                    step="analyze", status="running",
+                    message=f"[{i + 1}/{total}] {doc.title or Path(doc.file_path).name}"
+                ))
+                analysis = await asyncio.to_thread(pipeline.analyzer.process, doc)
+                analyses.append(analysis)
+                try:
+                    from src.store.knowledge_base import KnowledgeBase
+                    kb = KnowledgeBase()
+                    doc_id = kb.store_analysis(analysis, file_path=doc.file_path, file_type=doc.file_type.value, source_type="user_upload")
+                    stored_doc_ids.append(doc_id)
+                except Exception:
+                    logger.debug("KB store failed during pipeline", exc_info=True)
+
         await queue.put(StepProgress(step="analyze", status="completed", message=f"{len(analyses)} analyses"))
 
         # Step 3: Synthesize (optional)

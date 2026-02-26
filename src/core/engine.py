@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 import yaml
@@ -35,6 +36,7 @@ class Pipeline:
         pipeline_conf = config.get("pipeline", {})
         self.max_review_retries = pipeline_conf.get("max_review_retries", 2)
         self.output_dir = pipeline_conf.get("output_dir", "./output")
+        self.max_concurrency = pipeline_conf.get("max_concurrency", 3)
 
         # 分析模式配置
         analyzer_prompt = None
@@ -99,18 +101,14 @@ class Pipeline:
                 return ctx
             progress.update(task, description=f"✅ 解析完成 ({len(ctx.parsed_documents)} 篇)")
 
-            # Step 2: Analyze
+            # Step 2: Analyze (parallel when multiple documents)
             task = progress.add_task("🔍 深度分析...", total=None)
-            for doc in ctx.parsed_documents:
-                analysis = self.analyzer.process(doc)
-                ctx.analyses.append(analysis)
-                # 存入知识库
-                try:
-                    from src.store.knowledge_base import KnowledgeBase
-                    kb = KnowledgeBase()
-                    kb.store_analysis(analysis, file_path=doc.file_path, file_type=doc.file_type.value)
-                except Exception:
-                    logger.debug("KB store failed", exc_info=True)
+            if len(ctx.parsed_documents) > 1 and self.max_concurrency > 1:
+                ctx.analyses = list(self._analyze_parallel(ctx.parsed_documents, progress, task))
+            else:
+                for doc in ctx.parsed_documents:
+                    result = self._analyze_and_store(doc)
+                    ctx.analyses.append(result)
             progress.update(task, description=f"✅ 分析完成 ({len(ctx.analyses)} 篇)")
 
             # Step 3: Synthesize (optional)
@@ -173,6 +171,42 @@ class Pipeline:
                 self._print_usage_summary(ctx)
 
         return ctx
+
+    def _analyze_and_store(self, doc) -> "AnalysisResult":
+        """分析单个文档并存入知识库."""
+        from src.core.models import AnalysisResult  # noqa: F811
+
+        analysis = self.analyzer.process(doc)
+        try:
+            from src.store.knowledge_base import KnowledgeBase
+            kb = KnowledgeBase()
+            kb.store_analysis(analysis, file_path=doc.file_path, file_type=doc.file_type.value)
+        except Exception:
+            logger.debug("KB store failed", exc_info=True)
+        return analysis
+
+    def _analyze_parallel(self, documents: list, progress=None, task_id=None):
+        """并行分析多个文档."""
+        results = [None] * len(documents)
+        with ThreadPoolExecutor(max_workers=self.max_concurrency) as executor:
+            future_to_idx = {
+                executor.submit(self._analyze_and_store, doc): idx
+                for idx, doc in enumerate(documents)
+            }
+            for future in as_completed(future_to_idx):
+                idx = future_to_idx[future]
+                doc = documents[idx]
+                try:
+                    results[idx] = future.result()
+                    if progress and task_id is not None:
+                        progress.update(
+                            task_id,
+                            description=f"🔍 分析完成: {doc.title or Path(doc.file_path).name}",
+                        )
+                except Exception as e:
+                    logger.error(f"Failed to analyze {doc.file_path}: {e}")
+                    raise
+        return [r for r in results if r is not None]
 
     def _print_usage_summary(self, ctx: PipelineContext) -> None:
         """打印模型调用成本摘要."""

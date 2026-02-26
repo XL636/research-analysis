@@ -43,6 +43,8 @@ agent_models:
 pipeline:
   max_review_retries: 2
   output_dir: ./output
+  max_concurrency: 3
+  batch_max_concurrency: 5
 paper:
   output_dir: ./output/papers
   max_section_tokens: 8192

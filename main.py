@@ -184,6 +184,7 @@ def batch(
     synthesize: bool = typer.Option(False, "--synthesize", "-s", help="启用跨文档综合分析"),
     recursive: bool = typer.Option(False, "--recursive", "-r", help="递归扫描子目录"),
     output_dir: Optional[str] = typer.Option(None, "--output-dir", "-d", help="输出目录"),
+    concurrency: int = typer.Option(0, "--concurrency", "-c", help="并行文件数（0=使用配置默认值）"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="显示详细日志"),
 ) -> None:
     """批量处理目录下的所有研究材料."""
@@ -210,15 +211,45 @@ def batch(
         console.print(f"  • {f.relative_to(dir_path)}")
     console.print()
 
+    from concurrent.futures import ThreadPoolExecutor, as_completed as futures_as_completed
+
+    import yaml
     from rich.progress import BarColumn, MofNCompleteColumn, Progress, TextColumn, TimeElapsedColumn
 
     from src.core.engine import Pipeline
 
-    pipeline = Pipeline(template=template, mode=mode)
+    # 确定并发数
+    if concurrency <= 0:
+        try:
+            with open("config/settings.yaml", encoding="utf-8") as f:
+                cfg = yaml.safe_load(f)
+            concurrency = cfg.get("pipeline", {}).get("batch_max_concurrency", 5)
+        except Exception:
+            concurrency = 5
 
     # 设置输出目录
-    out_dir = Path(output_dir) if output_dir else Path(pipeline.output_dir)
+    sample_pipeline = Pipeline(template=template, mode=mode)
+    out_dir = Path(output_dir) if output_dir else Path(sample_pipeline.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
+
+    def process_one(file_path: Path) -> dict:
+        """处理单个文件（在线程中运行）."""
+        try:
+            ext_map = {"markdown": ".md", "docx": ".docx", "pptx": ".pptx", "pdf": ".pdf"}
+            ext = ext_map.get(format, ".md")
+            out_path = str(out_dir / f"{file_path.stem}_report{ext}")
+
+            p = Pipeline(template=template, mode=mode)
+            ctx = p.run(
+                input_files=[str(file_path)],
+                output_format=format,
+                output_path=out_path,
+                synthesize=False,
+            )
+            return {"file": file_path.name, "status": "success", "output": ctx.output_path}
+        except Exception as e:
+            logger.error(f"Failed to process {file_path}: {e}")
+            return {"file": file_path.name, "status": "failed", "output": str(e)}
 
     results: list[dict] = []
     with Progress(
@@ -228,26 +259,18 @@ def batch(
         TimeElapsedColumn(),
         console=console,
     ) as progress:
-        task = progress.add_task("批量分析", total=len(files))
+        task = progress.add_task(f"批量分析 (并发={concurrency})", total=len(files))
 
-        for file_path in files:
-            progress.update(task, description=f"分析: {file_path.name}")
-            try:
-                ext_map = {"markdown": ".md", "docx": ".docx", "pptx": ".pptx", "pdf": ".pdf"}
-                ext = ext_map.get(format, ".md")
-                out_path = str(out_dir / f"{file_path.stem}_report{ext}")
+        with ThreadPoolExecutor(max_workers=concurrency) as executor:
+            future_to_file = {executor.submit(process_one, fp): fp for fp in files}
 
-                ctx = pipeline.run(
-                    input_files=[str(file_path)],
-                    output_format=format,
-                    output_path=out_path,
-                    synthesize=False,
-                )
-                results.append({"file": file_path.name, "status": "success", "output": ctx.output_path})
-            except Exception as e:
-                logger.error(f"Failed to process {file_path}: {e}")
-                results.append({"file": file_path.name, "status": "failed", "output": str(e)})
-            progress.advance(task)
+            for future in futures_as_completed(future_to_file):
+                fp = future_to_file[future]
+                result = future.result()
+                results.append(result)
+                status = "✅" if result["status"] == "success" else "❌"
+                progress.update(task, description=f"{status} {fp.name}")
+                progress.advance(task)
 
     # 综合分析（可选）
     if synthesize and len(files) > 1:
@@ -257,7 +280,8 @@ def batch(
             ext = ext_map.get(format, ".md")
             synth_path = str(out_dir / f"synthesis_report{ext}")
 
-            ctx = pipeline.run(
+            p = Pipeline(template=template, mode=mode)
+            ctx = p.run(
                 input_files=[str(f) for f in files],
                 output_format=format,
                 output_path=synth_path,
