@@ -1,0 +1,281 @@
+"""Reader API routes - document upload, page reading, AI chat."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import yaml
+from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi.responses import FileResponse
+
+from src.api.schemas import (
+    DeleteResponse,
+    ReaderChatHistoryResponse,
+    ReaderChatMessage,
+    ReaderChatRequest,
+    ReaderChatResponse,
+    ReaderDocumentListResponse,
+    ReaderDocumentResponse,
+    ReaderPageResponse,
+    ReaderProgressRequest,
+)
+from src.api.services.reader_service import (
+    ALLOWED_EXTENSIONS,
+    delete_reader_files,
+    detect_file_type,
+    extract_pages,
+    save_reader_file,
+)
+from src.store.reader_store import ReaderStore
+
+router = APIRouter()
+
+_store: ReaderStore | None = None
+
+
+def _get_store() -> ReaderStore:
+    global _store
+    if _store is None:
+        _store = ReaderStore()
+    return _store
+
+
+def _load_config() -> dict:
+    config_path = Path("config/settings.yaml")
+    if config_path.exists():
+        with open(config_path, encoding="utf-8") as f:
+            return yaml.safe_load(f)
+    return {}
+
+
+@router.post("/upload", response_model=ReaderDocumentResponse)
+async def upload_document(
+    file: UploadFile = File(..., description="上传文件（PDF/PPTX/DOCX/MD/TXT）"),
+):
+    """Upload a file, parse into pages, return document info."""
+    raw_name = file.filename or "upload"
+    filename = Path(raw_name).name
+    ext = Path(filename).suffix.lower()
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported file type: {ext}. Allowed: {ALLOWED_EXTENSIONS}",
+        )
+
+    contents = await file.read()
+    if len(contents) > 100 * 1024 * 1024:  # 100MB
+        raise HTTPException(status_code=400, detail="File too large (max 100MB)")
+
+    # Save file
+    doc_id_hex, file_path = save_reader_file(filename, contents)
+
+    # Detect type and extract pages
+    file_type = detect_file_type(filename)
+    try:
+        pages = extract_pages(file_path, file_type)
+    except Exception as e:
+        delete_reader_files(file_path)
+        raise HTTPException(status_code=400, detail=f"Failed to parse file: {e}")
+
+    if not pages:
+        pages = [""]
+
+    # Title: use filename without extension
+    title = Path(filename).stem
+
+    # Store in DB
+    store = _get_store()
+    doc = store.create_document(
+        title=title,
+        file_name=filename,
+        file_type=file_type,
+        file_path=file_path,
+        total_pages=len(pages),
+    )
+    store.insert_pages(doc["id"], pages)
+
+    return ReaderDocumentResponse(**doc)
+
+
+@router.get("/documents", response_model=ReaderDocumentListResponse)
+async def list_documents():
+    """List all reader documents."""
+    store = _get_store()
+    docs = store.list_documents()
+    return ReaderDocumentListResponse(
+        documents=[ReaderDocumentResponse(**d) for d in docs]
+    )
+
+
+@router.get("/{doc_id}", response_model=ReaderDocumentResponse)
+async def get_document(doc_id: int):
+    """Get document details."""
+    store = _get_store()
+    doc = store.get_document(doc_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    return ReaderDocumentResponse(**doc)
+
+
+@router.delete("/{doc_id}", response_model=DeleteResponse)
+async def delete_document(doc_id: int):
+    """Delete document, pages, and chats."""
+    store = _get_store()
+    doc = store.get_document(doc_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    # Delete files
+    delete_reader_files(doc["file_path"])
+    # Delete from DB
+    store.delete_document(doc_id)
+    return DeleteResponse(success=True, message="Document deleted")
+
+
+@router.get("/{doc_id}/page/{page_num}", response_model=ReaderPageResponse)
+async def get_page(doc_id: int, page_num: int):
+    """Get a specific page's text content."""
+    store = _get_store()
+    doc = store.get_document(doc_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    if page_num < 1 or page_num > doc["total_pages"]:
+        raise HTTPException(status_code=400, detail=f"Page {page_num} out of range (1-{doc['total_pages']})")
+
+    content = store.get_page_content(doc_id, page_num)
+    return ReaderPageResponse(page_num=page_num, content=content or "")
+
+
+@router.get("/{doc_id}/file")
+async def get_file(doc_id: int):
+    """Return the original file (for PDF rendering in browser)."""
+    store = _get_store()
+    doc = store.get_document(doc_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    file_path = Path(doc["file_path"])
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="File not found on disk")
+
+    media_types = {
+        "pdf": "application/pdf",
+        "pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "md": "text/markdown",
+        "txt": "text/plain",
+    }
+    media_type = media_types.get(doc["file_type"], "application/octet-stream")
+    return FileResponse(
+        str(file_path),
+        media_type=media_type,
+        filename=doc["file_name"],
+    )
+
+
+@router.patch("/{doc_id}/progress", response_model=ReaderDocumentResponse)
+async def update_progress(doc_id: int, body: ReaderProgressRequest):
+    """Update reading progress (current page)."""
+    store = _get_store()
+    doc = store.get_document(doc_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    updated = store.update_progress(doc_id, body.current_page)
+    return ReaderDocumentResponse(**updated)
+
+
+@router.post("/{doc_id}/chat", response_model=ReaderChatResponse)
+async def chat(doc_id: int, body: ReaderChatRequest):
+    """AI chat - answer questions based on current page context."""
+    store = _get_store()
+    doc = store.get_document(doc_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    config = _load_config()
+    reader_conf = config.get("reader", {})
+    context_pages = reader_conf.get("context_pages", 1)
+    max_history = reader_conf.get("max_chat_history", 20)
+
+    # Build page context: current page + surrounding pages
+    start_page = max(1, body.page_num - context_pages)
+    end_page = min(doc["total_pages"], body.page_num + context_pages)
+    page_rows = store.get_page_range(doc_id, start_page, end_page)
+
+    context_parts = []
+    for pr in page_rows:
+        marker = " (当前页)" if pr["page_num"] == body.page_num else ""
+        context_parts.append(f"[第 {pr['page_num']} 页{marker}]\n{pr['content']}")
+    page_context = "\n\n---\n\n".join(context_parts)
+
+    # Load prompt template
+    prompt_template_path = reader_conf.get(
+        "prompt_template", "config/prompts/reader_assistant.txt"
+    )
+    prompt_path = Path(prompt_template_path)
+    if prompt_path.exists():
+        system_prompt = prompt_path.read_text(encoding="utf-8")
+    else:
+        system_prompt = (
+            "你是一个阅读辅助助手。基于以下页面内容回答用户问题。\n\n{page_context}"
+        )
+
+    system_prompt = system_prompt.replace("{document_title}", doc["title"])
+    system_prompt = system_prompt.replace("{page_context}", page_context)
+
+    # Build messages: system + recent chat history + current question
+    messages: list[dict[str, str]] = [{"role": "system", "content": system_prompt}]
+
+    chat_history = store.get_chat_history(doc_id, limit=max_history)
+    for ch in chat_history[-10:]:  # Last 10 messages for context
+        messages.append({"role": ch["role"], "content": ch["content"]})
+
+    messages.append({"role": "user", "content": body.message})
+
+    # Save user message
+    store.add_chat(doc_id, "user", body.message, body.page_num)
+
+    # Call LLM
+    from src.core.llm_client import LLMClient
+
+    model_name = config.get("agent_models", {}).get("reader", "glm-5")
+    llm = LLMClient()
+    try:
+        reply = llm.chat(model_name, messages, temperature=0.7, max_tokens=4096)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI chat failed: {e}")
+
+    # Save assistant message
+    assistant_msg = store.add_chat(doc_id, "assistant", reply, body.page_num)
+
+    return ReaderChatResponse(
+        reply=reply,
+        message=ReaderChatMessage(**assistant_msg),
+    )
+
+
+@router.get("/{doc_id}/chat/history", response_model=ReaderChatHistoryResponse)
+async def get_chat_history(doc_id: int):
+    """Get chat history for a document."""
+    store = _get_store()
+    doc = store.get_document(doc_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    history = store.get_chat_history(doc_id)
+    return ReaderChatHistoryResponse(
+        messages=[ReaderChatMessage(**m) for m in history]
+    )
+
+
+@router.delete("/{doc_id}/chat/history", response_model=DeleteResponse)
+async def clear_chat_history(doc_id: int):
+    """Clear chat history for a document."""
+    store = _get_store()
+    doc = store.get_document(doc_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    store.clear_chat(doc_id)
+    return DeleteResponse(success=True, message="Chat history cleared")
