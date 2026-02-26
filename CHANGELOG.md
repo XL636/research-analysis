@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Web: 第 5 个"自定义"分析模式 — 自选模板 + 自选深度（quick/standard/deep），原有 4 个模式行为不变 (T-68)
+- API: POST /pipeline/run 新增 depth 参数，custom 模式下用 depth 映射 analyzer 配置 (T-68)
+- Core: engine.py template_content 优先分支 — 有模板时不传 generator prompt_override，让模板控制报告格式 (T-68)
+- Config: 恢复 standard.generator_prompt，使 4 个预设模式各自有完整的 prompt 链 (T-68)
+- i18n: zh-CN/en 新增 analyze.customMode/depthLabel/depth.* 等 8 个翻译 key (T-68)
 - Core: 自定义报告模板系统 — ReportTemplate 模型 + SQLite 存储 + 内置模板自动同步 + CRUD API (T-68)
 - Core: GeneratorAgent 模板优先级链 — prompt_override > template_content > TEMPLATES dict > default (T-68)
 - CLI: `template` 子命令组 — list/show/create/delete，`analyze --template-id` 选项 (T-68)
@@ -69,6 +74,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Web: AnalysisCards 空数据防御 — 无 key_findings/methodology 时显示摘要文本 (T-63)
 
 ### Changed
+- Web: 移除旧的 standard-only 模板选择器和 modeOverrideHint 提示，模板选择移入"自定义"模式子面板 (T-68)
 - Web: 移除一键写作功能，恢复手动确认流程 (T-64)
 - Web: 调研完成后显示"前往大纲"引导按钮 + 重新生成大纲按钮 (T-64)
 - Web: PaperProjectPage 参考文献统一为可点击链接，移除 metadata-only badge 和提示 (T-63)
