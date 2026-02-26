@@ -26,20 +26,27 @@ class GeneratorAgent(BaseAgent):
 
     agent_type = "generator"
 
-    def __init__(self, *args, template: str = "default", **kwargs):
+    def __init__(self, *args, template: str = "default", template_content: str | None = None, **kwargs):
         super().__init__(*args, **kwargs)
         self._template = template
+        self._template_content = template_content
 
     @property
     def system_prompt(self) -> str:
-        """根据模板选择加载对应的 Prompt. prompt_override 优先于 TEMPLATES."""
+        """根据模板选择加载对应的 Prompt.
+
+        优先级：prompt_override > template_content > TEMPLATES > default.
+        """
         if self._system_prompt is None:
-            # 优先使用 prompt_override（来自分析模式配置）
+            # 1. 优先使用 prompt_override（来自分析模式配置）
             if self._prompt_override:
                 override_path = Path(self._prompt_override)
                 if override_path.exists():
                     self._system_prompt = override_path.read_text(encoding="utf-8")
-            # 其次使用 TEMPLATES 字典（来自 --template 参数）
+            # 2. 其次使用 template_content（来自数据库自定义模板）
+            if self._system_prompt is None and self._template_content:
+                self._system_prompt = self._template_content
+            # 3. 使用 TEMPLATES 字典（来自 --template 参数 / 文件系统内置）
             if self._system_prompt is None:
                 template_path = TEMPLATES.get(self._template)
                 if template_path and Path(template_path).exists():

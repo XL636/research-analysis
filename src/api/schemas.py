@@ -335,3 +335,42 @@ class ReferenceItem(BaseModel):
 
 class ReferencesResponse(BaseModel):
     references: list[ReferenceItem] = Field(default_factory=list)
+
+
+# --- Templates ---
+
+class TemplateSectionSchema(BaseModel):
+    title: str
+    description: str = ""
+    required: bool = True
+
+
+class TemplateResponse(BaseModel):
+    id: int
+    name: str
+    display_name: str
+    description: str = ""
+    prompt_content: str = ""
+    sections: list[TemplateSectionSchema] = Field(default_factory=list)
+    is_builtin: bool = False
+    created_at: str = ""
+    updated_at: str = ""
+
+
+class TemplateListResponse(BaseModel):
+    templates: list[TemplateResponse] = Field(default_factory=list)
+
+
+class CreateTemplateRequest(BaseModel):
+    name: str
+    display_name: str
+    description: str = ""
+    prompt_content: str = ""
+    sections: list[TemplateSectionSchema] = Field(default_factory=list)
+
+
+class UpdateTemplateRequest(BaseModel):
+    display_name: str | None = None
+    description: str | None = None
+    prompt_content: str | None = None
+    sections: list[TemplateSectionSchema] | None = None

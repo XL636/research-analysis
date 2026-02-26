@@ -41,6 +41,7 @@ def analyze(
     output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
     format: str = typer.Option("markdown", "--format", "-f", help="输出格式: markdown/docx/pptx/pdf"),
     template: str = typer.Option("default", "--template", "-t", help="报告模板: default/meeting"),
+    template_id: Optional[int] = typer.Option(None, "--template-id", help="使用数据库中的模板 ID"),
     mode: Optional[str] = typer.Option(None, "--mode", "-m", help="分析模式: quick/standard/deep/meeting"),
     synthesize: bool = typer.Option(False, "--synthesize", "-s", help="启用跨文档综合分析"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="显示详细日志"),
@@ -61,8 +62,18 @@ def analyze(
         console.print("[red]没有可用的输入文件[/red]")
         raise typer.Exit(1)
 
-    # --mode 优先于 --template
-    if mode:
+    # 加载数据库模板
+    template_content = None
+    if template_id is not None:
+        from src.store.template_store import TemplateStore
+        store = TemplateStore()
+        tpl = store.get_template(template_id)
+        if not tpl:
+            console.print(f"[red]模板不存在: id={template_id}[/red]")
+            raise typer.Exit(1)
+        template_content = tpl.prompt_content
+        console.print(f"\n[bold]📚 开始分析 {len(valid_files)} 个文件 (模板: {tpl.display_name})[/bold]\n")
+    elif mode:
         mode_label = ANALYSIS_MODE_LABELS.get(mode, mode)
         console.print(f"\n[bold]📚 开始分析 {len(valid_files)} 个文件 (模式: {mode_label})[/bold]\n")
     else:
@@ -71,7 +82,7 @@ def analyze(
 
     from src.core.engine import Pipeline
 
-    pipeline = Pipeline(template=template, mode=mode)
+    pipeline = Pipeline(template=template, mode=mode, template_content=template_content)
     ctx = pipeline.run(
         input_files=valid_files,
         output_format=format,
@@ -317,6 +328,127 @@ def import_kb(
     kb = KnowledgeBase()
     count = kb.import_json(str(file_path))
     console.print(f"[bold green]✅ 导入完成: {count} 篇文档[/bold green]")
+
+
+# ── Template 子命令组 ──
+
+template_app = typer.Typer(name="template", help="报告模板管理 - 查看/创建/删除报告模板")
+app.add_typer(template_app, name="template")
+
+
+@template_app.command(name="list")
+def template_list() -> None:
+    """列出所有报告模板."""
+    from src.store.template_store import TemplateStore
+
+    store = TemplateStore()
+    templates = store.list_templates()
+
+    if not templates:
+        console.print("[yellow]暂无模板[/yellow]")
+        return
+
+    table = Table(title="报告模板")
+    table.add_column("ID", style="dim")
+    table.add_column("名称", style="cyan")
+    table.add_column("显示名", style="bold")
+    table.add_column("类型", style="green")
+    table.add_column("描述")
+
+    for t in templates:
+        ttype = "内置" if t.is_builtin else "自定义"
+        table.add_row(str(t.id), t.name, t.display_name, ttype, t.description)
+
+    console.print(table)
+
+
+@template_app.command(name="show")
+def template_show(
+    template_id: int = typer.Argument(..., help="模板 ID"),
+) -> None:
+    """查看模板详情."""
+    from src.store.template_store import TemplateStore
+
+    store = TemplateStore()
+    t = store.get_template(template_id)
+    if not t:
+        console.print(f"[red]模板不存在: id={template_id}[/red]")
+        raise typer.Exit(1)
+
+    console.print(f"\n[bold]{t.display_name}[/bold] ({t.name})")
+    console.print(f"  ID: {t.id}")
+    console.print(f"  类型: {'内置' if t.is_builtin else '自定义'}")
+    console.print(f"  描述: {t.description}")
+    if t.sections:
+        console.print("  章节:")
+        for s in t.sections:
+            req = "必填" if s.required else "可选"
+            console.print(f"    - {s.title} ({req}) {s.description}")
+    console.print(f"\n[dim]Prompt 内容 ({len(t.prompt_content)} 字符):[/dim]")
+    # 只显示前 500 字符
+    preview = t.prompt_content[:500]
+    if len(t.prompt_content) > 500:
+        preview += "..."
+    console.print(preview)
+
+
+@template_app.command(name="create")
+def template_create(
+    name: str = typer.Option(..., "--name", "-n", help="模板唯一名称 (slug)"),
+    display_name: str = typer.Option("", "--display-name", "-d", help="显示名称"),
+    description: str = typer.Option("", "--desc", help="模板描述"),
+    file: Optional[str] = typer.Option(None, "--file", "-f", help="从文件读取 prompt 内容"),
+    prompt: str = typer.Option("", "--prompt", "-p", help="直接指定 prompt 内容"),
+) -> None:
+    """创建自定义模板."""
+    from src.store.template_store import TemplateStore
+
+    if not display_name:
+        display_name = name
+
+    prompt_content = prompt
+    if file:
+        file_path = Path(file)
+        if not file_path.exists():
+            console.print(f"[red]文件不存在: {file}[/red]")
+            raise typer.Exit(1)
+        prompt_content = file_path.read_text(encoding="utf-8")
+
+    if not prompt_content:
+        console.print("[red]请通过 --file 或 --prompt 提供 prompt 内容[/red]")
+        raise typer.Exit(1)
+
+    store = TemplateStore()
+    try:
+        t = store.create_template(
+            name=name,
+            display_name=display_name,
+            description=description,
+            prompt_content=prompt_content,
+        )
+        console.print(f"[bold green]模板已创建: {t.display_name} (id={t.id})[/bold green]")
+    except Exception as e:
+        console.print(f"[red]创建失败: {e}[/red]")
+        raise typer.Exit(1)
+
+
+@template_app.command(name="delete")
+def template_delete(
+    template_id: int = typer.Argument(..., help="模板 ID"),
+) -> None:
+    """删除自定义模板（内置模板不可删除）."""
+    from src.store.template_store import TemplateStore
+
+    store = TemplateStore()
+    try:
+        success = store.delete_template(template_id)
+        if success:
+            console.print(f"[bold green]模板已删除: id={template_id}[/bold green]")
+        else:
+            console.print(f"[red]模板不存在: id={template_id}[/red]")
+    except ValueError as e:
+        console.print(f"[red]{e}[/red]")
+        raise typer.Exit(1)
 
 
 # ── Paper 子命令组 ──

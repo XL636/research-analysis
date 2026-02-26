@@ -48,10 +48,21 @@ async def start_pipeline(
     format: str = Form("markdown", description="输出格式: markdown/docx/pptx/pdf"),
     synthesize: bool = Form(False, description="启用跨文档综合分析"),
     mode: str = Form("standard", description="分析模式: quick/standard/deep/meeting"),
+    template_id: int | None = Form(None, description="报告模板 ID（可选）"),
 ):
     """Upload files and start analysis pipeline."""
     if not files:
         raise HTTPException(status_code=400, detail="No files uploaded")
+
+    # Load template content if template_id provided
+    template_content = None
+    if template_id is not None:
+        from src.store.template_store import TemplateStore
+        store = TemplateStore()
+        template = store.get_template(template_id)
+        if not template:
+            raise HTTPException(status_code=404, detail=f"Template id={template_id} not found")
+        template_content = template.prompt_content
 
     run_id = create_run()
 
@@ -65,7 +76,7 @@ async def start_pipeline(
             raise HTTPException(status_code=400, detail=str(e))
 
     # Start pipeline in background
-    asyncio.create_task(run_pipeline(run_id, file_paths, format, synthesize, mode))
+    asyncio.create_task(run_pipeline(run_id, file_paths, format, synthesize, mode, template_content=template_content))
 
     return PipelineRunResponse(run_id=run_id, status="started")
 

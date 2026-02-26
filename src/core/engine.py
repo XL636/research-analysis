@@ -23,10 +23,11 @@ console = Console()
 class Pipeline:
     """分析 Pipeline：Parse → Analyze → [Synthesize] → Generate → [Review]."""
 
-    def __init__(self, config_path: str = "config/settings.yaml", template: str = "default", mode: str | None = None):
+    def __init__(self, config_path: str = "config/settings.yaml", template: str = "default", mode: str | None = None, template_content: str | None = None):
         self.config_path = config_path
         self.llm = LLMClient(config_path)
         self.mode = mode
+        self._template_content = template_content
 
         # 加载 pipeline 配置
         with open(config_path, encoding="utf-8") as f:
@@ -54,9 +55,9 @@ class Pipeline:
         self.parser = ParserAgent(self.llm, config_path)
         self.analyzer = AnalyzerAgent(self.llm, config_path, prompt_override=analyzer_prompt, max_text_length=max_text_length)
         if mode and generator_prompt:
-            self.generator = GeneratorAgent(self.llm, config_path, template=template, prompt_override=generator_prompt)
+            self.generator = GeneratorAgent(self.llm, config_path, template=template, template_content=template_content, prompt_override=generator_prompt)
         else:
-            self.generator = GeneratorAgent(self.llm, config_path, template=template)
+            self.generator = GeneratorAgent(self.llm, config_path, template=template, template_content=template_content)
 
     def run(
         self,

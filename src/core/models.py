@@ -170,6 +170,28 @@ class UsageStats(BaseModel):
         usage.completion_tokens += completion_tokens
 
 
+class TemplateSection(BaseModel):
+    """报告模板的章节定义."""
+
+    title: str
+    description: str = ""
+    required: bool = True
+
+
+class ReportTemplate(BaseModel):
+    """自定义报告模板."""
+
+    id: int = 0
+    name: str              # 唯一 slug，如 "lab-report"
+    display_name: str      # 显示名，如 "实验室报告"
+    description: str = ""
+    prompt_content: str    # 完整 system prompt
+    sections: list[TemplateSection] = Field(default_factory=list)
+    is_builtin: bool = False
+    created_at: str = ""
+    updated_at: str = ""
+
+
 class PipelineContext(BaseModel):
     """Pipeline 执行上下文 - 贯穿整个工作流."""
 

@@ -37,6 +37,7 @@ async def run_pipeline(
     output_format: str = "markdown",
     synthesize: bool = False,
     mode: str = "standard",
+    template_content: str | None = None,
 ) -> None:
     """Run the pipeline in a background thread, pushing progress to a queue."""
     run = _runs.get(run_id)
@@ -47,7 +48,7 @@ async def run_pipeline(
     queue: asyncio.Queue = run["queue"]
 
     try:
-        pipeline = Pipeline(mode=mode)
+        pipeline = Pipeline(mode=mode, template_content=template_content)
 
         # Step 1: Parse
         await queue.put(StepProgress(step="parse", status="running"))
