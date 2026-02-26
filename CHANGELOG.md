@@ -8,6 +8,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Reader: 阅读辅助助手模块 — 上传任意文件，翻页阅读 + AI 实时问答 (T-71~T-75)
+- Reader: ReaderStore SQLite 存储层 — reader_documents/reader_pages/reader_chats 3 张表 (T-71)
+- Reader: 文件分页提取服务 — PDF 按自然页、PPTX 按幻灯片、DOCX 按标题、MD/TXT 按段落分页 (T-72)
+- Reader: 10 个 API 端点 — upload/list/get/delete/page/file/progress/chat/history/clear (T-73)
+- Reader: AI 问答 — 当前页 + 前后各 1 页上下文 + 最近对话历史，调用 GLM-5 模型 (T-73)
+- Reader: reader_assistant.txt 阅读辅助 system prompt (T-73)
+- Config: settings.yaml 新增 reader 配置段 + agent_models.reader: glm-5 (T-73)
+- Web: react-pdf + pdfjs-dist — PDF 浏览器端原生渲染，保留排版/图表/公式 (T-74)
+- Web: ReaderListPage 文档列表页 — 卡片网格 + 上传对话框 + 阅读进度条 (T-74)
+- Web: ReaderViewPage 核心阅读视图 — 左右分栏布局（62%文档 + 38%对话） (T-75)
+- Web: PdfPageViewer — react-pdf 单页渲染（文本层可选中） (T-75)
+- Web: TextPageViewer — 非 PDF 文件 MarkdownRenderer 渲染 (T-75)
+- Web: PageNavigation — 上/下页 + 页码输入跳转 (T-75)
+- Web: ChatPanel + ChatMessage — AI 对话面板，消息标注页码 (T-75)
+- Web: 键盘快捷键 ← → 翻页, Escape 收起/展开对话面板 (T-75)
+- Web: 翻页自动保存阅读进度 + 预加载前后各 1 页 (T-75)
+- Web: Sidebar 新增阅读助手导航项（BookOpenCheck 图标） (T-74)
+- i18n: zh-CN/en 新增 reader.* 30+ 翻译 key (T-74)
+
 - Web: 第 5 个"自定义"分析模式 — 自选模板 + 自选深度（quick/standard/deep），原有 4 个模式行为不变 (T-68)
 - API: POST /pipeline/run 新增 depth 参数，custom 模式下用 depth 映射 analyzer 配置 (T-68)
 - Core: engine.py template_content 优先分支 — 有模板时不传 generator prompt_override，让模板控制报告格式 (T-68)
