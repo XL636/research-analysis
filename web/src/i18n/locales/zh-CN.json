@@ -284,6 +284,7 @@
   "template.promptPlaceholder": "输入报告生成的 System Prompt...",
   "template.selectLabel": "报告模板",
   "template.default": "跟随模式默认",
+  "template.modeOverrideHint": "当前分析模式已指定专用报告格式，自定义模板仅在「标准分析」模式下生效。",
 
   "settings.agentGroupAnalysis": "分析工作流",
   "settings.agentGroupPaper": "论文写作工作流",

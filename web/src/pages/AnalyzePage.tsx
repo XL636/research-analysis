@@ -182,7 +182,7 @@ export default function AnalyzePage() {
                     <button
                       key={m.id}
                       type="button"
-                      onClick={() => setMode(m.id)}
+                      onClick={() => { setMode(m.id); if (m.id !== 'standard') setTemplateId(undefined) }}
                       className={`flex flex-col items-start gap-1.5 border rounded-lg px-4 py-3 text-left transition-all duration-200 ${
                         isSelected
                           ? 'border-primary-500 bg-primary-50 ring-1 ring-primary-500'
@@ -203,40 +203,46 @@ export default function AnalyzePage() {
             </div>
           )}
 
-          {/* Template selector */}
-          {templates.length > 0 && (
+          {/* Template selector — only effective in standard mode */}
+          {templates.filter(t => !t.is_builtin).length > 0 && (
             <div className="mt-6">
               <label className="block text-sm font-medium text-primary-950 mb-2">
                 {t('template.selectLabel')}
               </label>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => setTemplateId(undefined)}
-                  className={`border rounded-lg px-3 py-1.5 text-sm transition-all duration-200 ${
-                    templateId === undefined
-                      ? 'border-primary-500 bg-primary-50 text-primary-700 ring-1 ring-primary-500'
-                      : 'border-gray-200 text-gray-600 hover:border-gray-300'
-                  }`}
-                >
-                  {t('template.default')}
-                </button>
-                {templates.filter(t => !t.is_builtin).map(tpl => (
+              {mode !== 'standard' ? (
+                <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                  {t('template.modeOverrideHint')}
+                </p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
                   <button
-                    key={tpl.id}
                     type="button"
-                    onClick={() => setTemplateId(tpl.id)}
-                    className={`flex items-center gap-1.5 border rounded-lg px-3 py-1.5 text-sm transition-all duration-200 ${
-                      templateId === tpl.id
+                    onClick={() => setTemplateId(undefined)}
+                    className={`border rounded-lg px-3 py-1.5 text-sm transition-all duration-200 ${
+                      templateId === undefined
                         ? 'border-primary-500 bg-primary-50 text-primary-700 ring-1 ring-primary-500'
                         : 'border-gray-200 text-gray-600 hover:border-gray-300'
                     }`}
                   >
-                    <FileText className="h-3.5 w-3.5" />
-                    {tpl.display_name}
+                    {t('template.default')}
                   </button>
-                ))}
-              </div>
+                  {templates.filter(t => !t.is_builtin).map(tpl => (
+                    <button
+                      key={tpl.id}
+                      type="button"
+                      onClick={() => setTemplateId(tpl.id)}
+                      className={`flex items-center gap-1.5 border rounded-lg px-3 py-1.5 text-sm transition-all duration-200 ${
+                        templateId === tpl.id
+                          ? 'border-primary-500 bg-primary-50 text-primary-700 ring-1 ring-primary-500'
+                          : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                      }`}
+                    >
+                      <FileText className="h-3.5 w-3.5" />
+                      {tpl.display_name}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

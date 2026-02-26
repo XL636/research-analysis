@@ -85,7 +85,6 @@ analysis_modes:
     description_zh: "全面深度分析，含方法论评估和贡献评价"
     description_en: "Comprehensive analysis with methodology assessment"
     analyzer_prompt: "config/prompts/analyzer_system.txt"
-    generator_prompt: "config/prompts/generator_system.txt"
     skip_review: false
     max_text_length: 8000
   deep:

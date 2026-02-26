@@ -284,6 +284,7 @@
   "template.promptPlaceholder": "Enter the system prompt for report generation...",
   "template.selectLabel": "Report Template",
   "template.default": "Mode Default",
+  "template.modeOverrideHint": "The current analysis mode uses its own report format. Custom templates only apply in Standard Analysis mode.",
 
   "settings.agentGroupAnalysis": "Analysis Workflow",
   "settings.agentGroupPaper": "Paper Writing Workflow",
