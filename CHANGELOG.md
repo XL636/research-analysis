@@ -30,6 +30,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - i18n: zh-CN/en 新增 template.* + analyze.parallel.* 翻译 key (T-68, T-69)
 - Web: 分析模式详情提示条 — 选中模式后显示文本上限、评审状态、使用建议，custom 模式根据深度动态显示 (T-68)
 - i18n: zh-CN/en 新增 8 个 analyze.modeHint.* 翻译 key (T-68)
+- Web: 分析进度全局持久化 — AnalysisContext 全局状态管理 + GlobalProgressBanner 跨页面绿色进度条，跳转页面不丢失进度 (T-70)
+- Config: settings.yaml 新增 glm-5 旗舰模型 + glm-4-0414/glm-4-plus-0414/glm-4-air-0414/glm-z1-air-0414 系列模型配置
 - Core: 论文类型识别 — AnalysisResult 新增 paper_type 字段（empirical/theoretical/survey/opinion/technical），LLM 自动识别论文类型 (T-67)
 - Prompt: 3 个 analyzer prompt（system/deep/quick）加入类型识别步骤，方法论评估改为按类型自适应的论证方式评估 (T-67)
 - Skill: analyze-paper Skill 同步更新 — 新增 paper_type 维度，JSON schema 和报告模板自适应 (T-67)
