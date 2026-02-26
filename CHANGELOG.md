@@ -28,6 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Web: ProgressStepper 子进度显示 — running 步骤显示 `[1/3] paper.pdf` 等消息 (T-69)
 - Config: settings.yaml 新增 max_concurrency/batch_max_concurrency 并发配置 (T-69)
 - i18n: zh-CN/en 新增 template.* + analyze.parallel.* 翻译 key (T-68, T-69)
+- Web: 分析模式详情提示条 — 选中模式后显示文本上限、评审状态、使用建议，custom 模式根据深度动态显示 (T-68)
+- i18n: zh-CN/en 新增 8 个 analyze.modeHint.* 翻译 key (T-68)
 - Core: 论文类型识别 — AnalysisResult 新增 paper_type 字段（empirical/theoretical/survey/opinion/technical），LLM 自动识别论文类型 (T-67)
 - Prompt: 3 个 analyzer prompt（system/deep/quick）加入类型识别步骤，方法论评估改为按类型自适应的论证方式评估 (T-67)
 - Skill: analyze-paper Skill 同步更新 — 新增 paper_type 维度，JSON schema 和报告模板自适应 (T-67)
