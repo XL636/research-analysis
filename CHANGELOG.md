@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Reader: 多会话支持 — 一个文档可有多个对话，支持切换、新建、删除，首条消息自动生成标题 (T-76~T-78)
+- Reader: AI 推荐问题 — 翻页时自动生成 2-3 个基于当前页的问题，可点击芯片直接发送 (T-76~T-78)
+- Reader: SessionSwitcher 会话切换下拉菜单 — 嵌入 ChatPanel header，显示标题/消息数/删除 (T-78)
+- Reader: SuggestedQuestions 组件 — 无消息时居中大尺寸展示，有消息时输入框上方紧凑 chip 行 (T-78)
+- Store: reader_sessions 表 + reader_suggested_questions 表 + reader_chats.session_id 迁移 (T-76)
+- API: 7 个新端点 — sessions CRUD + session chat + suggestions（含 LLM 缓存） (T-77)
+- Config: reader_suggestions.txt prompt + settings.yaml suggestions_model/count/min_content 配置 (T-77)
+- i18n: zh-CN/en 新增 reader.suggestions/newSession/deleteSession 等 7 个翻译 key (T-78)
 - Reader: 阅读辅助助手模块 — 上传任意文件，翻页阅读 + AI 实时问答 (T-71~T-75)
 - Reader: ReaderStore SQLite 存储层 — reader_documents/reader_pages/reader_chats 3 张表 (T-71)
 - Reader: 文件分页提取服务 — PDF 按自然页、PPTX 按幻灯片、DOCX 按标题、MD/TXT 按段落分页 (T-72)

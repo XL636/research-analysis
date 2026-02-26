@@ -6,9 +6,13 @@ import {
   useReaderDocument,
   useReaderPage,
   useUpdateReaderProgress,
-  useSendReaderChat,
-  useReaderChatHistory,
-  useClearReaderChat,
+  useReaderSessions,
+  useCreateReaderSession,
+  useDeleteReaderSession,
+  useSessionChatHistory,
+  useSendSessionChat,
+  useClearSessionChat,
+  useReaderSuggestions,
 } from '../hooks/useReader'
 import { getReaderFileUrl } from '../api/reader'
 import PdfPageViewer from '../components/reader/PdfPageViewer'
@@ -26,6 +30,7 @@ export default function ReaderViewPage() {
   const { data: doc, isLoading: docLoading } = useReaderDocument(docId)
   const [currentPage, setCurrentPage] = useState(1)
   const [chatOpen, setChatOpen] = useState(true)
+  const [activeSessionId, setActiveSessionId] = useState(0)
 
   // Initialize current page from document's saved progress
   useEffect(() => {
@@ -47,11 +52,39 @@ export default function ReaderViewPage() {
   useReaderPage(docId, doc ? Math.min(currentPage + 1, doc.total_pages) : 0)
 
   const updateProgress = useUpdateReaderProgress()
-  const sendChat = useSendReaderChat()
-  const { data: chatHistoryData } = useReaderChatHistory(docId)
-  const clearChat = useClearReaderChat()
+
+  // Sessions
+  const { data: sessions = [] } = useReaderSessions(docId)
+  const createSession = useCreateReaderSession()
+  const deleteSession = useDeleteReaderSession()
+
+  // Auto-select latest session when sessions load
+  useEffect(() => {
+    if (sessions.length > 0 && activeSessionId === 0) {
+      setActiveSessionId(sessions[0].id)
+    }
+    // If active session was deleted, switch to first available
+    if (sessions.length > 0 && !sessions.find((s) => s.id === activeSessionId)) {
+      setActiveSessionId(sessions[0].id)
+    }
+  }, [sessions, activeSessionId])
+
+  // Session chat
+  const { data: chatHistoryData } = useSessionChatHistory(docId, activeSessionId)
+  const sendChat = useSendSessionChat()
+  const clearChat = useClearSessionChat()
 
   const chatMessages = chatHistoryData?.messages || []
+
+  // Suggestions with debounced page
+  const [debouncedPage, setDebouncedPage] = useState(currentPage)
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedPage(currentPage), 500)
+    return () => clearTimeout(timer)
+  }, [currentPage])
+
+  const { data: suggestionsData, isLoading: suggestionsLoading } = useReaderSuggestions(docId, debouncedPage)
+  const suggestions = suggestionsData?.questions || []
 
   const handlePageChange = useCallback((page: number) => {
     setCurrentPage(page)
@@ -82,11 +115,30 @@ export default function ReaderViewPage() {
   }, [currentPage, doc, handlePageChange])
 
   const handleSendChat = (message: string) => {
-    sendChat.mutate({ id: docId, message, pageNum: currentPage })
+    if (activeSessionId > 0) {
+      sendChat.mutate({ docId, sessionId: activeSessionId, message, pageNum: currentPage })
+    }
   }
 
   const handleClearChat = () => {
-    clearChat.mutate(docId)
+    if (activeSessionId > 0) {
+      clearChat.mutate({ docId, sessionId: activeSessionId })
+    }
+  }
+
+  const handleSessionCreate = () => {
+    createSession.mutate(
+      { docId },
+      {
+        onSuccess: (newSession) => {
+          setActiveSessionId(newSession.id)
+        },
+      }
+    )
+  }
+
+  const handleSessionDelete = (sessionId: number) => {
+    deleteSession.mutate({ docId, sessionId })
   }
 
   if (docLoading) {
@@ -173,6 +225,13 @@ export default function ReaderViewPage() {
               isSending={sendChat.isPending}
               onSend={handleSendChat}
               onClear={handleClearChat}
+              sessions={sessions}
+              activeSessionId={activeSessionId}
+              onSessionSelect={setActiveSessionId}
+              onSessionCreate={handleSessionCreate}
+              onSessionDelete={handleSessionDelete}
+              suggestions={suggestions}
+              suggestionsLoading={suggestionsLoading}
             />
           </div>
         )}

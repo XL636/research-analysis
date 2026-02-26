@@ -9,6 +9,13 @@ import {
   sendReaderChat,
   getReaderChatHistory,
   clearReaderChatHistory,
+  listSessions,
+  createSession,
+  deleteSession,
+  getSessionChatHistory,
+  sendSessionChat,
+  clearSessionChatHistory,
+  getSuggestedQuestions,
 } from '../api/reader'
 
 export function useReaderDocuments() {
@@ -65,6 +72,7 @@ export function useUpdateReaderProgress() {
   })
 }
 
+// Legacy hooks (still functional)
 export function useSendReaderChat() {
   const queryClient = useQueryClient()
   return useMutation({
@@ -91,5 +99,79 @@ export function useClearReaderChat() {
     onSuccess: (_data, id) => {
       queryClient.invalidateQueries({ queryKey: ['readerChatHistory', id] })
     },
+  })
+}
+
+// Session hooks
+export function useReaderSessions(docId: number) {
+  return useQuery({
+    queryKey: ['readerSessions', docId],
+    queryFn: () => listSessions(docId),
+    enabled: docId > 0,
+  })
+}
+
+export function useCreateReaderSession() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ docId, title }: { docId: number; title?: string }) =>
+      createSession(docId, title),
+    onSuccess: (_data, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['readerSessions', vars.docId] })
+    },
+  })
+}
+
+export function useDeleteReaderSession() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ docId, sessionId }: { docId: number; sessionId: number }) =>
+      deleteSession(docId, sessionId),
+    onSuccess: (_data, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['readerSessions', vars.docId] })
+    },
+  })
+}
+
+export function useSessionChatHistory(docId: number, sessionId: number) {
+  return useQuery({
+    queryKey: ['sessionChatHistory', docId, sessionId],
+    queryFn: () => getSessionChatHistory(docId, sessionId),
+    enabled: docId > 0 && sessionId > 0,
+  })
+}
+
+export function useSendSessionChat() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ docId, sessionId, message, pageNum }: {
+      docId: number; sessionId: number; message: string; pageNum: number
+    }) => sendSessionChat(docId, sessionId, message, pageNum),
+    onSuccess: (_data, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['sessionChatHistory', vars.docId, vars.sessionId] })
+      queryClient.invalidateQueries({ queryKey: ['readerSessions', vars.docId] })
+    },
+  })
+}
+
+export function useClearSessionChat() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ docId, sessionId }: { docId: number; sessionId: number }) =>
+      clearSessionChatHistory(docId, sessionId),
+    onSuccess: (_data, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['sessionChatHistory', vars.docId, vars.sessionId] })
+      queryClient.invalidateQueries({ queryKey: ['readerSessions', vars.docId] })
+    },
+  })
+}
+
+// Suggestions hook
+export function useReaderSuggestions(docId: number, pageNum: number) {
+  return useQuery({
+    queryKey: ['readerSuggestions', docId, pageNum],
+    queryFn: () => getSuggestedQuestions(docId, pageNum),
+    enabled: docId > 0 && pageNum > 0,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   })
 }

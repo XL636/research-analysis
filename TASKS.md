@@ -438,6 +438,26 @@
 
 ## Phase 9: 阅读辅助助手 `[完成]`
 
+### 阅读助手增强
+
+- [x] **T-76: 数据库 + Store 层改造（多会话 + 推荐问题）**
+  - 目标：新增 reader_sessions/reader_suggested_questions 表，reader_chats 加 session_id，数据迁移
+  - 步骤：① 2 张新表 → ② ALTER TABLE 迁移 + orphan 绑定 → ③ 9 个新方法
+  - 验收：`from src.store.reader_store import ReaderStore; ReaderStore()` 无报错
+  - 依赖：T-71
+
+- [x] **T-77: 后端 API 端点（会话 + 推荐问题）**
+  - 目标：7 个新端点 + 旧端点兼容 + 推荐问题 LLM 生成 + 缓存
+  - 步骤：① 4 个新 schema → ② 7 个新路由 → ③ suggestions prompt + config → ④ 旧端点内部走 session
+  - 验收：Swagger 可测试所有端点
+  - 依赖：T-76
+
+- [x] **T-78: 前端多会话 + 推荐问题**
+  - 目标：SessionSwitcher + SuggestedQuestions 组件，ChatPanel/ReaderViewPage 集成
+  - 步骤：① 类型 + API + hooks → ② SessionSwitcher 下拉菜单 → ③ SuggestedQuestions 芯片 → ④ ChatPanel 集成 → ⑤ ReaderViewPage session 状态管理 → ⑥ i18n
+  - 验收：`npm run build` 无错误
+  - 依赖：T-77
+
 - [x] **T-71: Reader 数据存储层**
   - 目标：SQLite 存储文档元数据、分页文本、对话历史
   - 步骤：① reader_store.py 3 张表 → ② CRUD 方法

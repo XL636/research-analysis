@@ -377,3 +377,23 @@ export interface ReaderChatResponse {
 export interface ReaderChatHistoryResponse {
   messages: ReaderChatMessage[]
 }
+
+// Reader Sessions
+export interface ReaderSession {
+  id: number
+  document_id: number
+  title: string
+  message_count: number
+  created_at: string
+  updated_at: string
+}
+
+export interface ReaderSessionListResponse {
+  sessions: ReaderSession[]
+}
+
+export interface SuggestedQuestionsResponse {
+  questions: string[]
+  page_num: number
+  cached: boolean
+}

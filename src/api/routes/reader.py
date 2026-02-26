@@ -1,4 +1,4 @@
-"""Reader API routes - document upload, page reading, AI chat."""
+"""Reader API routes - document upload, page reading, AI chat, sessions, suggestions."""
 
 from __future__ import annotations
 
@@ -7,8 +7,10 @@ from pathlib import Path
 import yaml
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
+from loguru import logger
 
 from src.api.schemas import (
+    CreateSessionRequest,
     DeleteResponse,
     ReaderChatHistoryResponse,
     ReaderChatMessage,
@@ -18,6 +20,9 @@ from src.api.schemas import (
     ReaderDocumentResponse,
     ReaderPageResponse,
     ReaderProgressRequest,
+    ReaderSessionListResponse,
+    ReaderSessionResponse,
+    SuggestedQuestionsResponse,
 )
 from src.api.services.reader_service import (
     ALLOWED_EXTENSIONS,
@@ -46,6 +51,17 @@ def _load_config() -> dict:
         with open(config_path, encoding="utf-8") as f:
             return yaml.safe_load(f)
     return {}
+
+
+def _get_or_create_latest_session(store: ReaderStore, doc_id: int) -> dict:
+    """Get the most recent session for a document, or create one."""
+    sessions = store.list_sessions(doc_id)
+    if sessions:
+        return sessions[0]  # Already sorted by updated_at DESC
+    return store.create_session(doc_id, "默认对话")
+
+
+# --- Document endpoints ---
 
 
 @router.post("/upload", response_model=ReaderDocumentResponse)
@@ -94,6 +110,9 @@ async def upload_document(
     )
     store.insert_pages(doc["id"], pages)
 
+    # Auto-create first session
+    store.create_session(doc["id"], "默认对话")
+
     return ReaderDocumentResponse(**doc)
 
 
@@ -119,7 +138,7 @@ async def get_document(doc_id: int):
 
 @router.delete("/{doc_id}", response_model=DeleteResponse)
 async def delete_document(doc_id: int):
-    """Delete document, pages, and chats."""
+    """Delete document, pages, chats, and sessions."""
     store = _get_store()
     doc = store.get_document(doc_id)
     if not doc:
@@ -127,7 +146,7 @@ async def delete_document(doc_id: int):
 
     # Delete files
     delete_reader_files(doc["file_path"])
-    # Delete from DB
+    # Delete from DB (CASCADE handles pages, chats, sessions, suggestions)
     store.delete_document(doc_id)
     return DeleteResponse(success=True, message="Document deleted")
 
@@ -185,20 +204,82 @@ async def update_progress(doc_id: int, body: ReaderProgressRequest):
     return ReaderDocumentResponse(**updated)
 
 
-@router.post("/{doc_id}/chat", response_model=ReaderChatResponse)
-async def chat(doc_id: int, body: ReaderChatRequest):
-    """AI chat - answer questions based on current page context."""
+# --- Session endpoints ---
+
+
+@router.post("/{doc_id}/sessions", response_model=ReaderSessionResponse)
+async def create_session(doc_id: int, body: CreateSessionRequest | None = None):
+    """Create a new chat session for a document."""
     store = _get_store()
     doc = store.get_document(doc_id)
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
+
+    title = body.title if body else "新对话"
+    session = store.create_session(doc_id, title)
+    return ReaderSessionResponse(**session)
+
+
+@router.get("/{doc_id}/sessions", response_model=ReaderSessionListResponse)
+async def list_sessions(doc_id: int):
+    """List all chat sessions for a document (with message_count)."""
+    store = _get_store()
+    doc = store.get_document(doc_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    sessions = store.list_sessions(doc_id)
+    return ReaderSessionListResponse(
+        sessions=[ReaderSessionResponse(**s) for s in sessions]
+    )
+
+
+@router.delete("/{doc_id}/sessions/{session_id}", response_model=DeleteResponse)
+async def delete_session(doc_id: int, session_id: int):
+    """Delete a chat session and all its messages."""
+    store = _get_store()
+    session = store.get_session(session_id)
+    if not session or session["document_id"] != doc_id:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    store.delete_session(session_id)
+    return DeleteResponse(success=True, message="Session deleted")
+
+
+# --- Session chat endpoints ---
+
+
+@router.get("/{doc_id}/sessions/{session_id}/history", response_model=ReaderChatHistoryResponse)
+async def get_session_chat_history(doc_id: int, session_id: int):
+    """Get chat history for a specific session."""
+    store = _get_store()
+    session = store.get_session(session_id)
+    if not session or session["document_id"] != doc_id:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    history = store.get_chat_history(doc_id, session_id=session_id)
+    return ReaderChatHistoryResponse(
+        messages=[ReaderChatMessage(**m) for m in history]
+    )
+
+
+@router.post("/{doc_id}/sessions/{session_id}/chat", response_model=ReaderChatResponse)
+async def session_chat(doc_id: int, session_id: int, body: ReaderChatRequest):
+    """AI chat within a session - answer questions based on current page context."""
+    store = _get_store()
+    doc = store.get_document(doc_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    session = store.get_session(session_id)
+    if not session or session["document_id"] != doc_id:
+        raise HTTPException(status_code=404, detail="Session not found")
 
     config = _load_config()
     reader_conf = config.get("reader", {})
     context_pages = reader_conf.get("context_pages", 1)
     max_history = reader_conf.get("max_chat_history", 20)
 
-    # Build page context: current page + surrounding pages
+    # Build page context
     start_page = max(1, body.page_num - context_pages)
     end_page = min(doc["total_pages"], body.page_num + context_pages)
     page_rows = store.get_page_range(doc_id, start_page, end_page)
@@ -224,17 +305,23 @@ async def chat(doc_id: int, body: ReaderChatRequest):
     system_prompt = system_prompt.replace("{document_title}", doc["title"])
     system_prompt = system_prompt.replace("{page_context}", page_context)
 
-    # Build messages: system + recent chat history + current question
+    # Build messages: system + recent session history + current question
     messages: list[dict[str, str]] = [{"role": "system", "content": system_prompt}]
 
-    chat_history = store.get_chat_history(doc_id, limit=max_history)
-    for ch in chat_history[-10:]:  # Last 10 messages for context
+    chat_history = store.get_chat_history(doc_id, limit=max_history, session_id=session_id)
+    for ch in chat_history[-10:]:
         messages.append({"role": ch["role"], "content": ch["content"]})
 
     messages.append({"role": "user", "content": body.message})
 
     # Save user message
-    store.add_chat(doc_id, "user", body.message, body.page_num)
+    store.add_chat(doc_id, "user", body.message, body.page_num, session_id=session_id)
+
+    # Auto-generate session title from first message
+    if session["message_count"] == 0:
+        auto_title = body.message[:30].strip()
+        if auto_title:
+            store.update_session_title(session_id, auto_title)
 
     # Call LLM
     from src.core.llm_client import LLMClient
@@ -247,7 +334,10 @@ async def chat(doc_id: int, body: ReaderChatRequest):
         raise HTTPException(status_code=500, detail=f"AI chat failed: {e}")
 
     # Save assistant message
-    assistant_msg = store.add_chat(doc_id, "assistant", reply, body.page_num)
+    assistant_msg = store.add_chat(doc_id, "assistant", reply, body.page_num, session_id=session_id)
+
+    # Touch session updated_at
+    store.touch_session(session_id)
 
     return ReaderChatResponse(
         reply=reply,
@@ -255,15 +345,112 @@ async def chat(doc_id: int, body: ReaderChatRequest):
     )
 
 
-@router.get("/{doc_id}/chat/history", response_model=ReaderChatHistoryResponse)
-async def get_chat_history(doc_id: int):
-    """Get chat history for a document."""
+@router.delete("/{doc_id}/sessions/{session_id}/history", response_model=DeleteResponse)
+async def clear_session_chat_history(doc_id: int, session_id: int):
+    """Clear chat history for a specific session."""
+    store = _get_store()
+    session = store.get_session(session_id)
+    if not session or session["document_id"] != doc_id:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    store.clear_chat(doc_id, session_id=session_id)
+    return DeleteResponse(success=True, message="Session chat history cleared")
+
+
+# --- Suggested questions ---
+
+
+@router.get("/{doc_id}/suggestions", response_model=SuggestedQuestionsResponse)
+async def get_suggestions(doc_id: int, page_num: int = 1):
+    """Get AI-generated suggested questions for a page."""
+    store = _get_store()
+    doc = store.get_document(doc_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    if page_num < 1 or page_num > doc["total_pages"]:
+        raise HTTPException(status_code=400, detail=f"Page {page_num} out of range")
+
+    config = _load_config()
+    reader_conf = config.get("reader", {})
+    min_content = reader_conf.get("suggestions_min_content", 50)
+    suggestions_count = reader_conf.get("suggestions_count", 3)
+
+    # Check cache
+    cached = store.get_suggestions(doc_id, page_num)
+    if cached is not None:
+        return SuggestedQuestionsResponse(questions=cached, page_num=page_num, cached=True)
+
+    # Get page content
+    content = store.get_page_content(doc_id, page_num)
+    if not content or len(content.strip()) < min_content:
+        return SuggestedQuestionsResponse(questions=[], page_num=page_num, cached=False)
+
+    # Load prompt
+    prompt_path_str = reader_conf.get(
+        "suggestions_prompt", "config/prompts/reader_suggestions.txt"
+    )
+    prompt_path = Path(prompt_path_str)
+    if prompt_path.exists():
+        prompt_template = prompt_path.read_text(encoding="utf-8")
+    else:
+        prompt_template = (
+            "基于以下内容生成{count}个问题，JSON格式返回 {{\"questions\": [...]}}。\n\n{page_content}"
+        )
+
+    prompt = prompt_template.replace("{document_title}", doc["title"])
+    prompt = prompt.replace("{page_num}", str(page_num))
+    prompt = prompt.replace("{count}", str(suggestions_count))
+    prompt = prompt.replace("{page_content}", content[:3000])  # Limit content size
+
+    # Call LLM
+    from src.core.llm_client import LLMClient
+
+    model_name = reader_conf.get("suggestions_model", "glm-4-flash")
+    llm = LLMClient()
+    try:
+        result = llm.chat_json(
+            model_name,
+            [{"role": "user", "content": prompt}],
+            temperature=0.7,
+            max_tokens=512,
+        )
+        questions = result.get("questions", [])[:suggestions_count]
+    except Exception as e:
+        logger.warning(f"Failed to generate suggestions for doc_id={doc_id}, page={page_num}: {e}")
+        return SuggestedQuestionsResponse(questions=[], page_num=page_num, cached=False)
+
+    # Save to cache
+    if questions:
+        store.save_suggestions(doc_id, page_num, questions)
+
+    return SuggestedQuestionsResponse(questions=questions, page_num=page_num, cached=False)
+
+
+# --- Legacy endpoints (backward compatible) ---
+
+
+@router.post("/{doc_id}/chat", response_model=ReaderChatResponse)
+async def chat(doc_id: int, body: ReaderChatRequest):
+    """AI chat - answer questions based on current page context (legacy, uses latest session)."""
     store = _get_store()
     doc = store.get_document(doc_id)
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
 
-    history = store.get_chat_history(doc_id)
+    session = _get_or_create_latest_session(store, doc_id)
+    return await session_chat(doc_id, session["id"], body)
+
+
+@router.get("/{doc_id}/chat/history", response_model=ReaderChatHistoryResponse)
+async def get_chat_history(doc_id: int):
+    """Get chat history for a document (legacy, uses latest session)."""
+    store = _get_store()
+    doc = store.get_document(doc_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    session = _get_or_create_latest_session(store, doc_id)
+    history = store.get_chat_history(doc_id, session_id=session["id"])
     return ReaderChatHistoryResponse(
         messages=[ReaderChatMessage(**m) for m in history]
     )
@@ -271,11 +458,12 @@ async def get_chat_history(doc_id: int):
 
 @router.delete("/{doc_id}/chat/history", response_model=DeleteResponse)
 async def clear_chat_history(doc_id: int):
-    """Clear chat history for a document."""
+    """Clear chat history for a document (legacy, uses latest session)."""
     store = _get_store()
     doc = store.get_document(doc_id)
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
 
-    store.clear_chat(doc_id)
+    session = _get_or_create_latest_session(store, doc_id)
+    store.clear_chat(doc_id, session_id=session["id"])
     return DeleteResponse(success=True, message="Chat history cleared")

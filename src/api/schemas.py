@@ -423,3 +423,28 @@ class ReaderChatResponse(BaseModel):
 
 class ReaderChatHistoryResponse(BaseModel):
     messages: list[ReaderChatMessage] = Field(default_factory=list)
+
+
+# --- Reader Sessions ---
+
+class CreateSessionRequest(BaseModel):
+    title: str = "新对话"
+
+
+class ReaderSessionResponse(BaseModel):
+    id: int
+    document_id: int
+    title: str
+    message_count: int = 0
+    created_at: str = ""
+    updated_at: str = ""
+
+
+class ReaderSessionListResponse(BaseModel):
+    sessions: list[ReaderSessionResponse] = Field(default_factory=list)
+
+
+class SuggestedQuestionsResponse(BaseModel):
+    questions: list[str] = Field(default_factory=list)
+    page_num: int = 0
+    cached: bool = False

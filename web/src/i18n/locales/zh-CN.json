@@ -347,5 +347,13 @@
   "reader.toggleChat": "切换对话面板",
   "reader.deleteConfirm": "确定要删除此文档吗？所有阅读进度和对话记录都将丢失。",
   "reader.notFoundTitle": "文档不存在",
-  "reader.notFoundDesc": "您查找的阅读文档不存在或已被删除。"
+  "reader.notFoundDesc": "您查找的阅读文档不存在或已被删除。",
+
+  "reader.suggestions": "推荐问题",
+  "reader.suggestionsLoading": "正在生成推荐问题...",
+  "reader.newSession": "新建对话",
+  "reader.deleteSession": "删除对话",
+  "reader.deleteSessionConfirm": "确定要删除此对话吗？所有消息将被清除。",
+  "reader.sessionMessages": "{{count}} 条消息",
+  "reader.defaultSessionTitle": "新对话"
 }
