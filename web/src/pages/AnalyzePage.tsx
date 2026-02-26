@@ -14,6 +14,7 @@ import {
   Microscope,
   Users,
   Sliders,
+  Info,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import FileDropzone from '../components/ui/FileDropzone'
@@ -221,6 +222,30 @@ export default function AnalyzePage() {
                   <span className="text-xs text-gray-500 line-clamp-2">{t('analyze.customModeDesc')}</span>
                 </button>
               </div>
+
+              {/* Mode hint info bar */}
+              {(() => {
+                const modeInfo = mode === 'custom'
+                  ? modes.find(m => m.id === depth)
+                  : modes.find(m => m.id === mode)
+                if (!modeInfo) return null
+                const limit = modeInfo.max_text_length >= 1000
+                  ? `${(modeInfo.max_text_length / 1000).toFixed(0)},000`
+                  : String(modeInfo.max_text_length)
+                const hintKey = mode === 'custom' ? 'custom' : mode
+                return (
+                  <div className="mt-3 flex items-start gap-2 text-xs text-gray-600 bg-gray-50 rounded-lg px-3 py-2">
+                    <Info className="h-3.5 w-3.5 mt-0.5 shrink-0 text-gray-400" />
+                    <span>
+                      {t('analyze.modeHint.textLimit', { limit })}
+                      {' · '}
+                      {modeInfo.skip_review ? t('analyze.modeHint.skipReview') : t('analyze.modeHint.hasReview')}
+                      {' · '}
+                      {t(`analyze.modeHint.${hintKey}`)}
+                    </span>
+                  </div>
+                )
+              })()}
 
               {/* Custom mode sub-panel */}
               {mode === 'custom' && (

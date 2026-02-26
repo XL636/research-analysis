@@ -309,5 +309,13 @@
   "analyze.customNoTemplateDesc": "Create a custom template on the Templates page first, then you can use it here.",
   "analyze.templateRequired": "Please select a report template",
   "analyze.parallel.processing": "Analyzing in parallel...",
-  "analyze.parallel.progress": "[{{current}}/{{total}}] {{name}}"
+  "analyze.parallel.progress": "[{{current}}/{{total}}] {{name}}",
+  "analyze.modeHint.textLimit": "Text limit ~{{limit}} chars",
+  "analyze.modeHint.skipReview": "Skips quality review",
+  "analyze.modeHint.hasReview": "Includes quality review",
+  "analyze.modeHint.quick": "Best for quick overviews",
+  "analyze.modeHint.standard": "Recommended for daily use, balances depth and speed",
+  "analyze.modeHint.deep": "Best for in-depth study of key papers",
+  "analyze.modeHint.meeting": "Outputs structured report for group meeting presentations",
+  "analyze.modeHint.custom": "Template controls report format, depth controls analysis behavior"
 }
