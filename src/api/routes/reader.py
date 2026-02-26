@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 
 import yaml
@@ -323,13 +324,15 @@ async def session_chat(doc_id: int, session_id: int, body: ReaderChatRequest):
         if auto_title:
             store.update_session_title(session_id, auto_title)
 
-    # Call LLM
+    # Call LLM (in thread to avoid blocking event loop)
     from src.core.llm_client import LLMClient
 
-    model_name = config.get("agent_models", {}).get("reader", "glm-5")
+    model_name = config.get("agent_models", {}).get("reader", "glm-4.5-plus")
     llm = LLMClient()
     try:
-        reply = llm.chat(model_name, messages, temperature=0.7, max_tokens=4096)
+        reply = await asyncio.to_thread(
+            llm.chat, model_name, messages, temperature=0.7, max_tokens=4096
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"AI chat failed: {e}")
 
@@ -402,13 +405,14 @@ async def get_suggestions(doc_id: int, page_num: int = 1):
     prompt = prompt.replace("{count}", str(suggestions_count))
     prompt = prompt.replace("{page_content}", content[:3000])  # Limit content size
 
-    # Call LLM
+    # Call LLM (in thread to avoid blocking event loop)
     from src.core.llm_client import LLMClient
 
     model_name = reader_conf.get("suggestions_model", "glm-4-flash")
     llm = LLMClient()
     try:
-        result = llm.chat_json(
+        result = await asyncio.to_thread(
+            llm.chat_json,
             model_name,
             [{"role": "user", "content": prompt}],
             temperature=0.7,
