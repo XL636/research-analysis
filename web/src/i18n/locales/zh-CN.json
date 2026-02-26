@@ -297,5 +297,8 @@
   "settings.agentDesc.citation": "收集并格式化参考文献",
   "settings.agentDesc.research": "自动搜索和分析相关文献",
   "settings.agentDesc.polish": "全文润色和优化",
-  "settings.providerLabel": "服务商"
+  "settings.providerLabel": "服务商",
+
+  "analyze.parallel.processing": "并行分析中...",
+  "analyze.parallel.progress": "[{{current}}/{{total}}] {{name}}"
 }

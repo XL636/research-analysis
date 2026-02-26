@@ -4,16 +4,21 @@ import { getProgressUrl } from '../api/pipeline'
 
 const PIPELINE_STEPS = ['parse', 'analyze', 'synthesize', 'generate', 'review']
 
+interface StepState {
+  name: string
+  status: 'pending' | 'running' | 'completed' | 'error'
+  message: string
+}
+
 interface PipelineProgressState {
-  steps: { name: string; status: 'pending' | 'running' | 'completed' | 'error' }[]
+  steps: StepState[]
   isComplete: boolean
   error: string | null
 }
 
 export function usePipelineProgress(runId: string | null): PipelineProgressState {
-  type StepStatus = 'pending' | 'running' | 'completed' | 'error'
-  const [steps, setSteps] = useState<{ name: string; status: StepStatus }[]>(
-    PIPELINE_STEPS.map(name => ({ name, status: 'pending' }))
+  const [steps, setSteps] = useState<StepState[]>(
+    PIPELINE_STEPS.map(name => ({ name, status: 'pending' as const, message: '' }))
   )
   const [isComplete, setIsComplete] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -22,7 +27,7 @@ export function usePipelineProgress(runId: string | null): PipelineProgressState
     if (!runId) return
 
     // Reset
-    setSteps(PIPELINE_STEPS.map(name => ({ name, status: 'pending' as const })))
+    setSteps(PIPELINE_STEPS.map(name => ({ name, status: 'pending' as const, message: '' })))
     setIsComplete(false)
     setError(null)
 
@@ -47,7 +52,9 @@ export function usePipelineProgress(runId: string | null): PipelineProgressState
 
         setSteps(prev =>
           prev.map(s =>
-            s.name === progress.step ? { ...s, status: progress.status } : s
+            s.name === progress.step
+              ? { ...s, status: progress.status, message: progress.message || '' }
+              : s
           )
         )
       } catch {

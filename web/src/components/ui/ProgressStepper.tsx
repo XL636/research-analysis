@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 interface Step {
   name: string
   status: 'pending' | 'running' | 'completed' | 'error'
+  message?: string
 }
 
 interface ProgressStepperProps {
@@ -79,6 +80,9 @@ export default function ProgressStepper({ steps }: ProgressStepperProps) {
                 {step.name}
               </p>
               <p className="text-xs text-gray-400 mt-0.5">{t(config.labelKey)}</p>
+              {step.status === 'running' && step.message && (
+                <p className="text-xs text-primary-500 mt-0.5 font-mono">{step.message}</p>
+              )}
             </div>
           </div>
         )
