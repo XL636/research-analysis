@@ -4,6 +4,7 @@ interface SuggestedQuestionsProps {
   questions: string[]
   isLoading: boolean
   hasMessages: boolean
+  disabled?: boolean
   onSelect: (question: string) => void
 }
 
@@ -11,6 +12,7 @@ export default function SuggestedQuestions({
   questions,
   isLoading,
   hasMessages,
+  disabled = false,
   onSelect,
 }: SuggestedQuestionsProps) {
   const { t } = useTranslation()
@@ -43,7 +45,8 @@ export default function SuggestedQuestions({
             <button
               key={i}
               onClick={() => onSelect(q)}
-              className="px-4 py-2 text-sm bg-primary-50 text-primary-700 rounded-full hover:bg-primary-100 transition-colors border border-primary-200"
+              disabled={disabled}
+              className="px-4 py-2 text-sm bg-primary-50 text-primary-700 rounded-full hover:bg-primary-100 transition-colors border border-primary-200 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {q}
             </button>
@@ -60,7 +63,8 @@ export default function SuggestedQuestions({
         <button
           key={i}
           onClick={() => onSelect(q)}
-          className="px-2.5 py-1 text-xs bg-gray-50 text-gray-600 rounded-full hover:bg-primary-50 hover:text-primary-700 transition-colors border border-gray-200 hover:border-primary-200 truncate max-w-[200px]"
+          disabled={disabled}
+          className="px-2.5 py-1 text-xs bg-gray-50 text-gray-600 rounded-full hover:bg-primary-50 hover:text-primary-700 transition-colors border border-gray-200 hover:border-primary-200 truncate max-w-[200px] disabled:opacity-40 disabled:cursor-not-allowed"
           title={q}
         >
           {q}

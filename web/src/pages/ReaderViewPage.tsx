@@ -223,6 +223,7 @@ export default function ReaderViewPage() {
               messages={chatMessages}
               currentPage={currentPage}
               isSending={sendChat.isPending}
+              sendError={sendChat.error ? String(sendChat.error) : null}
               onSend={handleSendChat}
               onClear={handleClearChat}
               sessions={sessions}

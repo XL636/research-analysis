@@ -10,6 +10,7 @@ interface ChatPanelProps {
   messages: ReaderChatMessage[]
   currentPage: number
   isSending: boolean
+  sendError?: string | null
   onSend: (message: string) => void
   onClear: () => void
   // Session props
@@ -27,6 +28,7 @@ export default function ChatPanel({
   messages,
   currentPage,
   isSending,
+  sendError,
   onSend,
   onClear,
   sessions,
@@ -98,6 +100,7 @@ export default function ChatPanel({
               questions={suggestions}
               isLoading={suggestionsLoading}
               hasMessages={false}
+              disabled={isSending}
               onSelect={handleSuggestionClick}
             />
             {!suggestionsLoading && suggestions.length === 0 && (
@@ -123,6 +126,13 @@ export default function ChatPanel({
                 </div>
               </div>
             )}
+            {sendError && !isSending && (
+              <div className="flex justify-start mb-3">
+                <div className="bg-red-50 text-red-600 text-xs rounded-xl rounded-bl-sm px-4 py-2 border border-red-200">
+                  {t('reader.chatError')}
+                </div>
+              </div>
+            )}
             <div ref={messagesEndRef} />
           </>
         )}
@@ -134,6 +144,7 @@ export default function ChatPanel({
           questions={suggestions}
           isLoading={false}
           hasMessages={true}
+          disabled={isSending}
           onSelect={handleSuggestionClick}
         />
       )}

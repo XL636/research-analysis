@@ -29,11 +29,6 @@ models:
     base_url: https://open.bigmodel.cn/api/paas/v4/
     model: glm-4-plus
     api_key_env: ZHIPU_API_KEY
-  glm-4.5-plus:
-    provider: zhipu
-    base_url: https://open.bigmodel.cn/api/paas/v4/
-    model: glm-4.5-plus
-    api_key_env: ZHIPU_API_KEY
   glm-4-flash:
     provider: zhipu
     base_url: https://open.bigmodel.cn/api/paas/v4/
@@ -70,7 +65,7 @@ agent_models:
   citation: glm-5
   research: glm-5
   polish: glm-5
-  reader: glm-4.5-plus
+  reader: glm-4-plus
 pipeline:
   max_review_retries: 2
   output_dir: ./output

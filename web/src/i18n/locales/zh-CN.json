@@ -355,5 +355,6 @@
   "reader.deleteSession": "删除对话",
   "reader.deleteSessionConfirm": "确定要删除此对话吗？所有消息将被清除。",
   "reader.sessionMessages": "{{count}} 条消息",
-  "reader.defaultSessionTitle": "新对话"
+  "reader.defaultSessionTitle": "新对话",
+  "reader.chatError": "AI 回复失败，请重试"
 }
