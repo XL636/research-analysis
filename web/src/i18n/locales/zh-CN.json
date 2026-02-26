@@ -284,7 +284,6 @@
   "template.promptPlaceholder": "输入报告生成的 System Prompt...",
   "template.selectLabel": "报告模板",
   "template.default": "跟随模式默认",
-  "template.modeOverrideHint": "当前分析模式已指定专用报告格式，自定义模板仅在「标准分析」模式下生效。",
 
   "settings.agentGroupAnalysis": "分析工作流",
   "settings.agentGroupPaper": "论文写作工作流",
@@ -300,6 +299,15 @@
   "settings.agentDesc.polish": "全文润色和优化",
   "settings.providerLabel": "服务商",
 
+  "analyze.customMode": "自定义",
+  "analyze.customModeDesc": "自选模板 + 自选深度",
+  "analyze.depthLabel": "分析深度",
+  "analyze.depth.quick": "浅层",
+  "analyze.depth.standard": "标准",
+  "analyze.depth.deep": "深度",
+  "analyze.customNoTemplate": "暂无自定义模板",
+  "analyze.customNoTemplateDesc": "请先前往模板页面创建自定义模板，然后即可在此使用。",
+  "analyze.templateRequired": "请选择报告模板",
   "analyze.parallel.processing": "并行分析中...",
   "analyze.parallel.progress": "[{{current}}/{{total}}] {{name}}"
 }

@@ -47,8 +47,9 @@ async def start_pipeline(
     files: list[UploadFile] = File(..., description="上传文件（PDF/PPTX/MD/TXT/DOCX）"),
     format: str = Form("markdown", description="输出格式: markdown/docx/pptx/pdf"),
     synthesize: bool = Form(False, description="启用跨文档综合分析"),
-    mode: str = Form("standard", description="分析模式: quick/standard/deep/meeting"),
+    mode: str = Form("standard", description="分析模式: quick/standard/deep/meeting/custom"),
     template_id: int | None = Form(None, description="报告模板 ID（可选）"),
+    depth: str = Form("standard", description="分析深度（仅 custom 模式）: quick/standard/deep"),
 ):
     """Upload files and start analysis pipeline."""
     if not files:
@@ -64,6 +65,15 @@ async def start_pipeline(
             raise HTTPException(status_code=404, detail=f"Template id={template_id} not found")
         template_content = template.prompt_content
 
+    # Custom mode: use depth as actual mode for analyzer/review config
+    actual_mode = mode
+    if mode == "custom":
+        if depth not in ("quick", "standard", "deep"):
+            raise HTTPException(status_code=400, detail=f"Invalid depth: {depth}")
+        if template_id is None:
+            raise HTTPException(status_code=400, detail="Custom mode requires a template_id")
+        actual_mode = depth
+
     run_id = create_run()
 
     # Save uploaded files
@@ -76,7 +86,7 @@ async def start_pipeline(
             raise HTTPException(status_code=400, detail=str(e))
 
     # Start pipeline in background
-    asyncio.create_task(run_pipeline(run_id, file_paths, format, synthesize, mode, template_content=template_content))
+    asyncio.create_task(run_pipeline(run_id, file_paths, format, synthesize, actual_mode, template_content=template_content))
 
     return PipelineRunResponse(run_id=run_id, status="started")
 

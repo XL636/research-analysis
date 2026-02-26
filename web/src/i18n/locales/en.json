@@ -284,7 +284,6 @@
   "template.promptPlaceholder": "Enter the system prompt for report generation...",
   "template.selectLabel": "Report Template",
   "template.default": "Mode Default",
-  "template.modeOverrideHint": "The current analysis mode uses its own report format. Custom templates only apply in Standard Analysis mode.",
 
   "settings.agentGroupAnalysis": "Analysis Workflow",
   "settings.agentGroupPaper": "Paper Writing Workflow",
@@ -300,6 +299,15 @@
   "settings.agentDesc.polish": "Full paper polishing and refinement",
   "settings.providerLabel": "Provider",
 
+  "analyze.customMode": "Custom",
+  "analyze.customModeDesc": "Choose template + depth",
+  "analyze.depthLabel": "Analysis Depth",
+  "analyze.depth.quick": "Quick",
+  "analyze.depth.standard": "Standard",
+  "analyze.depth.deep": "Deep",
+  "analyze.customNoTemplate": "No custom templates",
+  "analyze.customNoTemplateDesc": "Create a custom template on the Templates page first, then you can use it here.",
+  "analyze.templateRequired": "Please select a report template",
   "analyze.parallel.processing": "Analyzing in parallel...",
   "analyze.parallel.progress": "[{{current}}/{{total}}] {{name}}"
 }

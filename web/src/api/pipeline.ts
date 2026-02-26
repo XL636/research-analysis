@@ -12,6 +12,7 @@ export async function startPipeline(
   synthesize: boolean = false,
   mode: string = 'standard',
   templateId?: number,
+  depth?: string,
 ): Promise<PipelineRunResponse> {
   const formData = new FormData()
   files.forEach(f => formData.append('files', f))
@@ -20,6 +21,9 @@ export async function startPipeline(
   formData.append('mode', mode)
   if (templateId !== undefined) {
     formData.append('template_id', String(templateId))
+  }
+  if (depth) {
+    formData.append('depth', depth)
   }
   const { data } = await api.post('/pipeline/run', formData)
   return data

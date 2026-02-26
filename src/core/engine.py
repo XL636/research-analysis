@@ -56,7 +56,10 @@ class Pipeline:
         # 初始化 Agent
         self.parser = ParserAgent(self.llm, config_path)
         self.analyzer = AnalyzerAgent(self.llm, config_path, prompt_override=analyzer_prompt, max_text_length=max_text_length)
-        if mode and generator_prompt:
+        if template_content:
+            # 自定义模板优先：不传 generator 的 prompt_override，让模板控制报告格式
+            self.generator = GeneratorAgent(self.llm, config_path, template=template, template_content=template_content)
+        elif mode and generator_prompt:
             self.generator = GeneratorAgent(self.llm, config_path, template=template, template_content=template_content, prompt_override=generator_prompt)
         else:
             self.generator = GeneratorAgent(self.llm, config_path, template=template, template_content=template_content)
