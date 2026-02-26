@@ -317,5 +317,7 @@
   "analyze.modeHint.standard": "推荐日常使用，平衡深度与速度",
   "analyze.modeHint.deep": "适合重点论文的深入解读",
   "analyze.modeHint.meeting": "输出面向组会汇报的结构化报告",
-  "analyze.modeHint.custom": "自选模板控制报告格式，深度控制分析行为"
+  "analyze.modeHint.custom": "自选模板控制报告格式，深度控制分析行为",
+  "analyze.globalProgress": "正在分析: {{files}}",
+  "analyze.goToAnalysis": "查看进度"
 }

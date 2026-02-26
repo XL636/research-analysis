@@ -21,13 +21,11 @@ import FileDropzone from '../components/ui/FileDropzone'
 import ProgressStepper from '../components/ui/ProgressStepper'
 import MarkdownRenderer from '../components/ui/MarkdownRenderer'
 import EmptyState from '../components/ui/EmptyState'
-import { usePipelineProgress } from '../hooks/usePipelineProgress'
-import { startPipeline, getPipelineResult, getDownloadUrl, getAnalysisModes } from '../api/pipeline'
+import { useAnalysis } from '../contexts/AnalysisContext'
+import { startPipeline, getDownloadUrl, getAnalysisModes } from '../api/pipeline'
 import { checkDuplicate, deleteDocument } from '../api/knowledge'
 import { getTemplates } from '../api/templates'
 import type { DocumentSummary, AnalysisModeInfo, ReportTemplate } from '../types'
-
-type Phase = 'upload' | 'analyzing' | 'result'
 
 const MODE_ICONS: Record<string, typeof Zap> = {
   quick: Zap,
@@ -45,7 +43,9 @@ const FORMAT_OPTIONS = [
 
 export default function AnalyzePage() {
   const { t, i18n } = useTranslation()
-  const [phase, setPhase] = useState<Phase>('upload')
+  const { run: analysisRun, startRun, reset: resetAnalysis } = useAnalysis()
+
+  // Local form state (only for upload phase)
   const [files, setFiles] = useState<File[]>([])
   const [format, setFormat] = useState('markdown')
   const [mode, setMode] = useState('standard')
@@ -54,16 +54,16 @@ export default function AnalyzePage() {
   const [templateId, setTemplateId] = useState<number | undefined>(undefined)
   const [depth, setDepth] = useState('standard')
   const [synthesize, setSynthesize] = useState(false)
-  const [runId, setRunId] = useState<string | null>(null)
-  const [reportContent, setReportContent] = useState('')
-  const [reportTitle, setReportTitle] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Duplicate detection state
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false)
   const [duplicateDocs, setDuplicateDocs] = useState<DocumentSummary[]>([])
 
-  const { steps, isComplete, error } = usePipelineProgress(runId)
+  // Derive phase from global context
+  const phase = analysisRun?.phase === 'analyzing' ? 'analyzing'
+    : analysisRun?.phase === 'result' ? 'result'
+    : 'upload'
 
   // Load analysis modes and templates
   useEffect(() => {
@@ -71,29 +71,12 @@ export default function AnalyzePage() {
     getTemplates().then(res => setTemplates(res.templates)).catch(() => {})
   }, [])
 
-  // Watch for pipeline completion or error
-  useEffect(() => {
-    if (!runId) return
-
-    if (isComplete) {
-      getPipelineResult(runId).then(result => {
-        setReportContent(result.report_content)
-        setReportTitle(result.report_title)
-        setPhase('result')
-      }).catch(() => {
-        setReportContent('')
-        setReportTitle('')
-        setPhase('result')
-      })
-    }
-  }, [isComplete, runId])
-
   const doStartPipeline = async () => {
     setIsSubmitting(true)
     try {
+      const fileNames = files.map(f => f.name)
       const response = await startPipeline(files, format, synthesize, mode, templateId, mode === 'custom' ? depth : undefined)
-      setRunId(response.run_id)
-      setPhase('analyzing')
+      startRun(response.run_id, fileNames, mode, format)
     } catch {
       // stay on upload phase if start fails
     } finally {
@@ -144,16 +127,13 @@ export default function AnalyzePage() {
   }
 
   const handleReset = () => {
-    setPhase('upload')
+    resetAnalysis()
     setFiles([])
     setFormat('markdown')
     setMode('standard')
     setTemplateId(undefined)
     setDepth('standard')
     setSynthesize(false)
-    setRunId(null)
-    setReportContent('')
-    setReportTitle('')
     setIsSubmitting(false)
     setShowDuplicateDialog(false)
     setDuplicateDocs([])
@@ -471,19 +451,19 @@ export default function AnalyzePage() {
   }
 
   // ── Phase 2: Analyzing ───────────────────────────────────────────────
-  if (phase === 'analyzing') {
+  if (phase === 'analyzing' && analysisRun) {
     return (
       <div>
         <h1 className="text-2xl font-heading font-bold text-primary-950 mb-6">
           {t('analyze.analyzing')}
         </h1>
 
-        {error && (
+        {analysisRun.error && (
           <div className="mb-6 flex items-start gap-3 rounded-lg bg-red-50 p-4">
             <AlertCircle className="h-5 w-5 flex-shrink-0 text-red-500 mt-0.5" />
             <div>
               <p className="text-sm font-medium text-red-800">{t('analyze.analysisError')}</p>
-              <p className="text-sm text-red-600 mt-1">{error}</p>
+              <p className="text-sm text-red-600 mt-1">{analysisRun.error}</p>
             </div>
           </div>
         )}
@@ -492,7 +472,7 @@ export default function AnalyzePage() {
           <div className="flex gap-8">
             {/* Left: Progress stepper */}
             <div className="flex-1">
-              <ProgressStepper steps={steps} />
+              <ProgressStepper steps={analysisRun.steps} />
             </div>
 
             {/* Right: Info panel */}
@@ -502,13 +482,13 @@ export default function AnalyzePage() {
                   {t('analyze.filesBeingAnalyzed')}
                 </h3>
                 <ul className="space-y-2">
-                  {files.map((file, index) => (
+                  {analysisRun.fileNames.map((name, index) => (
                     <li
-                      key={`${file.name}-${index}`}
+                      key={`${name}-${index}`}
                       className="flex items-center gap-2 text-sm text-primary-950"
                     >
                       <FileText className="h-4 w-4 text-primary-500 flex-shrink-0" />
-                      <span className="truncate">{file.name}</span>
+                      <span className="truncate">{name}</span>
                     </li>
                   ))}
                 </ul>
@@ -520,9 +500,9 @@ export default function AnalyzePage() {
                 </h3>
                 <p className="text-sm text-primary-950">
                   {(() => {
-                    if (mode === 'custom') return t('analyze.customMode')
-                    const m = modes.find(m => m.id === mode)
-                    return m ? (i18n.language.startsWith('zh') ? m.label_zh : m.label_en) : mode
+                    if (analysisRun.mode === 'custom') return t('analyze.customMode')
+                    const m = modes.find(m => m.id === analysisRun.mode)
+                    return m ? (i18n.language.startsWith('zh') ? m.label_zh : m.label_en) : analysisRun.mode
                   })()}
                 </p>
               </div>
@@ -531,7 +511,7 @@ export default function AnalyzePage() {
                 <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-1">
                   {t('analyze.outputFormat')}
                 </h3>
-                <p className="text-sm text-primary-950 capitalize">{format}</p>
+                <p className="text-sm text-primary-950 capitalize">{analysisRun.format}</p>
               </div>
 
               <button
@@ -549,6 +529,11 @@ export default function AnalyzePage() {
   }
 
   // ── Phase 3: Result ──────────────────────────────────────────────────
+  const reportContent = analysisRun?.reportContent ?? ''
+  const reportTitle = analysisRun?.reportTitle ?? ''
+  const runId = analysisRun?.runId ?? null
+  const runFormat = analysisRun?.format ?? 'markdown'
+
   return (
     <div>
       <h1 className="text-2xl font-heading font-bold text-primary-950 mb-6">
@@ -567,7 +552,7 @@ export default function AnalyzePage() {
         </button>
 
         <a
-          href={runId ? getDownloadUrl(runId, format) : '#'}
+          href={runId ? getDownloadUrl(runId, runFormat) : '#'}
           download
           className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg px-6 py-2 text-sm font-medium transition-all duration-200"
         >
