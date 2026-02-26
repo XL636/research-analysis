@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import { BookOpen, LayoutDashboard, FileSearch, Library, PenLine, Globe, Settings, ChevronsLeft, ChevronsRight } from 'lucide-react'
+import { BookOpen, LayoutDashboard, FileSearch, Library, PenLine, Globe, Settings, ChevronsLeft, ChevronsRight, FileText } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 const STORAGE_KEY = 'sidebar-collapsed'
@@ -9,6 +9,7 @@ const navItems = [
   { to: '/', labelKey: 'nav.dashboard', icon: LayoutDashboard },
   { to: '/analyze', labelKey: 'nav.analyze', icon: FileSearch },
   { to: '/knowledge', labelKey: 'nav.knowledge', icon: Library },
+  { to: '/templates', labelKey: 'nav.templates', icon: FileText },
   { to: '/paper', labelKey: 'nav.paper', icon: PenLine },
   { to: '/settings', labelKey: 'nav.settings', icon: Settings },
 ]

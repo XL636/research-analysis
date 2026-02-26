@@ -300,3 +300,41 @@ export interface ReferenceItem {
 export interface ReferencesResponse {
   references: ReferenceItem[]
 }
+
+// Templates
+export interface TemplateSection {
+  title: string
+  description: string
+  required: boolean
+}
+
+export interface ReportTemplate {
+  id: number
+  name: string
+  display_name: string
+  description: string
+  prompt_content: string
+  sections: TemplateSection[]
+  is_builtin: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface TemplateListResponse {
+  templates: ReportTemplate[]
+}
+
+export interface CreateTemplateRequest {
+  name: string
+  display_name: string
+  description?: string
+  prompt_content?: string
+  sections?: TemplateSection[]
+}
+
+export interface UpdateTemplateRequest {
+  display_name?: string
+  description?: string
+  prompt_content?: string
+  sections?: TemplateSection[]
+}

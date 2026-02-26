@@ -11,12 +11,16 @@ export async function startPipeline(
   format: string = 'markdown',
   synthesize: boolean = false,
   mode: string = 'standard',
+  templateId?: number,
 ): Promise<PipelineRunResponse> {
   const formData = new FormData()
   files.forEach(f => formData.append('files', f))
   formData.append('format', format)
   formData.append('synthesize', String(synthesize))
   formData.append('mode', mode)
+  if (templateId !== undefined) {
+    formData.append('template_id', String(templateId))
+  }
   const { data } = await api.post('/pipeline/run', formData)
   return data
 }

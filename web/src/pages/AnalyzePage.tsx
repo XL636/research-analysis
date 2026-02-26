@@ -22,7 +22,8 @@ import EmptyState from '../components/ui/EmptyState'
 import { usePipelineProgress } from '../hooks/usePipelineProgress'
 import { startPipeline, getPipelineResult, getDownloadUrl, getAnalysisModes } from '../api/pipeline'
 import { checkDuplicate, deleteDocument } from '../api/knowledge'
-import type { DocumentSummary, AnalysisModeInfo } from '../types'
+import { getTemplates } from '../api/templates'
+import type { DocumentSummary, AnalysisModeInfo, ReportTemplate } from '../types'
 
 type Phase = 'upload' | 'analyzing' | 'result'
 
@@ -47,6 +48,8 @@ export default function AnalyzePage() {
   const [format, setFormat] = useState('markdown')
   const [mode, setMode] = useState('standard')
   const [modes, setModes] = useState<AnalysisModeInfo[]>([])
+  const [templates, setTemplates] = useState<ReportTemplate[]>([])
+  const [templateId, setTemplateId] = useState<number | undefined>(undefined)
   const [synthesize, setSynthesize] = useState(false)
   const [runId, setRunId] = useState<string | null>(null)
   const [reportContent, setReportContent] = useState('')
@@ -59,9 +62,10 @@ export default function AnalyzePage() {
 
   const { steps, isComplete, error } = usePipelineProgress(runId)
 
-  // Load analysis modes
+  // Load analysis modes and templates
   useEffect(() => {
     getAnalysisModes().then(res => setModes(res.modes)).catch(() => {})
+    getTemplates().then(res => setTemplates(res.templates)).catch(() => {})
   }, [])
 
   // Watch for pipeline completion or error
@@ -84,7 +88,7 @@ export default function AnalyzePage() {
   const doStartPipeline = async () => {
     setIsSubmitting(true)
     try {
-      const response = await startPipeline(files, format, synthesize, mode)
+      const response = await startPipeline(files, format, synthesize, mode, templateId)
       setRunId(response.run_id)
       setPhase('analyzing')
     } catch {
@@ -141,6 +145,7 @@ export default function AnalyzePage() {
     setFiles([])
     setFormat('markdown')
     setMode('standard')
+    setTemplateId(undefined)
     setSynthesize(false)
     setRunId(null)
     setReportContent('')
@@ -194,6 +199,43 @@ export default function AnalyzePage() {
                     </button>
                   )
                 })}
+              </div>
+            </div>
+          )}
+
+          {/* Template selector */}
+          {templates.length > 0 && (
+            <div className="mt-6">
+              <label className="block text-sm font-medium text-primary-950 mb-2">
+                {t('template.selectLabel')}
+              </label>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setTemplateId(undefined)}
+                  className={`border rounded-lg px-3 py-1.5 text-sm transition-all duration-200 ${
+                    templateId === undefined
+                      ? 'border-primary-500 bg-primary-50 text-primary-700 ring-1 ring-primary-500'
+                      : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                  }`}
+                >
+                  {t('template.default')}
+                </button>
+                {templates.filter(t => !t.is_builtin).map(tpl => (
+                  <button
+                    key={tpl.id}
+                    type="button"
+                    onClick={() => setTemplateId(tpl.id)}
+                    className={`flex items-center gap-1.5 border rounded-lg px-3 py-1.5 text-sm transition-all duration-200 ${
+                      templateId === tpl.id
+                        ? 'border-primary-500 bg-primary-50 text-primary-700 ring-1 ring-primary-500'
+                        : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                    }`}
+                  >
+                    <FileText className="h-3.5 w-3.5" />
+                    {tpl.display_name}
+                  </button>
+                ))}
               </div>
             </div>
           )}
