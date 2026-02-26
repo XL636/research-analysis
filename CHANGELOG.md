@@ -17,6 +17,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Config: reader_suggestions.txt prompt + settings.yaml suggestions_model/count/min_content 配置 (T-77)
 - i18n: zh-CN/en 新增 reader.suggestions/newSession/deleteSession 等 7 个翻译 key (T-78)
 - Reader: 阅读辅助助手模块 — 上传任意文件，翻页阅读 + AI 实时问答 (T-71~T-75)
+
+### Fixed
+- Reader: 修复 AI 无回复 — glm-4.5-plus 模型不存在，改用 glm-4-plus（1s 响应） (T-78)
+- Reader: LLM 调用改用 asyncio.to_thread — 避免阻塞 FastAPI 事件循环导致所有请求排队 (T-77)
+- Reader: 发送中禁用推荐问题芯片 — 防止连续点击发送多条消息 (T-78)
+- Reader: AI 回复失败时显示红色错误提示 (T-78)
 - Reader: ReaderStore SQLite 存储层 — reader_documents/reader_pages/reader_chats 3 张表 (T-71)
 - Reader: 文件分页提取服务 — PDF 按自然页、PPTX 按幻灯片、DOCX 按标题、MD/TXT 按段落分页 (T-72)
 - Reader: 10 个 API 端点 — upload/list/get/delete/page/file/progress/chat/history/clear (T-73)
