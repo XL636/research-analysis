@@ -19,6 +19,11 @@ models:
     base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
     model: qwen-turbo
     api_key_env: DASHSCOPE_API_KEY
+  glm-5:
+    provider: zhipu
+    base_url: https://open.bigmodel.cn/api/paas/v4/
+    model: glm-5
+    api_key_env: ZHIPU_API_KEY
   glm-4-plus:
     provider: zhipu
     base_url: https://open.bigmodel.cn/api/paas/v4/
@@ -28,6 +33,26 @@ models:
     provider: zhipu
     base_url: https://open.bigmodel.cn/api/paas/v4/
     model: glm-4-flash
+    api_key_env: ZHIPU_API_KEY
+  glm-4-flash-250414:
+    provider: zhipu
+    base_url: https://open.bigmodel.cn/api/paas/v4/
+    model: glm-4-flash-250414
+    api_key_env: ZHIPU_API_KEY
+  glm-4-air-250414:
+    provider: zhipu
+    base_url: https://open.bigmodel.cn/api/paas/v4/
+    model: glm-4-air-250414
+    api_key_env: ZHIPU_API_KEY
+  glm-z1-flash:
+    provider: zhipu
+    base_url: https://open.bigmodel.cn/api/paas/v4/
+    model: glm-z1-flash
+    api_key_env: ZHIPU_API_KEY
+  glm-z1-air:
+    provider: zhipu
+    base_url: https://open.bigmodel.cn/api/paas/v4/
+    model: glm-z1-air
     api_key_env: ZHIPU_API_KEY
 agent_models:
   parser: glm-4-plus
