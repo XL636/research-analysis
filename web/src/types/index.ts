@@ -338,3 +338,42 @@ export interface UpdateTemplateRequest {
   prompt_content?: string
   sections?: TemplateSection[]
 }
+
+// Reader
+export interface ReaderDocument {
+  id: number
+  title: string
+  file_name: string
+  file_type: string
+  file_path: string
+  total_pages: number
+  current_page: number
+  created_at: string
+  updated_at: string
+}
+
+export interface ReaderDocumentListResponse {
+  documents: ReaderDocument[]
+}
+
+export interface ReaderPage {
+  page_num: number
+  content: string
+}
+
+export interface ReaderChatMessage {
+  id: number
+  role: 'user' | 'assistant'
+  content: string
+  page_num: number
+  created_at: string
+}
+
+export interface ReaderChatResponse {
+  reply: string
+  message: ReaderChatMessage
+}
+
+export interface ReaderChatHistoryResponse {
+  messages: ReaderChatMessage[]
+}
