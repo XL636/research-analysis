@@ -418,6 +418,18 @@
   - 验收：调研后确认按钮可见，润色不再无限卡住，操作失败后项目状态可恢复
   - 依赖：T-62
 
+- [x] **T-68: 自定义报告模板系统**
+  - 目标：模板 CRUD + GeneratorAgent 集成 + CLI + 模板管理页 + 分析页选择器
+  - 步骤：① ReportTemplate 数据模型 → ② template_store.py SQLite 存储 + 内置模板同步 → ③ GeneratorAgent template_content 优先级链 → ④ Engine/Runner 透传 → ⑤ API CRUD 端点 → ⑥ CLI template 子命令组 + --template-id → ⑦ 前端 TemplatesPage + AnalyzePage 模板选择器 → ⑧ i18n
+  - 验收：CLI `template list` 显示内置模板，Web `/templates` CRUD 正常，分析页可选模板
+  - 依赖：T-09, T-65
+
+- [x] **T-69: 异步并行处理多文档**
+  - 目标：Engine/Runner 并行化 + 线程安全 + batch 并行 + 进度增强
+  - 步骤：① settings.yaml max_concurrency 配置 → ② UsageStats/LLMClient 线程安全 → ③ pipeline_runner asyncio.gather + Semaphore → ④ engine.py ThreadPoolExecutor → ⑤ batch 命令 --concurrency 并行 → ⑥ 前端进度 message 子进度显示
+  - 验收：多文档分析并行执行，单文档退化为同步，batch --concurrency 可用，进度显示子状态
+  - 依赖：T-10, T-35
+
 ---
 
 ## Backlog（想法池）
@@ -429,6 +441,6 @@
 - [x] 批量处理：`python main.py batch ./papers/`
 - [x] 知识库导出/导入（JSON/CSV）
 - [x] Web UI 界面
-- [ ] 异步并行处理多文档
+- [x] 异步并行处理多文档
 - [x] 模型调用成本统计
-- [ ] 自定义报告模板系统
+- [x] 自定义报告模板系统

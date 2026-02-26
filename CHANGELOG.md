@@ -8,6 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Core: 自定义报告模板系统 — ReportTemplate 模型 + SQLite 存储 + 内置模板自动同步 + CRUD API (T-68)
+- Core: GeneratorAgent 模板优先级链 — prompt_override > template_content > TEMPLATES dict > default (T-68)
+- CLI: `template` 子命令组 — list/show/create/delete，`analyze --template-id` 选项 (T-68)
+- API: `/api/templates` CRUD 端点 — 列表/详情/创建/更新/删除（内置模板只读） (T-68)
+- API: `POST /pipeline/run` 新增 template_id 参数，使用自定义模板分析 (T-68)
+- Web: TemplatesPage 模板管理页 — 卡片网格、创建/编辑/预览对话框、内置/自定义标签 (T-68)
+- Web: AnalyzePage 模板选择器 — 模式卡片下方可选自定义模板 (T-68)
+- Core: 异步并行处理多文档 — Engine/Runner Analyze 步骤并行化，`max_concurrency` 可配置 (T-69)
+- Core: UsageStats + LLMClient 线程安全 — threading.Lock 保护共享状态 (T-69)
+- Core: pipeline_runner asyncio.gather + Semaphore 并行分析 + 子进度消息 (T-69)
+- Core: engine.py ThreadPoolExecutor 并行分析（CLI 路径） (T-69)
+- CLI: `batch --concurrency` 选项 — 多文件并行处理 (T-69)
+- Web: ProgressStepper 子进度显示 — running 步骤显示 `[1/3] paper.pdf` 等消息 (T-69)
+- Config: settings.yaml 新增 max_concurrency/batch_max_concurrency 并发配置 (T-69)
+- i18n: zh-CN/en 新增 template.* + analyze.parallel.* 翻译 key (T-68, T-69)
 - Core: 论文类型识别 — AnalysisResult 新增 paper_type 字段（empirical/theoretical/survey/opinion/technical），LLM 自动识别论文类型 (T-67)
 - Prompt: 3 个 analyzer prompt（system/deep/quick）加入类型识别步骤，方法论评估改为按类型自适应的论证方式评估 (T-67)
 - Skill: analyze-paper Skill 同步更新 — 新增 paper_type 维度，JSON schema 和报告模板自适应 (T-67)
