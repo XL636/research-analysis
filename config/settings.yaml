@@ -55,16 +55,17 @@ models:
     model: glm-z1-air
     api_key_env: ZHIPU_API_KEY
 agent_models:
-  parser: glm-4-plus
-  analyzer: glm-4-plus
-  synthesizer: glm-4-plus
-  generator: glm-4-plus
-  reviewer: glm-4-plus
-  outline: glm-4-plus
-  writer: glm-4-plus
-  citation: glm-4-plus
-  research: glm-4-plus
-  polish: glm-4-plus
+  parser: glm-5
+  analyzer: glm-5
+  synthesizer: glm-5
+  generator: glm-5
+  reviewer: glm-5
+  outline: glm-5
+  writer: glm-5
+  citation: glm-5
+  research: glm-5
+  polish: glm-5
+  reader: glm-5
 pipeline:
   max_review_retries: 2
   output_dir: ./output
@@ -96,41 +97,46 @@ search_providers:
     max_results: 5
 analysis_modes:
   quick:
-    label_zh: "快速摘要"
-    label_en: "Quick Summary"
-    description_zh: "快速提取核心要点，适合快速了解文档大意"
-    description_en: "Quickly extract key points for a high-level overview"
-    analyzer_prompt: "config/prompts/analyzer_quick.txt"
-    generator_prompt: "config/prompts/generator_quick.txt"
+    label_zh: 快速摘要
+    label_en: Quick Summary
+    description_zh: 快速提取核心要点，适合快速了解文档大意
+    description_en: Quickly extract key points for a high-level overview
+    analyzer_prompt: config/prompts/analyzer_quick.txt
+    generator_prompt: config/prompts/generator_quick.txt
     skip_review: true
     max_text_length: 4000
   standard:
-    label_zh: "标准分析"
-    label_en: "Standard Analysis"
-    description_zh: "全面深度分析，含方法论评估和贡献评价"
-    description_en: "Comprehensive analysis with methodology assessment"
-    analyzer_prompt: "config/prompts/analyzer_system.txt"
-    generator_prompt: "config/prompts/generator_system.txt"
+    label_zh: 标准分析
+    label_en: Standard Analysis
+    description_zh: 全面深度分析，含方法论评估和贡献评价
+    description_en: Comprehensive analysis with methodology assessment
+    analyzer_prompt: config/prompts/analyzer_system.txt
+    generator_prompt: config/prompts/generator_system.txt
     skip_review: false
     max_text_length: 8000
   deep:
-    label_zh: "深度研究"
-    label_en: "Deep Research"
-    description_zh: "最详尽的分析，适合重点论文的深入解读"
-    description_en: "Most thorough analysis for in-depth study of key papers"
-    analyzer_prompt: "config/prompts/analyzer_deep.txt"
-    generator_prompt: "config/prompts/generator_deep.txt"
+    label_zh: 深度研究
+    label_en: Deep Research
+    description_zh: 最详尽的分析，适合重点论文的深入解读
+    description_en: Most thorough analysis for in-depth study of key papers
+    analyzer_prompt: config/prompts/analyzer_deep.txt
+    generator_prompt: config/prompts/generator_deep.txt
     skip_review: false
     max_text_length: 16000
   meeting:
-    label_zh: "会议报告"
-    label_en: "Meeting Report"
-    description_zh: "面向组会汇报的结构化报告格式"
-    description_en: "Structured report format for group meeting presentations"
-    analyzer_prompt: "config/prompts/analyzer_system.txt"
-    generator_prompt: "config/prompts/meeting_report.txt"
+    label_zh: 会议报告
+    label_en: Meeting Report
+    description_zh: 面向组会汇报的结构化报告格式
+    description_en: Structured report format for group meeting presentations
+    analyzer_prompt: config/prompts/analyzer_system.txt
+    generator_prompt: config/prompts/meeting_report.txt
     skip_review: false
     max_text_length: 8000
+reader:
+  upload_dir: ./uploads/reader
+  prompt_template: config/prompts/reader_assistant.txt
+  context_pages: 1
+  max_chat_history: 20
 api:
   host: 0.0.0.0
   port: 8000

@@ -436,6 +436,38 @@
   - 验收：开始分析后跳转其他页面，顶部显示绿色进度条，点击可返回分析页，进度不丢失
   - 依赖：T-32
 
+## Phase 9: 阅读辅助助手 `[完成]`
+
+- [x] **T-71: Reader 数据存储层**
+  - 目标：SQLite 存储文档元数据、分页文本、对话历史
+  - 步骤：① reader_store.py 3 张表 → ② CRUD 方法
+  - 验收：`from src.store.reader_store import ReaderStore` 成功
+  - 依赖：无
+
+- [x] **T-72: 文件分页提取服务**
+  - 目标：PDF/PPTX/DOCX/MD/TXT 分页提取
+  - 步骤：① reader_service.py → ② 5 种格式分页逻辑
+  - 验收：各格式文件可正确分页
+  - 依赖：T-71
+
+- [x] **T-73: Reader API 端点**
+  - 目标：10 个 API 端点 + AI 问答
+  - 步骤：① schemas → ② routes/reader.py → ③ app.py 注册 → ④ settings.yaml + prompt
+  - 验收：Swagger UI 可测试所有端点
+  - 依赖：T-71, T-72
+
+- [x] **T-74: 前端基础设施 + 文档列表页**
+  - 目标：react-pdf 安装 + 类型 + API 客户端 + 列表页 + 路由 + 导航
+  - 步骤：① npm install → ② 类型/API/hooks → ③ ReaderListPage → ④ 路由 + 侧边栏 → ⑤ i18n
+  - 验收：`npm run build` 无错误
+  - 依赖：T-73
+
+- [x] **T-75: 核心阅读视图页**
+  - 目标：左右分栏阅读视图 + PDF 渲染 + 文本渲染 + AI 对话
+  - 步骤：① PdfPageViewer → ② TextPageViewer → ③ PageNavigation → ④ ChatPanel + ChatMessage → ⑤ ReaderViewPage 组装
+  - 验收：上传 PDF 可翻页浏览 + AI 问答，上传 TXT 可文本渲染
+  - 依赖：T-74
+
 ---
 
 ## Backlog（想法池）

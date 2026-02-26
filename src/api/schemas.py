@@ -374,3 +374,52 @@ class UpdateTemplateRequest(BaseModel):
     description: str | None = None
     prompt_content: str | None = None
     sections: list[TemplateSectionSchema] | None = None
+
+
+# --- Reader ---
+
+class ReaderDocumentResponse(BaseModel):
+    id: int
+    title: str
+    file_name: str
+    file_type: str
+    file_path: str = ""
+    total_pages: int = 0
+    current_page: int = 1
+    created_at: str = ""
+    updated_at: str = ""
+
+
+class ReaderDocumentListResponse(BaseModel):
+    documents: list[ReaderDocumentResponse] = Field(default_factory=list)
+
+
+class ReaderPageResponse(BaseModel):
+    page_num: int
+    content: str = ""
+
+
+class ReaderProgressRequest(BaseModel):
+    current_page: int
+
+
+class ReaderChatRequest(BaseModel):
+    message: str
+    page_num: int = 1
+
+
+class ReaderChatMessage(BaseModel):
+    id: int
+    role: str
+    content: str
+    page_num: int = 1
+    created_at: str = ""
+
+
+class ReaderChatResponse(BaseModel):
+    reply: str
+    message: ReaderChatMessage
+
+
+class ReaderChatHistoryResponse(BaseModel):
+    messages: list[ReaderChatMessage] = Field(default_factory=list)
