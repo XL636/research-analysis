@@ -37,6 +37,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Reader: 阅读辅助助手模块 — 上传任意文件，翻页阅读 + AI 实时问答 (T-71~T-75)
 
 ### Fixed
+- Reader: 修复删除文档失败 — FTS5 索引损坏时自动重建，确保删除不受影响
+- Reader: PDF 加载错误提示优化 — 预检文件可达性，404 时提示"文件不存在，请重新上传"
+- Reader: 修复 PDF worker 加载 — 改用 Vite ?url 导入模式，解决路径解析不可靠问题
 - Reader: 修复 AI 无回复 — glm-4.5-plus 模型不存在，改用 glm-4-plus（1s 响应） (T-78)
 - Reader: LLM 调用改用 asyncio.to_thread — 避免阻塞 FastAPI 事件循环导致所有请求排队 (T-77)
 - Reader: 发送中禁用推荐问题芯片 — 防止连续点击发送多条消息 (T-78)
