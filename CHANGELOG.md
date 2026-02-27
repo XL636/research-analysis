@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Reader: AI 回复流式输出 — SSE 逐字显示 + 闪烁光标，无需等待完整生成 (T-79)
+- Reader: 智能上下文选页 — 三种策略可配置切换：fixed（固定±N页）、keyword（FTS5全文搜索最相关页）、smart（FTS粗筛+LLM精排）(T-79)
+- LLM: stream_chat() 流式聊天方法 — 基于 OpenAI SDK stream=True，逐块 yield 文本片段 (T-79)
+- API: POST /reader/{id}/sessions/{sid}/stream-chat — SSE 流式端点，事件格式 delta/done/error (T-79)
+- Store: reader_pages_fts FTS5 虚拟表 — contentless 索引，自动回填已有数据 (T-79)
+- Store: search_pages() 全文搜索方法 + get_pages_by_nums() 批量取页 (T-79)
+- Web: streamSessionChat() — fetch + ReadableStream 解析 SSE POST 响应 (T-79)
+- Web: useStreamChat() hook — 管理流式状态（streamingContent/isStreaming/error）(T-79)
+- Web: ChatPanel 流式渲染 — 流式文本 + Markdown 渲染 + 闪烁光标▌，等待首字时显示跳动圆点 (T-79)
+- Config: context_strategy 配置项（fixed/keyword/smart）+ context_search_limit 参数 (T-79)
 - Reader: 多会话支持 — 一个文档可有多个对话，支持切换、新建、删除，首条消息自动生成标题 (T-76~T-78)
 - Reader: AI 推荐问题 — 翻页时自动生成 2-3 个基于当前页的问题，可点击芯片直接发送 (T-76~T-78)
 - Reader: SessionSwitcher 会话切换下拉菜单 — 嵌入 ChatPanel header，显示标题/消息数/删除 (T-78)

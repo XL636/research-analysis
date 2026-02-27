@@ -1,3 +1,4 @@
+import { useState, useCallback, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   listReaderDocuments,
@@ -16,7 +17,9 @@ import {
   sendSessionChat,
   clearSessionChatHistory,
   getSuggestedQuestions,
+  streamSessionChat,
 } from '../api/reader'
+import type { ReaderChatMessage } from '../types'
 
 export function useReaderDocuments() {
   return useQuery({
@@ -174,4 +177,60 @@ export function useReaderSuggestions(docId: number, pageNum: number) {
     enabled: docId > 0 && pageNum > 0,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   })
+}
+
+// Stream chat hook
+export function useStreamChat() {
+  const queryClient = useQueryClient()
+  const [streamingContent, setStreamingContent] = useState('')
+  const [isStreaming, setIsStreaming] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const abortRef = useRef(false)
+
+  const send = useCallback(async (params: {
+    docId: number
+    sessionId: number
+    message: string
+    pageNum: number
+  }) => {
+    const { docId, sessionId, message, pageNum } = params
+    setStreamingContent('')
+    setIsStreaming(true)
+    setError(null)
+    abortRef.current = false
+
+    try {
+      await streamSessionChat(
+        docId,
+        sessionId,
+        message,
+        pageNum,
+        // onDelta
+        (content: string) => {
+          if (!abortRef.current) {
+            setStreamingContent(prev => prev + content)
+          }
+        },
+        // onDone
+        (_msg: ReaderChatMessage) => {
+          setStreamingContent('')
+          setIsStreaming(false)
+          queryClient.invalidateQueries({ queryKey: ['sessionChatHistory', docId, sessionId] })
+          queryClient.invalidateQueries({ queryKey: ['readerSessions', docId] })
+        },
+        // onError
+        (errMsg: string) => {
+          setError(errMsg)
+          setIsStreaming(false)
+          setStreamingContent('')
+        },
+      )
+    } catch (e) {
+      setError(String(e))
+      setIsStreaming(false)
+      setStreamingContent('')
+    }
+  }, [queryClient])
+
+  return { send, streamingContent, isStreaming, error }
 }

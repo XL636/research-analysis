@@ -440,6 +440,12 @@
 
 ### 阅读助手增强
 
+- [x] **T-79: 流式输出 + 智能上下文**
+  - 目标：AI 回复逐字流式显示 + 按问题动态选页（FTS keyword/LLM smart/fixed 三策略）
+  - 步骤：① LLMClient stream_chat() → ② SSE 端点 + _prepare_chat_context 重构 → ③ FTS5 索引 + search_pages → ④ 智能选页策略路由 → ⑤ 前端 streamSessionChat API → ⑥ useStreamChat hook → ⑦ ChatPanel 流式渲染 → ⑧ config context_strategy
+  - 验收：文字逐字显示 + 闪烁光标，keyword 策略可引用远处页面，旧端点兼容
+  - 依赖：T-76~78
+
 - [x] **T-76: 数据库 + Store 层改造（多会话 + 推荐问题）**
   - 目标：新增 reader_sessions/reader_suggested_questions 表，reader_chats 加 session_id，数据迁移
   - 步骤：① 2 张新表 → ② ALTER TABLE 迁移 + orphan 绑定 → ③ 9 个新方法

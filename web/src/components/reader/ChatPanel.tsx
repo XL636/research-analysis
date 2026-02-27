@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import ChatMessage from './ChatMessage'
 import SessionSwitcher from './SessionSwitcher'
 import SuggestedQuestions from './SuggestedQuestions'
+import MarkdownRenderer from '../ui/MarkdownRenderer'
 import type { ReaderChatMessage, ReaderSession } from '../../types'
 
 interface ChatPanelProps {
@@ -22,6 +23,9 @@ interface ChatPanelProps {
   // Suggestion props
   suggestions: string[]
   suggestionsLoading: boolean
+  // Streaming props
+  streamingContent?: string
+  isStreaming?: boolean
 }
 
 export default function ChatPanel({
@@ -38,6 +42,8 @@ export default function ChatPanel({
   onSessionDelete,
   suggestions,
   suggestionsLoading,
+  streamingContent = '',
+  isStreaming = false,
 }: ChatPanelProps) {
   const { t } = useTranslation()
   const [input, setInput] = useState('')
@@ -45,11 +51,11 @@ export default function ChatPanel({
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  }, [messages, streamingContent])
 
   const handleSend = (message?: string) => {
     const text = message || input.trim()
-    if (!text || isSending) return
+    if (!text || isSending || isStreaming) return
     onSend(text)
     if (!message) setInput('')
   }
@@ -115,14 +121,21 @@ export default function ChatPanel({
             {messages.map((msg) => (
               <ChatMessage key={msg.id} message={msg} />
             ))}
-            {isSending && (
+            {(isSending || isStreaming) && (
               <div className="flex justify-start mb-3">
-                <div className="bg-gray-100 rounded-xl rounded-bl-sm px-4 py-3">
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 bg-primary-400 rounded-full animate-bounce [animation-delay:0ms]" />
-                    <div className="w-2 h-2 bg-primary-400 rounded-full animate-bounce [animation-delay:150ms]" />
-                    <div className="w-2 h-2 bg-primary-400 rounded-full animate-bounce [animation-delay:300ms]" />
-                  </div>
+                <div className="max-w-[85%] bg-gray-100 text-primary-950 rounded-xl rounded-bl-sm px-4 py-2.5">
+                  {isStreaming && streamingContent ? (
+                    <div className="text-sm [&_.markdown-content_p]:mb-2 [&_.markdown-content_p:last-child]:mb-0">
+                      <MarkdownRenderer content={streamingContent} />
+                      <span className="inline-block w-0.5 h-4 bg-primary-500 animate-pulse ml-0.5 align-text-bottom" />
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5 py-0.5">
+                      <div className="w-2 h-2 bg-primary-400 rounded-full animate-bounce [animation-delay:0ms]" />
+                      <div className="w-2 h-2 bg-primary-400 rounded-full animate-bounce [animation-delay:150ms]" />
+                      <div className="w-2 h-2 bg-primary-400 rounded-full animate-bounce [animation-delay:300ms]" />
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -167,7 +180,7 @@ export default function ChatPanel({
           />
           <button
             onClick={() => handleSend()}
-            disabled={!input.trim() || isSending}
+            disabled={!input.trim() || isSending || isStreaming}
             className="p-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0"
           >
             <Send className="w-4 h-4" />

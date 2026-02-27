@@ -97,6 +97,15 @@ class ReaderStore:
                 )
             """)
 
+            # FTS5 index for reader_pages (contentless, shares data with reader_pages)
+            conn.execute("""
+                CREATE VIRTUAL TABLE IF NOT EXISTS reader_pages_fts USING fts5(
+                    content,
+                    content='reader_pages',
+                    content_rowid='id'
+                )
+            """)
+
             # Migrate: add session_id column to reader_chats if missing
             cols = [row["name"] for row in conn.execute("PRAGMA table_info(reader_chats)").fetchall()]
             if "session_id" not in cols:
@@ -118,6 +127,13 @@ class ReaderStore:
                         (session_id, doc_id),
                     )
                 logger.debug("Migrated orphan chats to default sessions")
+
+            # Backfill FTS index if empty but pages exist
+            count_fts = conn.execute("SELECT COUNT(*) FROM reader_pages_fts").fetchone()[0]
+            count_pages = conn.execute("SELECT COUNT(*) FROM reader_pages").fetchone()[0]
+            if count_fts == 0 and count_pages > 0:
+                conn.execute("INSERT INTO reader_pages_fts(reader_pages_fts) VALUES('rebuild')")
+                logger.debug(f"Rebuilt FTS index for {count_pages} reader pages")
 
             conn.commit()
         logger.debug("Reader tables initialized")
@@ -161,6 +177,15 @@ class ReaderStore:
 
     def delete_document(self, doc_id: int) -> bool:
         with self._connect() as conn:
+            # Clean FTS entries before CASCADE deletes the pages
+            page_ids = conn.execute(
+                "SELECT id FROM reader_pages WHERE document_id = ?", (doc_id,)
+            ).fetchall()
+            for row in page_ids:
+                conn.execute(
+                    "INSERT INTO reader_pages_fts(reader_pages_fts, rowid, content) VALUES('delete', ?, '')",
+                    (row["id"],),
+                )
             # CASCADE will handle pages and chats
             cursor = conn.execute(
                 "DELETE FROM reader_documents WHERE id = ?", (doc_id,)
@@ -186,10 +211,16 @@ class ReaderStore:
     def insert_pages(self, doc_id: int, pages: list[str]) -> None:
         """Bulk insert pages for a document."""
         with self._connect() as conn:
-            conn.executemany(
-                "INSERT INTO reader_pages (document_id, page_num, content) VALUES (?, ?, ?)",
-                [(doc_id, i + 1, content) for i, content in enumerate(pages)],
-            )
+            for i, content in enumerate(pages):
+                cursor = conn.execute(
+                    "INSERT INTO reader_pages (document_id, page_num, content) VALUES (?, ?, ?)",
+                    (doc_id, i + 1, content),
+                )
+                row_id = cursor.lastrowid
+                conn.execute(
+                    "INSERT INTO reader_pages_fts(rowid, content) VALUES (?, ?)",
+                    (row_id, content),
+                )
             conn.commit()
         logger.debug(f"Inserted {len(pages)} pages for doc_id={doc_id}")
 
@@ -207,6 +238,34 @@ class ReaderStore:
             rows = conn.execute(
                 "SELECT page_num, content FROM reader_pages WHERE document_id = ? AND page_num >= ? AND page_num <= ? ORDER BY page_num",
                 (doc_id, start, end),
+            ).fetchall()
+        return [dict(r) for r in rows]
+
+    def search_pages(self, doc_id: int, query: str, limit: int = 5) -> list[dict]:
+        """在文档页面中全文搜索，返回 [{page_num, content, rank}]."""
+        with self._connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT p.page_num, p.content, fts.rank
+                FROM reader_pages_fts fts
+                JOIN reader_pages p ON p.id = fts.rowid
+                WHERE reader_pages_fts MATCH ? AND p.document_id = ?
+                ORDER BY fts.rank
+                LIMIT ?
+                """,
+                (query, doc_id, limit),
+            ).fetchall()
+        return [dict(r) for r in rows]
+
+    def get_pages_by_nums(self, doc_id: int, page_nums: list[int]) -> list[dict]:
+        """Get multiple pages by page numbers, returned in page_num order."""
+        if not page_nums:
+            return []
+        placeholders = ",".join("?" for _ in page_nums)
+        with self._connect() as conn:
+            rows = conn.execute(
+                f"SELECT page_num, content FROM reader_pages WHERE document_id = ? AND page_num IN ({placeholders}) ORDER BY page_num",
+                [doc_id, *page_nums],
             ).fetchall()
         return [dict(r) for r in rows]
 

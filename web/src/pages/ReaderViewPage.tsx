@@ -10,9 +10,9 @@ import {
   useCreateReaderSession,
   useDeleteReaderSession,
   useSessionChatHistory,
-  useSendSessionChat,
   useClearSessionChat,
   useReaderSuggestions,
+  useStreamChat,
 } from '../hooks/useReader'
 import { getReaderFileUrl } from '../api/reader'
 import PdfPageViewer from '../components/reader/PdfPageViewer'
@@ -71,7 +71,7 @@ export default function ReaderViewPage() {
 
   // Session chat
   const { data: chatHistoryData } = useSessionChatHistory(docId, activeSessionId)
-  const sendChat = useSendSessionChat()
+  const streamChat = useStreamChat()
   const clearChat = useClearSessionChat()
 
   const chatMessages = chatHistoryData?.messages || []
@@ -116,7 +116,7 @@ export default function ReaderViewPage() {
 
   const handleSendChat = (message: string) => {
     if (activeSessionId > 0) {
-      sendChat.mutate({ docId, sessionId: activeSessionId, message, pageNum: currentPage })
+      streamChat.send({ docId, sessionId: activeSessionId, message, pageNum: currentPage })
     }
   }
 
@@ -222,8 +222,8 @@ export default function ReaderViewPage() {
             <ChatPanel
               messages={chatMessages}
               currentPage={currentPage}
-              isSending={sendChat.isPending}
-              sendError={sendChat.error ? String(sendChat.error) : null}
+              isSending={streamChat.isStreaming}
+              sendError={streamChat.error}
               onSend={handleSendChat}
               onClear={handleClearChat}
               sessions={sessions}
@@ -233,6 +233,8 @@ export default function ReaderViewPage() {
               onSessionDelete={handleSessionDelete}
               suggestions={suggestions}
               suggestionsLoading={suggestionsLoading}
+              streamingContent={streamChat.streamingContent}
+              isStreaming={streamChat.isStreaming}
             />
           </div>
         )}

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import threading
+from collections.abc import Generator
 from typing import Any
 
 import yaml
@@ -103,6 +104,38 @@ class LLMClient:
         content = response.choices[0].message.content or ""
         logger.debug(f"LLM response: {len(content)} chars")
         return content
+
+    def stream_chat(
+        self,
+        model_name: str,
+        messages: list[dict[str, str]],
+        temperature: float = 0.7,
+        max_tokens: int = 8192,
+        **kwargs: Any,
+    ) -> Generator[str, None, None]:
+        """流式聊天，逐块 yield 文本片段."""
+        client, model_id = self._get_client(model_name)
+
+        logger.info(f"LLM stream call: model={model_name}, messages={len(messages)}")
+
+        stream = client.chat.completions.create(
+            model=model_id,
+            messages=messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            stream=True,
+            **kwargs,
+        )
+
+        for chunk in stream:
+            if chunk.choices and chunk.choices[0].delta.content:
+                yield chunk.choices[0].delta.content
+            if hasattr(chunk, "usage") and chunk.usage:
+                self.usage_stats.record(
+                    model_name=model_name,
+                    prompt_tokens=chunk.usage.prompt_tokens or 0,
+                    completion_tokens=chunk.usage.completion_tokens or 0,
+                )
 
     def chat_json(
         self,

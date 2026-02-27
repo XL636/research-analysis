@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import asyncio
+import json
+import queue
+import threading
 from pathlib import Path
 
 import yaml
 from fastapi import APIRouter, File, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from loguru import logger
 
 from src.api.schemas import (
@@ -264,9 +267,95 @@ async def get_session_chat_history(doc_id: int, session_id: int):
     )
 
 
-@router.post("/{doc_id}/sessions/{session_id}/chat", response_model=ReaderChatResponse)
-async def session_chat(doc_id: int, session_id: int, body: ReaderChatRequest):
-    """AI chat within a session - answer questions based on current page context."""
+def _select_context_pages_fixed(
+    store: ReaderStore, doc: dict, current_page: int, reader_conf: dict,
+) -> list[int]:
+    """Fixed strategy: ±N pages around current page."""
+    context_pages = reader_conf.get("context_pages", 1)
+    start = max(1, current_page - context_pages)
+    end = min(doc["total_pages"], current_page + context_pages)
+    return list(range(start, end + 1))
+
+
+def _select_context_pages_keyword(
+    store: ReaderStore, doc_id: int, question: str, current_page: int, reader_conf: dict,
+) -> list[int]:
+    """Keyword (FTS) strategy: search most relevant pages, always include current page."""
+    limit = reader_conf.get("context_search_limit", 5)
+    try:
+        results = store.search_pages(doc_id, question, limit=limit)
+        page_nums = {r["page_num"] for r in results}
+    except Exception:
+        page_nums = set()
+    page_nums.add(current_page)
+    return sorted(page_nums)
+
+
+def _select_context_pages_smart(
+    store: ReaderStore, doc_id: int, question: str, current_page: int,
+    reader_conf: dict, llm, config: dict,
+) -> list[int]:
+    """Smart strategy: FTS coarse filter + LLM rerank."""
+    candidates = store.search_pages(doc_id, question, limit=8)
+    if not candidates:
+        return [current_page]
+
+    summaries = [f"第{c['page_num']}页: {c['content'][:200]}" for c in candidates]
+    model = reader_conf.get("suggestions_model", "glm-4-flash")
+    prompt = (
+        f"用户在第{current_page}页问：{question}\n\n候选页面：\n"
+        + "\n".join(summaries)
+        + '\n\n请返回最相关的页码（JSON数组），最多5个。格式：{"pages": [2, 5, 8]}'
+    )
+
+    try:
+        result = llm.chat_json(
+            model,
+            [
+                {"role": "system", "content": "你是页面相关性评估助手。"},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.1,
+            max_tokens=128,
+        )
+        pages = set(result.get("pages", []))
+    except Exception:
+        pages = {c["page_num"] for c in candidates[:3]}
+
+    pages.add(current_page)
+    return sorted(pages)
+
+
+def _build_page_context(
+    store: ReaderStore, doc: dict, question: str, current_page: int,
+    reader_conf: dict, config: dict, llm=None,
+) -> str:
+    """Build page context string based on configured strategy."""
+    strategy = reader_conf.get("context_strategy", "fixed")
+    doc_id = doc["id"]
+
+    if strategy == "keyword":
+        page_nums = _select_context_pages_keyword(store, doc_id, question, current_page, reader_conf)
+    elif strategy == "smart":
+        page_nums = _select_context_pages_smart(store, doc_id, question, current_page, reader_conf, llm, config)
+    else:  # "fixed"
+        page_nums = _select_context_pages_fixed(store, doc, current_page, reader_conf)
+
+    page_rows = store.get_pages_by_nums(doc_id, page_nums)
+
+    context_parts = []
+    for pr in page_rows:
+        marker = " (当前页)" if pr["page_num"] == current_page else ""
+        context_parts.append(f"[第 {pr['page_num']} 页{marker}]\n{pr['content']}")
+    return "\n\n---\n\n".join(context_parts)
+
+
+async def _prepare_chat_context(
+    doc_id: int, session_id: int, body: ReaderChatRequest,
+) -> tuple[dict, list[dict[str, str]], str]:
+    """Validate, build context, save user message. Returns (doc, messages, model_name)."""
+    from src.core.llm_client import LLMClient
+
     store = _get_store()
     doc = store.get_document(doc_id)
     if not doc:
@@ -277,19 +366,15 @@ async def session_chat(doc_id: int, session_id: int, body: ReaderChatRequest):
 
     config = _load_config()
     reader_conf = config.get("reader", {})
-    context_pages = reader_conf.get("context_pages", 1)
     max_history = reader_conf.get("max_chat_history", 20)
 
-    # Build page context
-    start_page = max(1, body.page_num - context_pages)
-    end_page = min(doc["total_pages"], body.page_num + context_pages)
-    page_rows = store.get_page_range(doc_id, start_page, end_page)
+    llm = LLMClient()
+    model_name = config.get("agent_models", {}).get("reader", "glm-4-plus")
 
-    context_parts = []
-    for pr in page_rows:
-        marker = " (当前页)" if pr["page_num"] == body.page_num else ""
-        context_parts.append(f"[第 {pr['page_num']} 页{marker}]\n{pr['content']}")
-    page_context = "\n\n---\n\n".join(context_parts)
+    # Build page context using strategy
+    page_context = _build_page_context(
+        store, doc, body.message, body.page_num, reader_conf, config, llm=llm,
+    )
 
     # Load prompt template
     prompt_template_path = reader_conf.get(
@@ -324,10 +409,16 @@ async def session_chat(doc_id: int, session_id: int, body: ReaderChatRequest):
         if auto_title:
             store.update_session_title(session_id, auto_title)
 
-    # Call LLM (in thread to avoid blocking event loop)
+    return doc, messages, model_name
+
+
+@router.post("/{doc_id}/sessions/{session_id}/chat", response_model=ReaderChatResponse)
+async def session_chat(doc_id: int, session_id: int, body: ReaderChatRequest):
+    """AI chat within a session - answer questions based on current page context."""
     from src.core.llm_client import LLMClient
 
-    model_name = config.get("agent_models", {}).get("reader", "glm-4.5-plus")
+    doc, messages, model_name = await _prepare_chat_context(doc_id, session_id, body)
+
     llm = LLMClient()
     try:
         reply = await asyncio.to_thread(
@@ -336,15 +427,62 @@ async def session_chat(doc_id: int, session_id: int, body: ReaderChatRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"AI chat failed: {e}")
 
-    # Save assistant message
+    store = _get_store()
     assistant_msg = store.add_chat(doc_id, "assistant", reply, body.page_num, session_id=session_id)
-
-    # Touch session updated_at
     store.touch_session(session_id)
 
     return ReaderChatResponse(
         reply=reply,
         message=ReaderChatMessage(**assistant_msg),
+    )
+
+
+@router.post("/{doc_id}/sessions/{session_id}/stream-chat")
+async def session_stream_chat(doc_id: int, session_id: int, body: ReaderChatRequest):
+    """SSE streaming AI chat within a session."""
+    from src.core.llm_client import LLMClient
+
+    doc, messages, model_name = await _prepare_chat_context(doc_id, session_id, body)
+
+    async def event_generator():
+        full_reply = ""
+        try:
+            q: queue.Queue[str | None] = queue.Queue()
+
+            def _run():
+                try:
+                    llm = LLMClient()
+                    for chunk in llm.stream_chat(
+                        model_name, messages, temperature=0.7, max_tokens=4096
+                    ):
+                        q.put(chunk)
+                finally:
+                    q.put(None)
+
+            threading.Thread(target=_run, daemon=True).start()
+
+            while True:
+                chunk = await asyncio.to_thread(q.get)
+                if chunk is None:
+                    break
+                full_reply += chunk
+                yield f"data: {json.dumps({'type': 'delta', 'content': chunk}, ensure_ascii=False)}\n\n"
+
+        except Exception as e:
+            logger.error(f"Stream chat error: {e}")
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)}, ensure_ascii=False)}\n\n"
+            return
+
+        # Save complete reply
+        store = _get_store()
+        msg = store.add_chat(doc_id, "assistant", full_reply, body.page_num, session_id=session_id)
+        store.touch_session(session_id)
+        yield f"data: {json.dumps({'type': 'done', 'message': msg}, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
 
 

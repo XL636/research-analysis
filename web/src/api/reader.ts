@@ -3,6 +3,7 @@ import type {
   ReaderDocument,
   ReaderDocumentListResponse,
   ReaderPage,
+  ReaderChatMessage,
   ReaderChatResponse,
   ReaderChatHistoryResponse,
   ReaderSession,
@@ -113,6 +114,51 @@ export async function sendSessionChat(
 export async function clearSessionChatHistory(docId: number, sessionId: number): Promise<DeleteResponse> {
   const { data } = await api.delete(`/reader/${docId}/sessions/${sessionId}/history`)
   return data
+}
+
+// Stream chat (SSE via POST)
+export async function streamSessionChat(
+  docId: number,
+  sessionId: number,
+  message: string,
+  pageNum: number,
+  onDelta: (content: string) => void,
+  onDone: (message: ReaderChatMessage) => void,
+  onError: (error: string) => void,
+): Promise<void> {
+  const resp = await fetch(`/api/reader/${docId}/sessions/${sessionId}/stream-chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message, page_num: pageNum }),
+  })
+
+  if (!resp.ok) {
+    onError(`HTTP ${resp.status}: ${resp.statusText}`)
+    return
+  }
+
+  const reader = resp.body!.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buffer += decoder.decode(value, { stream: true })
+    const lines = buffer.split('\n')
+    buffer = lines.pop() || ''
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue
+      try {
+        const data = JSON.parse(line.slice(6))
+        if (data.type === 'delta') onDelta(data.content)
+        else if (data.type === 'done') onDone(data.message)
+        else if (data.type === 'error') onError(data.message)
+      } catch {
+        // ignore malformed SSE lines
+      }
+    }
+  }
 }
 
 // Suggested questions
