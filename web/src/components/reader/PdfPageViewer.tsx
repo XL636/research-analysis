@@ -37,9 +37,50 @@ export default function PdfPageViewer({ fileUrl, pageNumber, onLoadSuccess }: Pd
     onLoadSuccess?.(n)
   }
 
+  const [fileStatus, setFileStatus] = useState<'checking' | 'ok' | 'not_found' | 'error'>('checking')
+
+  // Pre-check if the file is accessible before handing to react-pdf
+  useEffect(() => {
+    setFileStatus('checking')
+    fetch(fileUrl, { method: 'HEAD' })
+      .then(resp => {
+        if (resp.ok) {
+          setFileStatus('ok')
+        } else if (resp.status === 404) {
+          setFileStatus('not_found')
+        } else {
+          setFileStatus('error')
+          setError(`HTTP ${resp.status}`)
+        }
+      })
+      .catch(() => {
+        setFileStatus('error')
+        setError('Network error')
+      })
+  }, [fileUrl])
+
   const handleDocLoadError = (err: Error) => {
     console.error('PDF load error:', err)
     setError(err.message || 'Unknown error')
+  }
+
+  if (fileStatus === 'checking') {
+    return (
+      <div ref={containerRef} className="flex items-center justify-center py-20 w-full">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary-500 border-t-transparent" />
+      </div>
+    )
+  }
+
+  if (fileStatus === 'not_found') {
+    return (
+      <div ref={containerRef} className="flex flex-col items-center w-full">
+        <div className="text-center py-20">
+          <p className="text-red-500 font-medium mb-2">PDF 原始文件不存在</p>
+          <p className="text-xs text-gray-400 mb-3">文件可能在服务器重启后丢失，请重新上传文档</p>
+        </div>
+      </div>
+    )
   }
 
   return (
