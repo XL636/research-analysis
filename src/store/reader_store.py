@@ -178,14 +178,26 @@ class ReaderStore:
     def delete_document(self, doc_id: int) -> bool:
         with self._connect() as conn:
             # Clean FTS entries before CASCADE deletes the pages
-            page_ids = conn.execute(
-                "SELECT id FROM reader_pages WHERE document_id = ?", (doc_id,)
-            ).fetchall()
-            for row in page_ids:
-                conn.execute(
-                    "INSERT INTO reader_pages_fts(reader_pages_fts, rowid, content) VALUES('delete', ?, '')",
-                    (row["id"],),
-                )
+            try:
+                page_ids = conn.execute(
+                    "SELECT id FROM reader_pages WHERE document_id = ?", (doc_id,)
+                ).fetchall()
+                for row in page_ids:
+                    conn.execute(
+                        "INSERT INTO reader_pages_fts(reader_pages_fts, rowid, content) VALUES('delete', ?, '')",
+                        (row["id"],),
+                    )
+            except Exception:
+                logger.warning(f"FTS cleanup failed for doc_id={doc_id}, rebuilding FTS index")
+                try:
+                    conn.execute("INSERT INTO reader_pages_fts(reader_pages_fts) VALUES('rebuild')")
+                except Exception:
+                    logger.warning("FTS rebuild also failed, dropping and recreating FTS table")
+                    conn.execute("DROP TABLE IF EXISTS reader_pages_fts")
+                    conn.execute("""
+                        CREATE VIRTUAL TABLE IF NOT EXISTS reader_pages_fts
+                        USING fts5(content, content_rowid='id')
+                    """)
             # CASCADE will handle pages and chats
             cursor = conn.execute(
                 "DELETE FROM reader_documents WHERE id = ?", (doc_id,)
