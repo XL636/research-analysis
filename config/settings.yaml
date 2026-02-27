@@ -135,7 +135,7 @@ analysis_modes:
 reader:
   upload_dir: ./uploads/reader
   prompt_template: config/prompts/reader_assistant.txt
-  context_strategy: keyword
+  context_strategy: smart
   context_pages: 1
   context_search_limit: 5
   max_chat_history: 20
