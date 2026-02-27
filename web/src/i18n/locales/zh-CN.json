@@ -356,5 +356,12 @@
   "reader.deleteSessionConfirm": "确定要删除此对话吗？所有消息将被清除。",
   "reader.sessionMessages": "{{count}} 条消息",
   "reader.defaultSessionTitle": "新对话",
-  "reader.chatError": "AI 回复失败，请重试"
+  "reader.chatError": "AI 回复失败，请重试",
+  "reader.agentMode": "Agent 模式",
+  "reader.agentTooltip": "开启后 AI 可自主搜索文档页面和知识库，适合复杂分析问题",
+  "reader.agentThinking": "AI 正在分析...",
+  "reader.agentSearchPages": "搜索文档页面",
+  "reader.agentGetPage": "获取页面内容",
+  "reader.agentSearchKB": "搜索知识库",
+  "reader.agentGetInfo": "获取文档信息"
 }

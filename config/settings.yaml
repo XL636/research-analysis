@@ -143,6 +143,8 @@ reader:
   suggestions_count: 3
   suggestions_min_content: 50
   suggestions_prompt: config/prompts/reader_suggestions.txt
+  agent_model: glm-4-plus
+  agent_max_iterations: 5
 api:
   host: 0.0.0.0
   port: 8000

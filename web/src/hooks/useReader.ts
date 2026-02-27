@@ -179,12 +179,20 @@ export function useReaderSuggestions(docId: number, pageNum: number) {
   })
 }
 
+// Agent step type for tool use tracking
+export interface AgentStep {
+  type: 'tool_use' | 'tool_result'
+  tool: string
+  detail: string
+}
+
 // Stream chat hook
 export function useStreamChat() {
   const queryClient = useQueryClient()
   const [streamingContent, setStreamingContent] = useState('')
   const [isStreaming, setIsStreaming] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [agentSteps, setAgentSteps] = useState<AgentStep[]>([])
   const abortRef = useRef(false)
 
   const send = useCallback(async (params: {
@@ -192,11 +200,13 @@ export function useStreamChat() {
     sessionId: number
     message: string
     pageNum: number
+    agentMode?: boolean
   }) => {
-    const { docId, sessionId, message, pageNum } = params
+    const { docId, sessionId, message, pageNum, agentMode } = params
     setStreamingContent('')
     setIsStreaming(true)
     setError(null)
+    setAgentSteps([])
     abortRef.current = false
 
     try {
@@ -215,6 +225,7 @@ export function useStreamChat() {
         (_msg: ReaderChatMessage) => {
           setStreamingContent('')
           setIsStreaming(false)
+          setAgentSteps([])
           queryClient.invalidateQueries({ queryKey: ['sessionChatHistory', docId, sessionId] })
           queryClient.invalidateQueries({ queryKey: ['readerSessions', docId] })
         },
@@ -223,14 +234,34 @@ export function useStreamChat() {
           setError(errMsg)
           setIsStreaming(false)
           setStreamingContent('')
+          setAgentSteps([])
+        },
+        // options
+        {
+          agentMode,
+          onToolUse: (tool: string, args: Record<string, unknown>) => {
+            setAgentSteps(prev => [...prev, {
+              type: 'tool_use',
+              tool,
+              detail: JSON.stringify(args),
+            }])
+          },
+          onToolResult: (tool: string, summary: string) => {
+            setAgentSteps(prev => [...prev, {
+              type: 'tool_result',
+              tool,
+              detail: summary,
+            }])
+          },
         },
       )
     } catch (e) {
       setError(String(e))
       setIsStreaming(false)
       setStreamingContent('')
+      setAgentSteps([])
     }
   }, [queryClient])
 
-  return { send, streamingContent, isStreaming, error }
+  return { send, streamingContent, isStreaming, error, agentSteps }
 }

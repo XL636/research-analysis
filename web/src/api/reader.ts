@@ -125,11 +125,20 @@ export async function streamSessionChat(
   onDelta: (content: string) => void,
   onDone: (message: ReaderChatMessage) => void,
   onError: (error: string) => void,
+  options?: {
+    agentMode?: boolean
+    onToolUse?: (tool: string, args: Record<string, unknown>) => void
+    onToolResult?: (tool: string, summary: string) => void
+  },
 ): Promise<void> {
   const resp = await fetch(`/api/reader/${docId}/sessions/${sessionId}/stream-chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message, page_num: pageNum }),
+    body: JSON.stringify({
+      message,
+      page_num: pageNum,
+      agent_mode: options?.agentMode ?? false,
+    }),
   })
 
   if (!resp.ok) {
@@ -154,6 +163,8 @@ export async function streamSessionChat(
         if (data.type === 'delta') onDelta(data.content)
         else if (data.type === 'done') onDone(data.message)
         else if (data.type === 'error') onError(data.message)
+        else if (data.type === 'tool_use') options?.onToolUse?.(data.tool, data.args)
+        else if (data.type === 'tool_result') options?.onToolResult?.(data.tool, data.summary)
       } catch {
         // ignore malformed SSE lines
       }

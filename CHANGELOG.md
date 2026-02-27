@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Reader: Agent 模式 — 可选 Agent 模式，AI 拥有工具调用能力，可自主搜索文档页面、获取指定页内容、查询知识库，多步推理后给出综合回答 (T-80)
+- Reader: Agent 工具集 — search_pages/get_page/search_knowledge_base/get_document_info 4 个工具 (T-80)
+- Reader: Agent 思考步骤展示 — 流式输出中实时显示工具调用进度（旋转图标 + 结果摘要）(T-80)
+- Web: ChatPanel Agent 开关按钮 — 输入框右下角小按钮，一键切换普通/Agent 模式 (T-80)
+- API: stream-chat 端点 agent_mode 分支 — Agent 模式走工具循环 + tool_use/tool_result SSE 事件 (T-80)
+- Config: reader.agent_model + reader.agent_max_iterations 配置项 (T-80)
+- Prompt: reader_agent.txt Agent 模式专用 system prompt (T-80)
+- i18n: Agent 模式相关 7 个翻译 key (zh-CN + en) (T-80)
 - Reader: AI 回复流式输出 — SSE 逐字显示 + 闪烁光标，无需等待完整生成 (T-79)
 - Reader: 智能上下文选页 — 三种策略可配置切换：fixed（固定±N页）、keyword（FTS5全文搜索最相关页）、smart（FTS粗筛+LLM精排）(T-79)
 - LLM: stream_chat() 流式聊天方法 — 基于 OpenAI SDK stream=True，逐块 yield 文本片段 (T-79)

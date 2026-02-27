@@ -446,6 +446,12 @@
   - 验收：文字逐字显示 + 闪烁光标，keyword 策略可引用远处页面，旧端点兼容
   - 依赖：T-76~78
 
+- [x] **T-80: 阅读助手 Agent 模式**
+  - 目标：新增可选 Agent 模式，LLM 拥有工具调用能力，可自主搜索文档页面、获取页面内容、查询知识库
+  - 步骤：① Schema agent_mode 字段 → ② 4 个 Agent 工具定义 + 执行分派 → ③ Agent 流式循环（工具调用→最终流式输出）→ ④ Agent 专用 prompt → ⑤ 前端 SSE tool_use/tool_result 事件 → ⑥ useStreamChat agentSteps 状态 → ⑦ ChatPanel Agent 开关 + 思考步骤展示 → ⑧ i18n
+  - 验收：普通模式无回归，Agent 模式可自主搜索多页面再综合回答，思考步骤正确显示
+  - 依赖：T-79
+
 - [x] **T-76: 数据库 + Store 层改造（多会话 + 推荐问题）**
   - 目标：新增 reader_sessions/reader_suggested_questions 表，reader_chats 加 session_id，数据迁移
   - 步骤：① 2 张新表 → ② ALTER TABLE 迁移 + orphan 绑定 → ③ 9 个新方法

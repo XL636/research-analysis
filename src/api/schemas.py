@@ -406,6 +406,7 @@ class ReaderProgressRequest(BaseModel):
 class ReaderChatRequest(BaseModel):
     message: str
     page_num: int = 1
+    agent_mode: bool = False
 
 
 class ReaderChatMessage(BaseModel):

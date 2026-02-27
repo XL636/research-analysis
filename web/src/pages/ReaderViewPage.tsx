@@ -31,6 +31,7 @@ export default function ReaderViewPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [chatOpen, setChatOpen] = useState(true)
   const [activeSessionId, setActiveSessionId] = useState(0)
+  const [agentMode, setAgentMode] = useState(false)
 
   // Initialize current page from document's saved progress
   useEffect(() => {
@@ -116,7 +117,7 @@ export default function ReaderViewPage() {
 
   const handleSendChat = (message: string) => {
     if (activeSessionId > 0) {
-      streamChat.send({ docId, sessionId: activeSessionId, message, pageNum: currentPage })
+      streamChat.send({ docId, sessionId: activeSessionId, message, pageNum: currentPage, agentMode })
     }
   }
 
@@ -235,6 +236,9 @@ export default function ReaderViewPage() {
               suggestionsLoading={suggestionsLoading}
               streamingContent={streamChat.streamingContent}
               isStreaming={streamChat.isStreaming}
+              agentMode={agentMode}
+              onToggleAgent={() => setAgentMode(prev => !prev)}
+              agentSteps={streamChat.agentSteps}
             />
           </div>
         )}

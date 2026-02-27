@@ -39,6 +39,61 @@ from src.store.reader_store import ReaderStore
 
 router = APIRouter()
 
+# --- Agent mode tool definitions (OpenAI Function Calling format) ---
+
+AGENT_TOOLS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "search_pages",
+            "description": "在当前文档中全文搜索页面内容，返回最相关的页面列表",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "搜索关键词"},
+                },
+                "required": ["query"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_page",
+            "description": "获取文档中指定页码的完整内容",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "page_num": {"type": "integer", "description": "页码（从1开始）"},
+                },
+                "required": ["page_num"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "search_knowledge_base",
+            "description": "在知识库中搜索已分析过的文档，可以找到相关研究和分析结果",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "搜索关键词"},
+                },
+                "required": ["query"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_document_info",
+            "description": "获取当前文档的元信息（标题、总页数、文件类型等）",
+            "parameters": {"type": "object", "properties": {}},
+        },
+    },
+]
+
 _store: ReaderStore | None = None
 
 
@@ -350,6 +405,88 @@ def _build_page_context(
     return "\n\n---\n\n".join(context_parts)
 
 
+def _execute_agent_tool(tool_name: str, args: dict, doc_id: int, store: ReaderStore, kb) -> str:
+    """Execute an Agent tool call, return result string."""
+    if tool_name == "search_pages":
+        results = store.search_pages(doc_id, args["query"], limit=5)
+        if not results:
+            return "未找到相关页面。"
+        lines = [
+            f"第{r['page_num']}页（相关度 rank={r['rank']:.2f}）:\n{r['content'][:300]}"
+            for r in results
+        ]
+        return "\n\n---\n".join(lines)
+
+    elif tool_name == "get_page":
+        content = store.get_page_content(doc_id, args["page_num"])
+        if not content:
+            return f"第{args['page_num']}页不存在或无内容。"
+        return f"[第{args['page_num']}页内容]\n{content}"
+
+    elif tool_name == "search_knowledge_base":
+        results = kb.search(args["query"], limit=5)
+        if not results:
+            return "知识库中未找到相关文档。"
+        lines = [f"《{r['title']}》: {r.get('summary', '')[:200]}" for r in results]
+        return "\n\n".join(lines)
+
+    elif tool_name == "get_document_info":
+        doc = store.get_document(doc_id)
+        return json.dumps(
+            {
+                "title": doc["title"],
+                "total_pages": doc["total_pages"],
+                "file_type": doc["file_type"],
+            },
+            ensure_ascii=False,
+        )
+
+    return "未知工具。"
+
+
+def _run_agent_stream(
+    llm, model_name: str, messages: list[dict], tools: list[dict],
+    doc_id: int, store: ReaderStore, kb, q: queue.Queue, max_iter: int = 5,
+) -> None:
+    """Agent tool loop + final streaming output. Runs in a background thread."""
+    for _i in range(max_iter):
+        # Non-streaming call for tool decision phase
+        client, model_id = llm._get_client(model_name)
+        response = client.chat.completions.create(
+            model=model_id,
+            messages=messages,
+            tools=tools,
+            temperature=0.7,
+            max_tokens=4096,
+        )
+        msg = response.choices[0].message
+
+        if msg.tool_calls:
+            # Append assistant message with tool calls
+            messages.append(msg.model_dump())
+            for tc in msg.tool_calls:
+                args = json.loads(tc.function.arguments)
+                q.put(("tool_use", tc.function.name, args))
+                result = _execute_agent_tool(tc.function.name, args, doc_id, store, kb)
+                summary = result[:100] + "..." if len(result) > 100 else result
+                q.put(("tool_result", tc.function.name, summary))
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": tc.id,
+                    "content": result,
+                })
+        else:
+            # No tool calls → final reply, stream it
+            for chunk in llm.stream_chat(model_name, messages, temperature=0.7, max_tokens=4096):
+                q.put(("delta", chunk))
+            break
+    else:
+        # Max iterations reached, force final reply without tools
+        for chunk in llm.stream_chat(model_name, messages, temperature=0.7, max_tokens=4096):
+            q.put(("delta", chunk))
+    q.put(None)  # End signal
+
+
 async def _prepare_chat_context(
     doc_id: int, session_id: int, body: ReaderChatRequest,
 ) -> tuple[dict, list[dict[str, str]], str]:
@@ -376,10 +513,13 @@ async def _prepare_chat_context(
         store, doc, body.message, body.page_num, reader_conf, config, llm=llm,
     )
 
-    # Load prompt template
-    prompt_template_path = reader_conf.get(
-        "prompt_template", "config/prompts/reader_assistant.txt"
-    )
+    # Load prompt template (agent mode uses a different prompt)
+    if body.agent_mode:
+        prompt_template_path = "config/prompts/reader_agent.txt"
+    else:
+        prompt_template_path = reader_conf.get(
+            "prompt_template", "config/prompts/reader_assistant.txt"
+        )
     prompt_path = Path(prompt_template_path)
     if prompt_path.exists():
         system_prompt = prompt_path.read_text(encoding="utf-8")
@@ -389,6 +529,7 @@ async def _prepare_chat_context(
         )
 
     system_prompt = system_prompt.replace("{document_title}", doc["title"])
+    system_prompt = system_prompt.replace("{current_page}", str(body.page_num))
     system_prompt = system_prompt.replace("{page_context}", page_context)
 
     # Build messages: system + recent session history + current question
@@ -447,26 +588,65 @@ async def session_stream_chat(doc_id: int, session_id: int, body: ReaderChatRequ
     async def event_generator():
         full_reply = ""
         try:
-            q: queue.Queue[str | None] = queue.Queue()
+            q: queue.Queue = queue.Queue()
 
-            def _run():
-                try:
-                    llm = LLMClient()
-                    for chunk in llm.stream_chat(
-                        model_name, messages, temperature=0.7, max_tokens=4096
-                    ):
-                        q.put(chunk)
-                finally:
-                    q.put(None)
+            if body.agent_mode:
+                # Agent mode: use agent_model, with tool calling loop
+                config = _load_config()
+                reader_conf = config.get("reader", {})
+                agent_model = reader_conf.get("agent_model", model_name)
+                max_iter = reader_conf.get("agent_max_iterations", 5)
 
-            threading.Thread(target=_run, daemon=True).start()
+                def _run():
+                    try:
+                        llm = LLMClient()
+                        store = _get_store()
+                        from src.store.knowledge_base import KnowledgeBase
+                        kb = KnowledgeBase()
+                        _run_agent_stream(
+                            llm, agent_model, messages, AGENT_TOOLS,
+                            doc_id, store, kb, q, max_iter=max_iter,
+                        )
+                    except Exception as e:
+                        q.put(("error", str(e)))
+                        q.put(None)
 
-            while True:
-                chunk = await asyncio.to_thread(q.get)
-                if chunk is None:
-                    break
-                full_reply += chunk
-                yield f"data: {json.dumps({'type': 'delta', 'content': chunk}, ensure_ascii=False)}\n\n"
+                threading.Thread(target=_run, daemon=True).start()
+
+                while True:
+                    item = await asyncio.to_thread(q.get)
+                    if item is None:
+                        break
+                    if item[0] == "tool_use":
+                        yield f"data: {json.dumps({'type': 'tool_use', 'tool': item[1], 'args': item[2]}, ensure_ascii=False)}\n\n"
+                    elif item[0] == "tool_result":
+                        yield f"data: {json.dumps({'type': 'tool_result', 'tool': item[1], 'summary': item[2]}, ensure_ascii=False)}\n\n"
+                    elif item[0] == "delta":
+                        full_reply += item[1]
+                        yield f"data: {json.dumps({'type': 'delta', 'content': item[1]}, ensure_ascii=False)}\n\n"
+                    elif item[0] == "error":
+                        yield f"data: {json.dumps({'type': 'error', 'message': item[1]}, ensure_ascii=False)}\n\n"
+                        return
+            else:
+                # Normal mode: direct streaming
+                def _run():
+                    try:
+                        llm = LLMClient()
+                        for chunk in llm.stream_chat(
+                            model_name, messages, temperature=0.7, max_tokens=4096
+                        ):
+                            q.put(chunk)
+                    finally:
+                        q.put(None)
+
+                threading.Thread(target=_run, daemon=True).start()
+
+                while True:
+                    chunk = await asyncio.to_thread(q.get)
+                    if chunk is None:
+                        break
+                    full_reply += chunk
+                    yield f"data: {json.dumps({'type': 'delta', 'content': chunk}, ensure_ascii=False)}\n\n"
 
         except Exception as e:
             logger.error(f"Stream chat error: {e}")
