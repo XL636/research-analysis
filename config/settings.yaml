@@ -95,6 +95,18 @@ search_providers:
     enabled: true
     timeout: 15
     max_results: 5
+  pubmed:
+    base_url: https://eutils.ncbi.nlm.nih.gov/entrez/eutils
+    api_key_env: NCBI_API_KEY
+    enabled: true
+    timeout: 15
+    max_results: 5
+  biorxiv:
+    base_url: https://www.ebi.ac.uk/europepmc/webservices/rest
+    api_key_env: ''
+    enabled: true
+    timeout: 15
+    max_results: 5
 analysis_modes:
   quick:
     label_zh: 快速摘要
