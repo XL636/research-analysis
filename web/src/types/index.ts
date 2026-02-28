@@ -397,3 +397,34 @@ export interface SuggestedQuestionsResponse {
   page_num: number
   cached: boolean
 }
+
+// Paper Search
+export interface PaperSearchResultItem {
+  title: string
+  authors: string
+  year: string
+  venue: string
+  doi: string
+  url: string
+  abstract: string
+  source: string
+}
+
+export interface PaperSearchResponse {
+  results: PaperSearchResultItem[]
+  total: number
+  providers_used: string[]
+}
+
+export interface SaveToKBResponse {
+  success: boolean
+  doc_id: number
+  message: string
+}
+
+export interface DownloadAnalyzeResponse {
+  success: boolean
+  doc_id: number
+  message: string
+  has_analysis: boolean
+}

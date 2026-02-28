@@ -1,0 +1,137 @@
+import { useState } from 'react'
+import { ExternalLink, BookmarkPlus, Download, ChevronDown, ChevronUp, Loader2, Check } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import type { PaperSearchResultItem } from '../../types'
+
+const SOURCE_COLORS: Record<string, string> = {
+  pubmed: 'bg-emerald-100 text-emerald-700',
+  arxiv: 'bg-red-100 text-red-700',
+  biorxiv: 'bg-blue-100 text-blue-700',
+  medrxiv: 'bg-sky-100 text-sky-700',
+  semantic_scholar: 'bg-purple-100 text-purple-700',
+  openalex: 'bg-orange-100 text-orange-700',
+}
+
+const SOURCE_LABELS: Record<string, string> = {
+  pubmed: 'PubMed',
+  arxiv: 'arXiv',
+  biorxiv: 'bioRxiv',
+  medrxiv: 'medRxiv',
+  semantic_scholar: 'Semantic Scholar',
+  openalex: 'OpenAlex',
+}
+
+interface SearchResultCardProps {
+  result: PaperSearchResultItem
+  onSave: (result: PaperSearchResultItem) => void
+  onDownload: (result: PaperSearchResultItem) => void
+  isSaving: boolean
+  isDownloading: boolean
+  savedDocId: number | null
+}
+
+export default function SearchResultCard({
+  result,
+  onSave,
+  onDownload,
+  isSaving,
+  isDownloading,
+  savedDocId,
+}: SearchResultCardProps) {
+  const { t } = useTranslation()
+  const [expanded, setExpanded] = useState(false)
+
+  const badgeColor = SOURCE_COLORS[result.source] || 'bg-gray-100 text-gray-700'
+  const sourceLabel = SOURCE_LABELS[result.source] || result.source
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-shadow">
+      {/* Header: source badge + title */}
+      <div className="flex items-start gap-3">
+        <span className={`shrink-0 mt-0.5 px-2 py-0.5 rounded text-xs font-medium ${badgeColor}`}>
+          {sourceLabel}
+        </span>
+        <h3 className="text-base font-semibold text-gray-900 leading-snug flex-1">
+          {result.title}
+        </h3>
+      </div>
+
+      {/* Meta line */}
+      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-500">
+        {result.authors && <span>{result.authors}</span>}
+        {result.year && <span>{result.year}</span>}
+        {result.venue && <span className="text-gray-400">| {result.venue}</span>}
+      </div>
+
+      {/* Abstract */}
+      {result.abstract && (
+        <div className="mt-3">
+          <p className={`text-sm text-gray-600 leading-relaxed ${!expanded ? 'line-clamp-3' : ''}`}>
+            {result.abstract}
+          </p>
+          {result.abstract.length > 150 && (
+            <button
+              onClick={() => setExpanded(!expanded)}
+              className="mt-1 text-xs text-primary-600 hover:text-primary-800 flex items-center gap-0.5"
+            >
+              {expanded ? (
+                <>
+                  {t('paperSearch.collapse')} <ChevronUp className="h-3 w-3" />
+                </>
+              ) : (
+                <>
+                  {t('paperSearch.expand')} <ChevronDown className="h-3 w-3" />
+                </>
+              )}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <button
+          onClick={() => onSave(result)}
+          disabled={isSaving || savedDocId !== null}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          {isSaving ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : savedDocId !== null ? (
+            <Check className="h-4 w-4 text-green-600" />
+          ) : (
+            <BookmarkPlus className="h-4 w-4" />
+          )}
+          {savedDocId !== null ? t('paperSearch.saved') : t('paperSearch.saveToKB')}
+        </button>
+
+        {result.url && (
+          <>
+            <button
+              onClick={() => onDownload(result)}
+              disabled={isDownloading}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {isDownloading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+              {t('paperSearch.downloadAnalyze')}
+            </button>
+
+            <a
+              href={result.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              <ExternalLink className="h-4 w-4" />
+              {t('paperSearch.viewOriginal')}
+            </a>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}

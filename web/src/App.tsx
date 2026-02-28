@@ -10,6 +10,7 @@ import SettingsPage from './pages/SettingsPage'
 import TemplatesPage from './pages/TemplatesPage'
 import ReaderListPage from './pages/ReaderListPage'
 import ReaderViewPage from './pages/ReaderViewPage'
+import PaperSearchPage from './pages/PaperSearchPage'
 
 export default function App() {
   return (
@@ -22,6 +23,7 @@ export default function App() {
         <Route path="templates" element={<TemplatesPage />} />
         <Route path="paper" element={<PaperListPage />} />
         <Route path="paper/:id" element={<PaperProjectPage />} />
+        <Route path="paper-search" element={<PaperSearchPage />} />
         <Route path="reader" element={<ReaderListPage />} />
         <Route path="reader/:id" element={<ReaderViewPage />} />
         <Route path="settings" element={<SettingsPage />} />
