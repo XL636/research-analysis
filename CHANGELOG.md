@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Paper Search: 论文搜索功能 — 支持 PubMed、arXiv、bioRxiv/medRxiv、Semantic Scholar、OpenAlex 五大学术数据库 (T-81~T-84)
+- Paper Search: PubMedProvider — NCBI E-utilities API (esearch + efetch) (T-81)
+- Paper Search: BiorxivProvider — Europe PMC REST API，同时覆盖 bioRxiv + medRxiv (T-81)
+- Paper Search: SearchManager 增强 — 新增 provider_names 参数支持按名称过滤搜索源 (T-81)
+- API: GET /api/paper-search/search — 搜索外部学术论文（支持指定搜索源） (T-82)
+- API: POST /api/paper-search/save-to-kb — 保存论文元数据到知识库 (T-82)
+- API: POST /api/paper-search/download-and-analyze — 下载 PDF 并自动分析入库 (T-82)
+- CLI: paper-search 命令 — 支持 --providers/-p、--limit/-n、--save/-s、--json 参数 (T-83)
+- Web: PaperSearchPage — 论文搜索页面，搜索框 + 来源过滤器 + 结果数量选择 (T-84)
+- Web: SearchResultCard — 搜索结果卡片，来源 Badge（5 种颜色）+ 摘要折叠 + 保存/下载/查看操作 (T-84)
+- Web: 侧边栏新增「论文搜索」导航项 (T-84)
+- i18n: 论文搜索功能中英文翻译 + PubMed/bioRxiv 设置项翻译 (T-84)
 - Reader: Agent 模式 — 可选 Agent 模式，AI 拥有工具调用能力，可自主搜索文档页面、获取指定页内容、查询知识库，多步推理后给出综合回答 (T-80)
 - Reader: Agent 工具集 — search_pages/get_page/search_knowledge_base/get_document_info 4 个工具 (T-80)
 - Reader: Agent 思考步骤展示 — 流式输出中实时显示工具调用进度（旋转图标 + 结果摘要）(T-80)

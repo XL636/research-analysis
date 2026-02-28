@@ -500,6 +500,32 @@
   - 验收：上传 PDF 可翻页浏览 + AI 问答，上传 TXT 可文本渲染
   - 依赖：T-74
 
+## Phase 10: 论文搜索功能 `[完成]`
+
+- [x] **T-81: 新增 PubMed + bioRxiv Provider**
+  - 目标：新增 PubMedProvider (NCBI E-utilities) 和 BiorxivProvider (Europe PMC REST API)
+  - 步骤：① PubMedProvider esearch+efetch → ② BiorxivProvider Europe PMC → ③ SearchManager provider_names 过滤 → ④ settings.yaml 配置
+  - 验收：新 Provider 可正常搜索返回 ExternalSearchResult
+  - 依赖：无
+
+- [x] **T-82: 论文搜索 API 端点**
+  - 目标：3 个 REST 端点 — 搜索/保存到知识库/下载分析
+  - 步骤：① schemas → ② paper_search.py 路由 → ③ app.py 注册
+  - 验收：Swagger UI 可测试所有端点
+  - 依赖：T-81
+
+- [x] **T-83: CLI paper-search 命令**
+  - 目标：CLI 搜索外部学术论文，支持 --providers --limit --save --json
+  - 步骤：① main.py paper-search 命令 → ② Rich Table 输出 → ③ --save 存入 KB
+  - 验收：`uv run python main.py paper-search "deep learning" -n 3` 正常输出
+  - 依赖：T-81
+
+- [x] **T-84: 前端论文搜索页面**
+  - 目标：完整的论文搜索 Web UI — 搜索框 + 来源过滤 + 结果卡片 + 保存/下载
+  - 步骤：① API 客户端 → ② usePaperSearch hook → ③ SearchResultCard 组件 → ④ PaperSearchPage → ⑤ 路由+侧边栏+i18n
+  - 验收：`npm run build` 无错误，搜索页面功能完整
+  - 依赖：T-82
+
 ---
 
 ## Backlog（想法池）
