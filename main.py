@@ -790,9 +790,10 @@ def paper_search(
         console.print("[red]没有可用的搜索源，请检查 config/settings.yaml[/red]")
         raise typer.Exit(1)
 
-    console.print(f"\n[bold]搜索论文: {query}[/bold]")
-    if provider_names:
-        console.print(f"[dim]搜索源: {', '.join(provider_names)}[/dim]")
+    if not json_output:
+        console.print(f"\n[bold]搜索论文: {query}[/bold]")
+        if provider_names:
+            console.print(f"[dim]搜索源: {', '.join(provider_names)}[/dim]")
 
     results = sm.search(query, max_results=limit, provider_names=provider_names)
     sm.close()
