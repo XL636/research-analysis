@@ -67,6 +67,7 @@ def create_app() -> FastAPI:
     from src.api.routes.settings import router as settings_router
     from src.api.routes.templates import router as templates_router
     from src.api.routes.reader import router as reader_router
+    from src.api.routes.paper_search import router as paper_search_router
 
     app.include_router(pipeline_router, prefix="/api/pipeline", tags=["Pipeline"])
     app.include_router(knowledge_router, prefix="/api/knowledge", tags=["Knowledge"])
@@ -76,6 +77,7 @@ def create_app() -> FastAPI:
     app.include_router(paper_router, prefix="/api/paper", tags=["Paper"])
     app.include_router(templates_router, prefix="/api/templates", tags=["Templates"])
     app.include_router(reader_router, prefix="/api/reader", tags=["Reader"])
+    app.include_router(paper_search_router, prefix="/api/paper-search", tags=["PaperSearch"])
 
     @app.get("/api/health")
     async def health():

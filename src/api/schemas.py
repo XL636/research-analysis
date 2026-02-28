@@ -449,3 +449,57 @@ class SuggestedQuestionsResponse(BaseModel):
     questions: list[str] = Field(default_factory=list)
     page_num: int = 0
     cached: bool = False
+
+
+# --- Paper Search ---
+
+class PaperSearchResult(BaseModel):
+    title: str = ""
+    authors: str = ""
+    year: str = ""
+    venue: str = ""
+    doi: str = ""
+    url: str = ""
+    abstract: str = ""
+    source: str = ""
+
+
+class PaperSearchResponse(BaseModel):
+    results: list[PaperSearchResult] = Field(default_factory=list)
+    total: int = 0
+    providers_used: list[str] = Field(default_factory=list)
+
+
+class SaveToKBRequest(BaseModel):
+    title: str
+    authors: str = ""
+    year: str = ""
+    venue: str = ""
+    doi: str = ""
+    url: str = ""
+    abstract: str = ""
+    source: str = ""
+
+
+class SaveToKBResponse(BaseModel):
+    success: bool
+    doc_id: int = 0
+    message: str = ""
+
+
+class DownloadAnalyzeRequest(BaseModel):
+    title: str
+    url: str
+    doi: str = ""
+    authors: str = ""
+    year: str = ""
+    venue: str = ""
+    abstract: str = ""
+    source: str = ""
+
+
+class DownloadAnalyzeResponse(BaseModel):
+    success: bool
+    doc_id: int = 0
+    message: str = ""
+    has_analysis: bool = False
