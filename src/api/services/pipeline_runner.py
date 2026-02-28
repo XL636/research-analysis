@@ -136,6 +136,20 @@ async def run_pipeline(
 
         # Step 4: Generate
         await queue.put(StepProgress(step="generate", status="running"))
+
+        # When multiple files without synthesis, generate individual reports per document
+        individual_reports: dict[int, str] = {}  # doc_id -> report_content
+        if not synthesis and len(analyses) > 1 and len(stored_doc_ids) == len(analyses):
+            for i, (analysis, did) in enumerate(zip(analyses, stored_doc_ids)):
+                await queue.put(StepProgress(
+                    step="generate", status="running",
+                    message=f"[{i + 1}/{len(analyses)}] {analysis.document_title}"
+                ))
+                individual_report = await asyncio.to_thread(
+                    pipeline.generator.process, [analysis]
+                )
+                individual_reports[did] = individual_report.content
+
         gen_input = synthesis if synthesis else analyses
         report = await asyncio.to_thread(pipeline.generator.process, gen_input)
         await queue.put(StepProgress(step="generate", status="completed"))
@@ -157,12 +171,15 @@ async def run_pipeline(
                 await queue.put(StepProgress(step="review", status="completed", message="skipped"))
 
         # Store report_content in knowledge base for each document
-        if report and stored_doc_ids:
+        if stored_doc_ids:
             try:
                 from src.store.knowledge_base import KnowledgeBase
                 kb = KnowledgeBase()
                 for did in stored_doc_ids:
-                    kb.update_report_content(did, report.content)
+                    # Use individual report if available, otherwise fall back to combined
+                    content = individual_reports.get(did, report.content if report else "")
+                    if content:
+                        kb.update_report_content(did, content)
             except Exception:
                 logger.debug("Failed to store report_content in KB", exc_info=True)
 
