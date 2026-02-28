@@ -15,6 +15,9 @@ from src.api.schemas import (
     PaperSearchResult,
     SaveToKBRequest,
     SaveToKBResponse,
+    SmartSearchRequest,
+    SmartSearchResponse,
+    SmartSearchResultItem,
 )
 
 router = APIRouter()
@@ -63,6 +66,44 @@ async def search_papers(
         )
     finally:
         sm.close()
+
+
+@router.post("/smart-search", response_model=SmartSearchResponse)
+async def smart_search(req: SmartSearchRequest):
+    """智能论文搜索：LLM 理解意图 + 生成关键词 + 多源搜索 + 筛选排序."""
+    from src.agents.paper_search import PaperSearchAgent, SmartSearchInput
+    from src.core.llm_client import LLMClient
+    from src.core.search_client import SearchManager
+
+    try:
+        llm = LLMClient()
+        sm = SearchManager()
+        agent = PaperSearchAgent(llm_client=llm, search_manager=sm)
+
+        search_input = SmartSearchInput(
+            query=req.query,
+            providers=req.providers,
+            max_results=req.max_results,
+            language_hint=req.language_hint,
+        )
+
+        output = await asyncio.to_thread(agent.process, search_input)
+        sm.close()
+
+        return SmartSearchResponse(
+            query=output.query,
+            interpreted_intent=output.interpreted_intent,
+            generated_keywords=output.generated_keywords,
+            results=[
+                SmartSearchResultItem(**r.model_dump())
+                for r in output.results
+            ],
+            total_candidates=output.total_candidates,
+            providers_used=output.providers_used,
+        )
+    except Exception as e:
+        logger.error(f"Smart search failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/save-to-kb", response_model=SaveToKBResponse)

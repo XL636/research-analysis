@@ -1,9 +1,11 @@
 import { useState, useCallback } from 'react'
-import { Search, Loader2 } from 'lucide-react'
+import { Search, Loader2, Sparkles, Zap } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { usePaperSearch, useSaveToKB, useDownloadAndAnalyze } from '../hooks/usePaperSearch'
+import { usePaperSearch, useSmartSearch, useSaveToKB, useDownloadAndAnalyze } from '../hooks/usePaperSearch'
 import SearchResultCard from '../components/paper-search/SearchResultCard'
-import type { PaperSearchResultItem } from '../types'
+import type { PaperSearchResultItem, SmartSearchResponse } from '../types'
+
+type SearchMode = 'keyword' | 'smart'
 
 const PROVIDER_OPTIONS = [
   { key: 'all', labelKey: 'paperSearch.providerAll' },
@@ -20,6 +22,7 @@ export default function PaperSearchPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedProviders, setSelectedProviders] = useState<string[]>([])
   const [maxResults, setMaxResults] = useState(5)
+  const [searchMode, setSearchMode] = useState<SearchMode>('keyword')
 
   // Track per-result save/download state
   const [savedMap, setSavedMap] = useState<Record<string, number>>({})
@@ -28,21 +31,32 @@ export default function PaperSearchPage() {
 
   const providersParam = selectedProviders.length > 0 ? selectedProviders.join(',') : undefined
 
-  const { data, isLoading, isFetching } = usePaperSearch({
-    q: searchQuery,
+  // Keyword search (useQuery)
+  const { data: keywordData, isLoading: keywordLoading, isFetching: keywordFetching } = usePaperSearch({
+    q: searchMode === 'keyword' ? searchQuery : '',
     providers: providersParam,
     max_results: maxResults,
   })
+
+  // Smart search (useMutation)
+  const smartSearch = useSmartSearch()
+  const smartData = smartSearch.data as SmartSearchResponse | undefined
 
   const saveMutation = useSaveToKB()
   const downloadMutation = useDownloadAndAnalyze()
 
   const handleSearch = useCallback(() => {
-    if (inputValue.trim()) {
-      setSearchQuery(inputValue.trim())
-      setSavedMap({})
+    if (!inputValue.trim()) return
+    setSavedMap({})
+    if (searchMode === 'smart') {
+      smartSearch.mutate({
+        query: inputValue.trim(),
+        providers: providersParam,
+        max_results: maxResults,
+      })
     }
-  }, [inputValue])
+    setSearchQuery(inputValue.trim())
+  }, [inputValue, searchMode, providersParam, maxResults, smartSearch])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') handleSearch()
@@ -52,12 +66,9 @@ export default function PaperSearchPage() {
     if (key === 'all') {
       setSelectedProviders([])
     } else {
-      setSelectedProviders(prev => {
-        if (prev.includes(key)) {
-          return prev.filter(p => p !== key)
-        }
-        return [...prev, key]
-      })
+      setSelectedProviders(prev =>
+        prev.includes(key) ? prev.filter(p => p !== key) : [...prev, key]
+      )
     }
   }
 
@@ -107,14 +118,49 @@ export default function PaperSearchPage() {
     }
   }
 
-  const results = data?.results || []
-  const showLoading = isLoading || isFetching
+  // Determine results and loading state based on mode
+  const isSmartMode = searchMode === 'smart'
+  const showLoading = isSmartMode
+    ? smartSearch.isPending
+    : (keywordLoading || keywordFetching)
+  const results: PaperSearchResultItem[] = isSmartMode
+    ? (smartData?.results || [])
+    : (keywordData?.results || [])
+  const hasSearched = isSmartMode
+    ? (smartSearch.isSuccess || smartSearch.isError)
+    : !!searchQuery
 
   return (
     <div className="max-w-4xl mx-auto">
       <h1 className="text-2xl font-heading font-bold text-gray-900 mb-6">
         {t('paperSearch.title')}
       </h1>
+
+      {/* Mode toggle */}
+      <div className="flex gap-1 p-1 bg-gray-100 rounded-lg w-fit mb-4">
+        <button
+          onClick={() => { setSearchMode('keyword'); setSearchQuery(''); smartSearch.reset() }}
+          className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+            searchMode === 'keyword'
+              ? 'bg-white text-gray-900 shadow-sm'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <Zap className="h-4 w-4" />
+          {t('paperSearch.modeKeyword')}
+        </button>
+        <button
+          onClick={() => { setSearchMode('smart'); setSearchQuery(''); smartSearch.reset() }}
+          className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+            searchMode === 'smart'
+              ? 'bg-white text-gray-900 shadow-sm'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <Sparkles className="h-4 w-4" />
+          {t('paperSearch.modeSmart')}
+        </button>
+      </div>
 
       {/* Search bar */}
       <div className="flex gap-2 mb-4">
@@ -125,21 +171,31 @@ export default function PaperSearchPage() {
             value={inputValue}
             onChange={e => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={t('paperSearch.placeholder')}
+            placeholder={isSmartMode ? t('paperSearch.smartPlaceholder') : t('paperSearch.placeholder')}
             className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none"
           />
         </div>
         <button
           onClick={handleSearch}
           disabled={!inputValue.trim() || showLoading}
-          className="px-5 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+          className={`px-5 py-2.5 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2 ${
+            isSmartMode
+              ? 'bg-violet-600 hover:bg-violet-700'
+              : 'bg-primary-600 hover:bg-primary-700'
+          }`}
         >
-          {showLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-          {t('paperSearch.search')}
+          {showLoading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : isSmartMode ? (
+            <Sparkles className="h-4 w-4" />
+          ) : (
+            <Search className="h-4 w-4" />
+          )}
+          {isSmartMode ? t('paperSearch.smartSearch') : t('paperSearch.search')}
         </button>
       </div>
 
-      {/* Provider filters */}
+      {/* Provider filters + result count selector */}
       <div className="flex flex-wrap gap-2 mb-6">
         {PROVIDER_OPTIONS.map(({ key, labelKey }) => {
           const isActive = key === 'all' ? selectedProviders.length === 0 : selectedProviders.includes(key)
@@ -158,35 +214,70 @@ export default function PaperSearchPage() {
           )
         })}
 
-        {/* Max results selector */}
         <select
           value={maxResults}
           onChange={e => setMaxResults(Number(e.target.value))}
           className="px-3 py-1.5 text-sm rounded-full border border-gray-300 bg-white text-gray-600 outline-none"
         >
-          <option value={3}>3 {t('paperSearch.perProvider')}</option>
-          <option value={5}>5 {t('paperSearch.perProvider')}</option>
-          <option value={10}>10 {t('paperSearch.perProvider')}</option>
-          <option value={20}>20 {t('paperSearch.perProvider')}</option>
+          {isSmartMode ? (
+            <>
+              <option value={10}>10 {t('paperSearch.results')}</option>
+              <option value={20}>20 {t('paperSearch.results')}</option>
+              <option value={30}>30 {t('paperSearch.results')}</option>
+            </>
+          ) : (
+            <>
+              <option value={3}>3 {t('paperSearch.perProvider')}</option>
+              <option value={5}>5 {t('paperSearch.perProvider')}</option>
+              <option value={10}>10 {t('paperSearch.perProvider')}</option>
+              <option value={20}>20 {t('paperSearch.perProvider')}</option>
+            </>
+          )}
         </select>
       </div>
 
-      {/* Results */}
+      {/* Loading */}
       {showLoading && (
         <div className="flex flex-col items-center justify-center py-16 text-gray-400">
           <Loader2 className="h-8 w-8 animate-spin mb-3" />
-          <p>{t('paperSearch.searching')}</p>
+          <p>{isSmartMode ? t('paperSearch.smartSearching') : t('paperSearch.searching')}</p>
         </div>
       )}
 
-      {!showLoading && searchQuery && results.length > 0 && (
-        <>
-          <p className="text-sm text-gray-500 mb-4">
-            {t('paperSearch.resultCount', {
-              count: data?.total || 0,
-              providers: data?.providers_used.length || 0,
+      {/* Smart search intent card */}
+      {!showLoading && isSmartMode && smartData && (
+        <div className="mb-4 p-4 bg-violet-50 border border-violet-200 rounded-xl">
+          <p className="text-sm font-medium text-violet-900 mb-2">
+            {smartData.interpreted_intent}
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {smartData.generated_keywords.map((kw, i) => (
+              <span key={i} className="px-2 py-0.5 text-xs bg-violet-100 text-violet-700 rounded-full">
+                {kw}
+              </span>
+            ))}
+          </div>
+          <p className="mt-2 text-xs text-violet-500">
+            {t('paperSearch.smartStats', {
+              total: smartData.total_candidates,
+              filtered: smartData.results.length,
+              providers: smartData.providers_used.length,
             })}
           </p>
+        </div>
+      )}
+
+      {/* Results */}
+      {!showLoading && hasSearched && results.length > 0 && (
+        <>
+          {!isSmartMode && (
+            <p className="text-sm text-gray-500 mb-4">
+              {t('paperSearch.resultCount', {
+                count: keywordData?.total || 0,
+                providers: keywordData?.providers_used.length || 0,
+              })}
+            </p>
+          )}
           <div className="space-y-4">
             {results.map((result, idx) => (
               <SearchResultCard
@@ -203,7 +294,8 @@ export default function PaperSearchPage() {
         </>
       )}
 
-      {!showLoading && searchQuery && results.length === 0 && (
+      {/* No results */}
+      {!showLoading && hasSearched && results.length === 0 && (
         <div className="text-center py-16 text-gray-400">
           <Search className="h-12 w-12 mx-auto mb-3 opacity-50" />
           <p className="text-lg font-medium">{t('paperSearch.noResults')}</p>
@@ -211,11 +303,20 @@ export default function PaperSearchPage() {
         </div>
       )}
 
-      {!searchQuery && (
+      {/* Empty state */}
+      {!hasSearched && !showLoading && (
         <div className="text-center py-16 text-gray-400">
-          <Search className="h-12 w-12 mx-auto mb-3 opacity-50" />
-          <p className="text-lg font-medium">{t('paperSearch.emptyTitle')}</p>
-          <p className="text-sm mt-1">{t('paperSearch.emptyDesc')}</p>
+          {isSmartMode ? (
+            <Sparkles className="h-12 w-12 mx-auto mb-3 opacity-50" />
+          ) : (
+            <Search className="h-12 w-12 mx-auto mb-3 opacity-50" />
+          )}
+          <p className="text-lg font-medium">
+            {isSmartMode ? t('paperSearch.smartEmptyTitle') : t('paperSearch.emptyTitle')}
+          </p>
+          <p className="text-sm mt-1">
+            {isSmartMode ? t('paperSearch.smartEmptyDesc') : t('paperSearch.emptyDesc')}
+          </p>
         </div>
       )}
     </div>

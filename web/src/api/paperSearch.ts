@@ -1,6 +1,7 @@
 import api from './client'
 import type {
   PaperSearchResponse,
+  SmartSearchResponse,
   SaveToKBResponse,
   DownloadAnalyzeResponse,
 } from '../types'
@@ -11,6 +12,18 @@ export async function searchPapers(params: {
   max_results?: number
 }): Promise<PaperSearchResponse> {
   const { data } = await api.get('/paper-search/search', { params, timeout: 60000 })
+  return data
+}
+
+export async function smartSearchPapers(params: {
+  query: string
+  providers?: string
+  max_results?: number
+  language_hint?: string
+}): Promise<SmartSearchResponse> {
+  const { data } = await api.post('/paper-search/smart-search', params, {
+    timeout: 120000,
+  })
   return data
 }
 

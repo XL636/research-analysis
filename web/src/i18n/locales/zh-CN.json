@@ -392,5 +392,17 @@
   "paperSearch.downloadAnalyze": "下载并分析",
   "paperSearch.viewOriginal": "查看原文",
   "paperSearch.expand": "展开",
-  "paperSearch.collapse": "收起"
+  "paperSearch.collapse": "收起",
+  "paperSearch.modeKeyword": "关键词搜索",
+  "paperSearch.modeSmart": "智能搜索",
+  "paperSearch.smartPlaceholder": "用自然语言描述你想找的论文，例如：近三年关于大语言模型在医学影像中应用的研究",
+  "paperSearch.smartSearch": "智能搜索",
+  "paperSearch.smartSearching": "AI 正在理解意图并搜索相关论文...",
+  "paperSearch.smartError": "智能搜索失败，请重试",
+  "paperSearch.interpretedIntent": "搜索意图",
+  "paperSearch.smartResultCount": "从 {{total}} 篇候选中筛选出 {{shown}} 篇，来自 {{providers}} 个搜索源",
+  "paperSearch.smartStats": "从 {{total}} 篇候选中筛选出 {{filtered}} 篇，来自 {{providers}} 个搜索源",
+  "paperSearch.smartEmptyTitle": "智能搜索学术论文",
+  "paperSearch.smartEmptyDesc": "用自然语言描述你的研究需求，AI 会自动理解意图、生成关键词、多源搜索并智能排序",
+  "paperSearch.results": "条结果"
 }

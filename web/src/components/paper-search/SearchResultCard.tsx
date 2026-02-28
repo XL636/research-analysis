@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { ExternalLink, BookmarkPlus, Download, ChevronDown, ChevronUp, Loader2, Check } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import type { PaperSearchResultItem } from '../../types'
+import type { PaperSearchResultItem, SmartSearchResultItem } from '../../types'
 
 const SOURCE_COLORS: Record<string, string> = {
   pubmed: 'bg-emerald-100 text-emerald-700',
@@ -19,6 +19,16 @@ const SOURCE_LABELS: Record<string, string> = {
   medrxiv: 'medRxiv',
   semantic_scholar: 'Semantic Scholar',
   openalex: 'OpenAlex',
+}
+
+function isSmartResult(r: PaperSearchResultItem): r is SmartSearchResultItem {
+  return 'relevance_score' in r
+}
+
+function scoreBadgeColor(score: number): string {
+  if (score >= 7) return 'bg-green-100 text-green-700 border-green-200'
+  if (score >= 4) return 'bg-yellow-100 text-yellow-700 border-yellow-200'
+  return 'bg-gray-100 text-gray-500 border-gray-200'
 }
 
 interface SearchResultCardProps {
@@ -46,11 +56,18 @@ export default function SearchResultCard({
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-shadow">
-      {/* Header: source badge + title */}
+      {/* Header: source badge + score badge + title */}
       <div className="flex items-start gap-3">
-        <span className={`shrink-0 mt-0.5 px-2 py-0.5 rounded text-xs font-medium ${badgeColor}`}>
-          {sourceLabel}
-        </span>
+        <div className="shrink-0 mt-0.5 flex items-center gap-1.5">
+          <span className={`px-2 py-0.5 rounded text-xs font-medium ${badgeColor}`}>
+            {sourceLabel}
+          </span>
+          {isSmartResult(result) && (
+            <span className={`px-2 py-0.5 rounded text-xs font-semibold border ${scoreBadgeColor(result.relevance_score)}`}>
+              {result.relevance_score.toFixed(1)}
+            </span>
+          )}
+        </div>
         <h3 className="text-base font-semibold text-gray-900 leading-snug flex-1">
           {result.title}
         </h3>
@@ -62,6 +79,13 @@ export default function SearchResultCard({
         {result.year && <span>{result.year}</span>}
         {result.venue && <span className="text-gray-400">| {result.venue}</span>}
       </div>
+
+      {/* Relevance reason */}
+      {isSmartResult(result) && result.relevance_reason && (
+        <p className="mt-2 text-sm text-primary-600 italic">
+          {result.relevance_reason}
+        </p>
+      )}
 
       {/* Abstract */}
       {result.abstract && (

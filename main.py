@@ -843,6 +843,123 @@ def paper_search(
         console.print(f"\n[bold green]已保存 {saved} 条结果到知识库[/bold green]")
 
 
+@app.command(name="smart-search")
+def smart_search(
+    query: str = typer.Argument(..., help="研究问题或主题描述（支持中英文）"),
+    providers: Optional[str] = typer.Option(None, "--providers", "-p", help="搜索源，逗号分隔 (如 arxiv,pubmed,semantic_scholar)"),
+    limit: int = typer.Option(20, "--limit", "-n", help="最大返回结果数"),
+    save: bool = typer.Option(False, "--save", "-s", help="将结果保存到知识库"),
+    json_output: bool = typer.Option(False, "--json", help="JSON 格式输出"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="显示详细日志"),
+) -> None:
+    """智能论文搜索 - LLM 理解意图 + 自动生成关键词 + 多源搜索 + 智能排序."""
+    _setup_logging(verbose)
+
+    from src.agents.paper_search import PaperSearchAgent, SmartSearchInput
+    from src.core.llm_client import LLMClient
+    from src.core.search_client import SearchManager
+
+    llm = LLMClient()
+    sm = SearchManager()
+
+    if not sm.has_providers:
+        console.print("[red]没有可用的搜索源，请检查 config/settings.yaml[/red]")
+        raise typer.Exit(1)
+
+    provider_names = None
+    if providers:
+        provider_names = [p.strip() for p in providers.split(",") if p.strip()]
+
+    agent = PaperSearchAgent(llm_client=llm, search_manager=sm)
+    search_input = SmartSearchInput(
+        query=query,
+        providers=provider_names,
+        max_results=limit,
+    )
+
+    if not json_output:
+        console.print(f"\n[bold]智能搜索: {query}[/bold]")
+        console.print("[dim]正在分析意图并生成关键词...[/dim]")
+
+    output = agent.process(search_input)
+    sm.close()
+
+    if json_output:
+        print(json_lib.dumps(output.model_dump(), ensure_ascii=False, indent=2))
+        if save and output.results:
+            _save_smart_results_to_kb(output.results)
+        return
+
+    # 显示意图和关键词
+    console.print(f"\n[bold cyan]理解意图:[/bold cyan] {output.interpreted_intent}")
+    console.print(f"[bold cyan]生成关键词:[/bold cyan] {', '.join(output.generated_keywords)}")
+    console.print(f"[dim]候选论文: {output.total_candidates} 篇 | 筛选后: {len(output.results)} 篇 | 搜索源: {', '.join(output.providers_used)}[/dim]\n")
+
+    if not output.results:
+        console.print("[yellow]未找到相关论文[/yellow]")
+        return
+
+    # Rich Table 输出
+    table = Table(title=f"智能搜索结果 ({len(output.results)} 条)")
+    table.add_column("#", style="dim", width=3)
+    table.add_column("评分", width=5)
+    table.add_column("标题", style="cyan", max_width=45)
+    table.add_column("年份", style="green", width=5)
+    table.add_column("来源", style="magenta", width=10)
+    table.add_column("相关性", style="dim", max_width=35)
+
+    for i, r in enumerate(output.results, 1):
+        # 评分颜色
+        score = r.relevance_score
+        if score >= 0.8:
+            score_str = f"[bold green]{score:.1f}[/bold green]"
+        elif score >= 0.5:
+            score_str = f"[yellow]{score:.1f}[/yellow]"
+        else:
+            score_str = f"[dim]{score:.1f}[/dim]"
+
+        title = r.title[:43] + "..." if len(r.title) > 45 else r.title
+        reason = r.relevance_reason[:33] + "..." if len(r.relevance_reason) > 35 else r.relevance_reason
+        source_label = {
+            "pubmed": "PubMed",
+            "arxiv": "arXiv",
+            "biorxiv": "bioRxiv",
+            "medrxiv": "medRxiv",
+            "semantic_scholar": "S2",
+            "openalex": "OpenAlex",
+        }.get(r.source, r.source)
+        table.add_row(str(i), score_str, title, r.year, source_label, reason)
+
+    console.print(table)
+
+    if save:
+        saved = _save_smart_results_to_kb(output.results)
+        console.print(f"\n[bold green]已保存 {saved} 条结果到知识库[/bold green]")
+
+
+def _save_smart_results_to_kb(results) -> int:
+    """Save smart search results to knowledge base."""
+    from src.store.knowledge_base import KnowledgeBase
+
+    kb = KnowledgeBase()
+    saved = 0
+    for r in results:
+        try:
+            kb.store_metadata_only(
+                title=r.title,
+                summary=r.abstract,
+                doi=r.doi,
+                url=r.url,
+                authors=r.authors,
+                year=r.year,
+                source_type="smart_search",
+            )
+            saved += 1
+        except Exception as e:
+            logger.warning(f"Failed to save '{r.title}': {e}")
+    return saved
+
+
 def _save_search_results_to_kb(results) -> int:
     """Save search results to knowledge base."""
     from src.store.knowledge_base import KnowledgeBase

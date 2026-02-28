@@ -392,5 +392,17 @@
   "paperSearch.downloadAnalyze": "Download & Analyze",
   "paperSearch.viewOriginal": "View Original",
   "paperSearch.expand": "Expand",
-  "paperSearch.collapse": "Collapse"
+  "paperSearch.collapse": "Collapse",
+  "paperSearch.modeKeyword": "Keyword Search",
+  "paperSearch.modeSmart": "Smart Search",
+  "paperSearch.smartPlaceholder": "Describe the papers you are looking for in natural language, e.g.: recent studies on LLM applications in medical imaging",
+  "paperSearch.smartSearch": "Smart Search",
+  "paperSearch.smartSearching": "AI is interpreting your intent and searching...",
+  "paperSearch.smartError": "Smart search failed, please try again",
+  "paperSearch.interpretedIntent": "Search Intent",
+  "paperSearch.smartResultCount": "{{shown}} results filtered from {{total}} candidates across {{providers}} sources",
+  "paperSearch.smartStats": "{{filtered}} results filtered from {{total}} candidates across {{providers}} sources",
+  "paperSearch.smartEmptyTitle": "Smart Paper Search",
+  "paperSearch.smartEmptyDesc": "Describe your research needs in natural language — AI will understand your intent, generate keywords, search multiple sources, and rank results",
+  "paperSearch.results": "results"
 }

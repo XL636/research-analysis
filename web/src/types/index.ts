@@ -416,6 +416,20 @@ export interface PaperSearchResponse {
   providers_used: string[]
 }
 
+export interface SmartSearchResultItem extends PaperSearchResultItem {
+  relevance_score: number
+  relevance_reason: string
+}
+
+export interface SmartSearchResponse {
+  query: string
+  interpreted_intent: string
+  generated_keywords: string[]
+  results: SmartSearchResultItem[]
+  total_candidates: number
+  providers_used: string[]
+}
+
 export interface SaveToKBResponse {
   success: boolean
   doc_id: number

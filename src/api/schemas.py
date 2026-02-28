@@ -470,6 +470,37 @@ class PaperSearchResponse(BaseModel):
     providers_used: list[str] = Field(default_factory=list)
 
 
+# --- Smart Search ---
+
+class SmartSearchRequest(BaseModel):
+    query: str
+    providers: list[str] | None = None
+    max_results: int = 20
+    language_hint: str = "auto"
+
+
+class SmartSearchResultItem(BaseModel):
+    title: str = ""
+    authors: str = ""
+    year: str = ""
+    venue: str = ""
+    doi: str = ""
+    url: str = ""
+    abstract: str = ""
+    source: str = ""
+    relevance_score: float = 0.0
+    relevance_reason: str = ""
+
+
+class SmartSearchResponse(BaseModel):
+    query: str = ""
+    interpreted_intent: str = ""
+    generated_keywords: list[str] = Field(default_factory=list)
+    results: list[SmartSearchResultItem] = Field(default_factory=list)
+    total_candidates: int = 0
+    providers_used: list[str] = Field(default_factory=list)
+
+
 class SaveToKBRequest(BaseModel):
     title: str
     authors: str = ""
