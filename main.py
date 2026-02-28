@@ -766,6 +766,105 @@ def get_analysis_cli(
     print(analysis.model_dump_json(indent=2))
 
 
+@app.command(name="paper-search")
+def paper_search(
+    query: str = typer.Argument(..., help="搜索关键词"),
+    providers: Optional[str] = typer.Option(None, "--providers", "-p", help="搜索源，逗号分隔 (如 arxiv,pubmed,biorxiv,semantic_scholar,openalex)"),
+    limit: int = typer.Option(5, "--limit", "-n", help="每个搜索源的最大结果数"),
+    save: bool = typer.Option(False, "--save", "-s", help="将结果保存到知识库"),
+    json_output: bool = typer.Option(False, "--json", help="JSON 格式输出"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="显示详细日志"),
+) -> None:
+    """搜索外部学术论文 (PubMed, arXiv, bioRxiv, Semantic Scholar, OpenAlex)."""
+    _setup_logging(verbose)
+
+    from src.core.search_client import SearchManager
+
+    sm = SearchManager()
+
+    provider_names = None
+    if providers:
+        provider_names = [p.strip() for p in providers.split(",") if p.strip()]
+
+    if not sm.has_providers:
+        console.print("[red]没有可用的搜索源，请检查 config/settings.yaml[/red]")
+        raise typer.Exit(1)
+
+    console.print(f"\n[bold]搜索论文: {query}[/bold]")
+    if provider_names:
+        console.print(f"[dim]搜索源: {', '.join(provider_names)}[/dim]")
+
+    results = sm.search(query, max_results=limit, provider_names=provider_names)
+    sm.close()
+
+    if not results:
+        if json_output:
+            print("[]")
+        else:
+            console.print("[yellow]未找到相关论文[/yellow]")
+        return
+
+    if json_output:
+        data = [r.model_dump() for r in results]
+        print(json_lib.dumps(data, ensure_ascii=False, indent=2))
+        if save:
+            _save_search_results_to_kb(results)
+        return
+
+    # Rich Table output
+    table = Table(title=f"论文搜索结果 ({len(results)} 条)")
+    table.add_column("#", style="dim", width=3)
+    table.add_column("标题", style="cyan", max_width=50)
+    table.add_column("作者", style="dim", max_width=30)
+    table.add_column("年份", style="green", width=5)
+    table.add_column("来源", style="magenta", width=10)
+    table.add_column("URL", style="blue", max_width=40)
+
+    for i, r in enumerate(results, 1):
+        # Truncate title for table display
+        title = r.title[:48] + "..." if len(r.title) > 50 else r.title
+        authors = r.authors[:28] + "..." if len(r.authors) > 30 else r.authors
+        url = r.url[:38] + "..." if len(r.url) > 40 else r.url
+        source_label = {
+            "pubmed": "PubMed",
+            "arxiv": "arXiv",
+            "biorxiv": "bioRxiv",
+            "medrxiv": "medRxiv",
+            "semantic_scholar": "S2",
+            "openalex": "OpenAlex",
+        }.get(r.source, r.source)
+        table.add_row(str(i), title, authors, r.year, source_label, url)
+
+    console.print(table)
+
+    if save:
+        saved = _save_search_results_to_kb(results)
+        console.print(f"\n[bold green]已保存 {saved} 条结果到知识库[/bold green]")
+
+
+def _save_search_results_to_kb(results) -> int:
+    """Save search results to knowledge base."""
+    from src.store.knowledge_base import KnowledgeBase
+
+    kb = KnowledgeBase()
+    saved = 0
+    for r in results:
+        try:
+            kb.store_metadata_only(
+                title=r.title,
+                summary=r.abstract,
+                doi=r.doi,
+                url=r.url,
+                authors=r.authors,
+                year=r.year,
+                source_type="paper_search",
+            )
+            saved += 1
+        except Exception as e:
+            logger.warning(f"Failed to save '{r.title}': {e}")
+    return saved
+
+
 @app.command()
 def serve(
     host: str = typer.Option("0.0.0.0", "--host", "-h", help="绑定地址"),
