@@ -528,6 +528,27 @@
 
 ---
 
+## Phase 11: 智能搜索增强 `[待开发]`
+
+- [x] **T-85: 智能论文搜索 — 固定流水线版**
+  - 目标：新增 smart-search 命令和 API，LLM 理解意图 → 生成关键词 → 多源搜索 → LLM 筛选排序
+  - 步骤：① PaperSearchAgent + SmartSearchInput/Output 数据模型 → ② paper_search_system.txt prompt → ③ settings.yaml paper_search: glm-4-flash → ④ CLI smart-search 命令 → ⑤ API POST /smart-search → ⑥ 前端模式切换 + 意图卡片 + 评分徽章 → ⑦ i18n
+  - 验收：CLI/API/Web 三端可用，关键词搜索不受影响
+  - 依赖：T-84
+
+- [ ] **T-86: 智能论文搜索 — 真 Agent 化改造**
+  - 目标：将 PaperSearchAgent 从固定三步流水线改造为自主决策循环 Agent
+  - 改造点：
+    - ① **循环决策**：`while not satisfied` → LLM 观察当前结果 → 决定下一步动作（换关键词/追加搜索/深读摘要/停止）
+    - ② **自适应 Provider 选择**：根据查询领域自动选择搜索源（医学→PubMed，CS→arXiv，综合→全部）
+    - ③ **反馈迭代**：第一轮结果不佳时自动调整关键词策略重搜
+    - ④ **渐进式深读**：粗筛后对高分论文深读摘要，发现新术语后追加搜索
+    - ⑤ **终止条件**：达到质量阈值或最大迭代次数后停止
+  - 验收：相比固定流水线，结果覆盖度和相关性明显提升，能处理模糊/宽泛查询
+  - 依赖：T-85
+
+---
+
 ## Backlog（想法池）
 
 > 以下是未排期的功能点和优化想法，随时可以追加。进入开发时移到对应 Phase。
