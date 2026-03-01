@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Tests
+- Paper Search: 新增 TestCrossRefProvider 测试类（8 个测试）— 解析、year 边界、错误处理 (T-87)
+- Paper Search: 新增 TestCLIResourceCleanup 测试类（2 个测试）— 异常后资源清理 (T-87)
+- Paper Search: 修复 provider 注册测试 5→6 个 provider (T-87)
+- 全量测试 198 passed (pytest) + 30 passed (vitest)
+
 ### Fixed
 - Web: 论文搜索结果切换页面后不再消失 — 模块级缓存保存搜索状态，Smart Search 数据额外缓存 (T-87)
 - Paper Search: SearchResultCard 补全 crossref 来源的颜色和标签映射 (T-87)

@@ -105,8 +105,9 @@
 | Knowledge Base (含 export/import) | 15 | 全部通过 |
 | CLI (batch/export/import) | 12 | 全部通过 |
 | API Routes (FastAPI) | 14 | 全部通过 |
+| Paper Search (Provider + CLI + Registration) | 32 | 全部通过 |
 | Frontend Components (Vitest) | 30 | 全部通过 |
-| **合计** | **196** | **全部通过** |
+| **合计** | **198** | **全部通过** |
 
 ## 里程碑进度
 
