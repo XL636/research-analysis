@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Fixed
+- Web: 论文搜索结果切换页面后不再消失 — 模块级缓存保存搜索状态，Smart Search 数据额外缓存 (T-87)
 - Paper Search: SearchResultCard 补全 crossref 来源的颜色和标签映射 (T-87)
 - Paper Search: CrossRef 日期解析增加 None/非 int 类型安全检查，防止显示 "None" (T-87)
 - Smart Search: Agent 深读 prompt 摘要分隔符添加换行，改善 LLM 边界识别 (T-87)
