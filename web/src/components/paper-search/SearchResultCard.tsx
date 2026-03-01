@@ -10,6 +10,7 @@ const SOURCE_COLORS: Record<string, string> = {
   medrxiv: 'bg-sky-100 text-sky-700',
   semantic_scholar: 'bg-purple-100 text-purple-700',
   openalex: 'bg-orange-100 text-orange-700',
+  crossref: 'bg-teal-100 text-teal-700',
 }
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -19,6 +20,7 @@ const SOURCE_LABELS: Record<string, string> = {
   medrxiv: 'medRxiv',
   semantic_scholar: 'Semantic Scholar',
   openalex: 'OpenAlex',
+  crossref: 'CrossRef',
 }
 
 function isSmartResult(r: PaperSearchResultItem): r is SmartSearchResultItem {

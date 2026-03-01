@@ -553,7 +553,8 @@ class CrossRefProvider(SearchProvider):
                 # Year
                 published = item.get("published") or item.get("published-print") or item.get("published-online") or {}
                 date_parts = published.get("date-parts", [[]])
-                year = str(date_parts[0][0]) if date_parts and date_parts[0] else ""
+                year_val = date_parts[0][0] if date_parts and date_parts[0] else None
+                year = str(year_val) if year_val and isinstance(year_val, int) else ""
 
                 # Venue
                 container = item.get("container-title") or []

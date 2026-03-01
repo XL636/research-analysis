@@ -795,8 +795,10 @@ def paper_search(
         if provider_names:
             console.print(f"[dim]搜索源: {', '.join(provider_names)}[/dim]")
 
-    results = sm.search(query, max_results=limit, provider_names=provider_names)
-    sm.close()
+    try:
+        results = sm.search(query, max_results=limit, provider_names=provider_names)
+    finally:
+        sm.close()
 
     if not results:
         if json_output:
@@ -882,8 +884,10 @@ def smart_search(
         console.print(f"\n[bold]智能搜索: {query}[/bold]")
         console.print("[dim]正在分析意图并生成关键词...[/dim]")
 
-    output = agent.process(search_input)
-    sm.close()
+    try:
+        output = agent.process(search_input)
+    finally:
+        sm.close()
 
     if json_output:
         print(json_lib.dumps(output.model_dump(), ensure_ascii=False, indent=2))
