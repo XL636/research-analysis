@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { Search, Loader2, Sparkles, Zap, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { usePaperSearch, useSmartSearch, useSaveToKB, useDownloadAndAnalyze } from '../hooks/usePaperSearch'
@@ -17,23 +17,37 @@ const PROVIDER_OPTIONS = [
   { key: 'crossref', labelKey: 'paperSearch.providerCrossRef' },
 ]
 
+// Module-level cache: survives component unmount, cleared on page refresh
+let pageCache: {
+  inputValue: string
+  searchQuery: string
+  selectedProviders: string[]
+  maxResults: number
+  searchMode: SearchMode
+  smartData: SmartSearchResponse | null
+  savedMap: Record<string, number>
+} | null = null
+
 export default function PaperSearchPage() {
   const { t } = useTranslation()
-  const [inputValue, setInputValue] = useState('')
-  const [searchQuery, setSearchQuery] = useState('')
-  const [selectedProviders, setSelectedProviders] = useState<string[]>([])
-  const [maxResults, setMaxResults] = useState(5)
-  const [searchMode, setSearchMode] = useState<SearchMode>('keyword')
+  const [inputValue, setInputValue] = useState(pageCache?.inputValue ?? '')
+  const [searchQuery, setSearchQuery] = useState(pageCache?.searchQuery ?? '')
+  const [selectedProviders, setSelectedProviders] = useState<string[]>(pageCache?.selectedProviders ?? [])
+  const [maxResults, setMaxResults] = useState(pageCache?.maxResults ?? 5)
+  const [searchMode, setSearchMode] = useState<SearchMode>(pageCache?.searchMode ?? 'keyword')
 
   // Track per-result save/download state
-  const [savedMap, setSavedMap] = useState<Record<string, number>>({})
+  const [savedMap, setSavedMap] = useState<Record<string, number>>(pageCache?.savedMap ?? {})
   const [savingKey, setSavingKey] = useState<string | null>(null)
   const [downloadingKey, setDownloadingKey] = useState<string | null>(null)
   const [showSearchLog, setShowSearchLog] = useState(false)
 
+  // Cached smart search data (useMutation data is lost on unmount)
+  const [cachedSmartData, setCachedSmartData] = useState<SmartSearchResponse | null>(pageCache?.smartData ?? null)
+
   const providersParam = selectedProviders.length > 0 ? selectedProviders.join(',') : undefined
 
-  // Keyword search (useQuery)
+  // Keyword search (useQuery) — React Query cache handles persistence
   const { data: keywordData, isLoading: keywordLoading, isFetching: keywordFetching } = usePaperSearch({
     q: searchMode === 'keyword' ? searchQuery : '',
     providers: providersParam,
@@ -42,7 +56,31 @@ export default function PaperSearchPage() {
 
   // Smart search (useMutation)
   const smartSearch = useSmartSearch()
-  const smartData = smartSearch.data as SmartSearchResponse | undefined
+  const smartData = (smartSearch.data as SmartSearchResponse | undefined) ?? cachedSmartData
+
+  // Sync smart search mutation result to local cache
+  const lastMutationData = useRef(smartSearch.data)
+  useEffect(() => {
+    if (smartSearch.data && smartSearch.data !== lastMutationData.current) {
+      lastMutationData.current = smartSearch.data
+      setCachedSmartData(smartSearch.data as SmartSearchResponse)
+    }
+  }, [smartSearch.data])
+
+  // Persist state to module-level cache on unmount
+  useEffect(() => {
+    return () => {
+      pageCache = {
+        inputValue,
+        searchQuery,
+        selectedProviders,
+        maxResults,
+        searchMode,
+        smartData: cachedSmartData,
+        savedMap,
+      }
+    }
+  })
 
   const saveMutation = useSaveToKB()
   const downloadMutation = useDownloadAndAnalyze()
@@ -51,6 +89,7 @@ export default function PaperSearchPage() {
     if (!inputValue.trim()) return
     setSavedMap({})
     if (searchMode === 'smart') {
+      setCachedSmartData(null)
       smartSearch.mutate({
         query: inputValue.trim(),
         providers: providersParam,
@@ -129,7 +168,7 @@ export default function PaperSearchPage() {
     ? (smartData?.results || [])
     : (keywordData?.results || [])
   const hasSearched = isSmartMode
-    ? (smartSearch.isSuccess || smartSearch.isError)
+    ? (smartSearch.isSuccess || smartSearch.isError || !!cachedSmartData)
     : !!searchQuery
 
   return (
@@ -141,7 +180,7 @@ export default function PaperSearchPage() {
       {/* Mode toggle */}
       <div className="flex gap-1 p-1 bg-gray-100 rounded-lg w-fit mb-4">
         <button
-          onClick={() => { setSearchMode('keyword'); setSearchQuery(''); smartSearch.reset() }}
+          onClick={() => { setSearchMode('keyword'); setSearchQuery(''); smartSearch.reset(); setCachedSmartData(null) }}
           className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
             searchMode === 'keyword'
               ? 'bg-white text-gray-900 shadow-sm'
@@ -152,7 +191,7 @@ export default function PaperSearchPage() {
           {t('paperSearch.modeKeyword')}
         </button>
         <button
-          onClick={() => { setSearchMode('smart'); setSearchQuery(''); smartSearch.reset() }}
+          onClick={() => { setSearchMode('smart'); setSearchQuery(''); smartSearch.reset(); setCachedSmartData(null) }}
           className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
             searchMode === 'smart'
               ? 'bg-white text-gray-900 shadow-sm'
