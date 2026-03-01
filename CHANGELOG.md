@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- Paper Search: SearchResultCard 补全 crossref 来源的颜色和标签映射 (T-87)
+- Paper Search: CrossRef 日期解析增加 None/非 int 类型安全检查，防止显示 "None" (T-87)
+- Smart Search: Agent 深读 prompt 摘要分隔符添加换行，改善 LLM 边界识别 (T-87)
+- CLI: paper-search 和 smart-search 命令用 try/finally 防止 httpx Client 资源泄漏 (T-87)
+
 ### Added
 - Paper Search: 新增 CrossRef 搜索源 — 完全免费，覆盖有 DOI 的中文期刊论文 (T-87)
 - Paper Search: 中文查询自动生成知网/万方/百度学术快捷搜索链接 (T-87)
