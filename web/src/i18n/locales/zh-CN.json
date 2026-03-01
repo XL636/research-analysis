@@ -404,5 +404,12 @@
   "paperSearch.smartStats": "从 {{total}} 篇候选中筛选出 {{filtered}} 篇，来自 {{providers}} 个搜索源",
   "paperSearch.smartEmptyTitle": "智能搜索学术论文",
   "paperSearch.smartEmptyDesc": "用自然语言描述你的研究需求，AI 会自动理解意图、生成关键词、多源搜索并智能排序",
-  "paperSearch.results": "条结果"
+  "paperSearch.results": "条结果",
+  "paperSearch.iterationsUsed": "搜索迭代",
+  "paperSearch.iterationRounds": "{{count}} 轮",
+  "paperSearch.qualityScore": "质量评分",
+  "paperSearch.domainDetected": "检测领域",
+  "paperSearch.searchLog": "搜索日志",
+  "paperSearch.showSearchLog": "查看搜索过程",
+  "paperSearch.hideSearchLog": "收起搜索过程"
 }

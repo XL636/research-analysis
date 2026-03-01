@@ -892,8 +892,19 @@ def smart_search(
 
     # 显示意图和关键词
     console.print(f"\n[bold cyan]理解意图:[/bold cyan] {output.interpreted_intent}")
+    if output.domain_detected:
+        console.print(f"[bold cyan]检测领域:[/bold cyan] {output.domain_detected}")
     console.print(f"[bold cyan]生成关键词:[/bold cyan] {', '.join(output.generated_keywords)}")
-    console.print(f"[dim]候选论文: {output.total_candidates} 篇 | 筛选后: {len(output.results)} 篇 | 搜索源: {', '.join(output.providers_used)}[/dim]\n")
+    stats_parts = [
+        f"候选论文: {output.total_candidates} 篇",
+        f"筛选后: {len(output.results)} 篇",
+        f"搜索源: {', '.join(output.providers_used)}",
+    ]
+    if output.iterations_used > 1:
+        stats_parts.append(f"迭代: {output.iterations_used} 轮")
+    if output.quality_score > 0:
+        stats_parts.append(f"质量: {output.quality_score:.0%}")
+    console.print(f"[dim]{' | '.join(stats_parts)}[/dim]\n")
 
     if not output.results:
         console.print("[yellow]未找到相关论文[/yellow]")

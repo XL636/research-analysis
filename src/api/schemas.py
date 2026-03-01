@@ -499,6 +499,11 @@ class SmartSearchResponse(BaseModel):
     results: list[SmartSearchResultItem] = Field(default_factory=list)
     total_candidates: int = 0
     providers_used: list[str] = Field(default_factory=list)
+    # T-86: Agent 化新增字段
+    iterations_used: int = 1
+    search_log: list[str] = Field(default_factory=list)
+    domain_detected: str = ""
+    quality_score: float = 0.0
 
 
 class SaveToKBRequest(BaseModel):

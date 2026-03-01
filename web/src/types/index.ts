@@ -428,6 +428,11 @@ export interface SmartSearchResponse {
   results: SmartSearchResultItem[]
   total_candidates: number
   providers_used: string[]
+  // T-86: Agent 化新增字段
+  iterations_used?: number
+  search_log?: string[]
+  domain_detected?: string
+  quality_score?: number
 }
 
 export interface SaveToKBResponse {

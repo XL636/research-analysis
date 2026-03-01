@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { Search, Loader2, Sparkles, Zap } from 'lucide-react'
+import { Search, Loader2, Sparkles, Zap, ChevronDown, ChevronUp } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { usePaperSearch, useSmartSearch, useSaveToKB, useDownloadAndAnalyze } from '../hooks/usePaperSearch'
 import SearchResultCard from '../components/paper-search/SearchResultCard'
@@ -28,6 +28,7 @@ export default function PaperSearchPage() {
   const [savedMap, setSavedMap] = useState<Record<string, number>>({})
   const [savingKey, setSavingKey] = useState<string | null>(null)
   const [downloadingKey, setDownloadingKey] = useState<string | null>(null)
+  const [showSearchLog, setShowSearchLog] = useState(false)
 
   const providersParam = selectedProviders.length > 0 ? selectedProviders.join(',') : undefined
 
@@ -257,13 +258,49 @@ export default function PaperSearchPage() {
               </span>
             ))}
           </div>
-          <p className="mt-2 text-xs text-violet-500">
-            {t('paperSearch.smartStats', {
-              total: smartData.total_candidates,
-              filtered: smartData.results.length,
-              providers: smartData.providers_used.length,
-            })}
-          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-violet-500">
+            <span>
+              {t('paperSearch.smartStats', {
+                total: smartData.total_candidates,
+                filtered: smartData.results.length,
+                providers: smartData.providers_used.length,
+              })}
+            </span>
+            {(smartData.iterations_used ?? 1) > 1 && (
+              <span className="px-1.5 py-0.5 bg-violet-100 text-violet-700 rounded">
+                {t('paperSearch.iterationsUsed')}: {t('paperSearch.iterationRounds', { count: smartData.iterations_used })}
+              </span>
+            )}
+            {smartData.domain_detected && (
+              <span className="px-1.5 py-0.5 bg-violet-100 text-violet-700 rounded">
+                {t('paperSearch.domainDetected')}: {smartData.domain_detected}
+              </span>
+            )}
+            {(smartData.quality_score ?? 0) > 0 && (
+              <span className="px-1.5 py-0.5 bg-violet-100 text-violet-700 rounded">
+                {t('paperSearch.qualityScore')}: {((smartData.quality_score ?? 0) * 100).toFixed(0)}%
+              </span>
+            )}
+          </div>
+          {/* 搜索日志折叠面板（仅多轮时显示） */}
+          {smartData.search_log && smartData.search_log.length > 0 && (smartData.iterations_used ?? 1) > 1 && (
+            <div className="mt-3 border-t border-violet-200 pt-2">
+              <button
+                onClick={() => setShowSearchLog(!showSearchLog)}
+                className="flex items-center gap-1 text-xs text-violet-600 hover:text-violet-800 transition-colors"
+              >
+                {showSearchLog ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                {showSearchLog ? t('paperSearch.hideSearchLog') : t('paperSearch.showSearchLog')}
+              </button>
+              {showSearchLog && (
+                <div className="mt-2 p-2 bg-violet-100/50 rounded-lg text-xs text-violet-700 font-mono space-y-0.5 max-h-48 overflow-y-auto">
+                  {smartData.search_log.map((log, i) => (
+                    <div key={i}>{log}</div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 

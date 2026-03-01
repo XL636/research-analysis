@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Smart Search: PaperSearchAgent Agent 化改造 — 自主决策循环（最多 4 轮迭代），自动评估结果质量并决定下一步动作 (T-86)
+- Smart Search: 自适应 Provider 选择 — 根据检测到的研究领域（medical/CS/AI 等）自动选择最优搜索源 (T-86)
+- Smart Search: 深读迭代 — 读取高分论文摘要提取领域术语，追加搜索发现更多相关论文 (T-86)
+- Smart Search: SmartSearchOutput 新增 iterations_used/search_log/domain_detected/quality_score 字段 (T-86)
+- API: SmartSearchResponse 新增 4 个可选字段，向后兼容 (T-86)
+- Web: 智能搜索意图卡片增加迭代次数、检测领域、质量评分标签 (T-86)
+- Web: 多轮搜索时显示搜索日志折叠面板，展示 Agent 决策过程 (T-86)
+- CLI: smart-search 输出增加领域检测、迭代轮数、质量评分信息 (T-86)
+- i18n: 新增 8 个迭代相关翻译 key (zh-CN + en) (T-86)
 - Paper Search: 论文搜索功能 — 支持 PubMed、arXiv、bioRxiv/medRxiv、Semantic Scholar、OpenAlex 五大学术数据库 (T-81~T-84)
 - Paper Search: PubMedProvider — NCBI E-utilities API (esearch + efetch) (T-81)
 - Paper Search: BiorxivProvider — Europe PMC REST API，同时覆盖 bioRxiv + medRxiv (T-81)

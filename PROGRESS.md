@@ -6,9 +6,9 @@
 
 | 指标 | 值 |
 |------|-----|
-| 当前阶段 | Phase 10 论文搜索 |
-| 总任务数 | 84 |
-| 已完成 | 84 |
+| 当前阶段 | Phase 11 智能搜索增强 |
+| 总任务数 | 86 |
+| 已完成 | 86 |
 | 进行中 | 0 |
 | 完成率 | 100% |
 
@@ -20,6 +20,7 @@
 
 | 日期 | Task | 说明 |
 |------|------|------|
+| 2026-03-01 | T-86 | PaperSearchAgent Agent化改造 — 决策循环+自适应Provider+深读迭代+前端迭代面板+CLI增强 |
 | 2026-02-28 | T-84 | 前端论文搜索页面 — PaperSearchPage + SearchResultCard + API 客户端 + hook + 路由 + 侧边栏 + i18n |
 | 2026-02-28 | T-83 | CLI paper-search 命令 — 搜索外部学术论文，Rich Table 输出，--save 保存到知识库 |
 | 2026-02-28 | T-82 | 论文搜索 API 端点 — search/save-to-kb/download-and-analyze 3 个 REST 端点 |

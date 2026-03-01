@@ -404,5 +404,12 @@
   "paperSearch.smartStats": "{{filtered}} results filtered from {{total}} candidates across {{providers}} sources",
   "paperSearch.smartEmptyTitle": "Smart Paper Search",
   "paperSearch.smartEmptyDesc": "Describe your research needs in natural language — AI will understand your intent, generate keywords, search multiple sources, and rank results",
-  "paperSearch.results": "results"
+  "paperSearch.results": "results",
+  "paperSearch.iterationsUsed": "Search Iterations",
+  "paperSearch.iterationRounds": "{{count}} rounds",
+  "paperSearch.qualityScore": "Quality Score",
+  "paperSearch.domainDetected": "Detected Domain",
+  "paperSearch.searchLog": "Search Log",
+  "paperSearch.showSearchLog": "Show search process",
+  "paperSearch.hideSearchLog": "Hide search process"
 }
