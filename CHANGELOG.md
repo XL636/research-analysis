@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Paper Search: 新增 CrossRef 搜索源 — 完全免费，覆盖有 DOI 的中文期刊论文 (T-87)
+- Paper Search: 中文查询自动生成知网/万方/百度学术快捷搜索链接 (T-87)
+- Web: 智能搜索结果页新增琥珀色中文数据库链接卡片 (T-87)
+- Web: Provider 按钮新增 CrossRef 选项 (T-87)
+- CLI: smart-search 中文查询末尾输出数据库链接 (T-87)
+- i18n: 新增 CrossRef + 中文数据库相关翻译 key (T-87)
 - Smart Search: PaperSearchAgent Agent 化改造 — 自主决策循环（最多 4 轮迭代），自动评估结果质量并决定下一步动作 (T-86)
 - Smart Search: 自适应 Provider 选择 — 根据检测到的研究领域（medical/CS/AI 等）自动选择最优搜索源 (T-86)
 - Smart Search: 深读迭代 — 读取高分论文摘要提取领域术语，追加搜索发现更多相关论文 (T-86)

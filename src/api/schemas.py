@@ -504,6 +504,8 @@ class SmartSearchResponse(BaseModel):
     search_log: list[str] = Field(default_factory=list)
     domain_detected: str = ""
     quality_score: float = 0.0
+    # T-87: 中文数据库快捷链接
+    chinese_db_links: list[dict[str, str]] = Field(default_factory=list)
 
 
 class SaveToKBRequest(BaseModel):

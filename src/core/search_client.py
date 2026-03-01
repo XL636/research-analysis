@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 import xml.etree.ElementTree as ET
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -37,7 +38,7 @@ class ExternalSearchResult(BaseModel):
     doi: str = ""
     url: str = ""
     abstract: str = ""
-    source: str = ""  # "semantic_scholar" | "openalex" | "arxiv" | "pubmed" | "biorxiv" | "medrxiv"
+    source: str = ""  # "semantic_scholar" | "openalex" | "arxiv" | "pubmed" | "biorxiv" | "medrxiv" | "crossref"
 
 
 # --- Provider ABC ---
@@ -501,6 +502,93 @@ class BiorxivProvider(SearchProvider):
             return []
 
 
+# --- CrossRef ---
+
+
+class CrossRefProvider(SearchProvider):
+    """CrossRef API — free, covers DOI-registered papers including Chinese journals."""
+
+    def search(self, query: str, max_results: int = 5) -> list[ExternalSearchResult]:
+        try:
+            limit = min(max_results, self.config.max_results)
+            headers: dict[str, str] = {}
+            email = os.environ.get(self.config.api_key_env or "", "")
+            params: dict[str, str | int] = {
+                "query": query,
+                "rows": limit,
+                "select": "title,author,published,container-title,DOI,URL,abstract",
+            }
+            if email:
+                params["mailto"] = email
+                headers["User-Agent"] = f"research-analysis/0.1 (mailto:{email})"
+
+            resp = self._client.get(
+                f"{self.config.base_url}/works",
+                params=params,
+                headers=headers,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+
+            items = data.get("message", {}).get("items", [])
+            results: list[ExternalSearchResult] = []
+
+            for item in items:
+                # Title
+                title_list = item.get("title") or []
+                title = title_list[0] if title_list else ""
+
+                # Authors
+                author_list = item.get("author") or []
+                author_names = []
+                for a in author_list[:5]:
+                    family = a.get("family", "")
+                    given = a.get("given", "")
+                    if family:
+                        author_names.append(f"{family} {given}".strip())
+                author_str = ", ".join(author_names)
+                if len(author_list) > 5:
+                    author_str += " et al."
+
+                # Year
+                published = item.get("published") or item.get("published-print") or item.get("published-online") or {}
+                date_parts = published.get("date-parts", [[]])
+                year = str(date_parts[0][0]) if date_parts and date_parts[0] else ""
+
+                # Venue
+                container = item.get("container-title") or []
+                venue = container[0] if container else ""
+
+                # DOI & URL
+                doi = item.get("DOI", "") or ""
+                url = item.get("URL", "") or ""
+                if not url and doi:
+                    url = f"https://doi.org/{doi}"
+
+                # Abstract — may contain JATS XML tags
+                raw_abstract = item.get("abstract", "") or ""
+                abstract = re.sub(r"<[^>]+>", "", raw_abstract).strip()[:500]
+
+                if not title:
+                    continue
+
+                results.append(ExternalSearchResult(
+                    title=title,
+                    authors=author_str,
+                    year=year,
+                    venue=venue,
+                    doi=doi,
+                    url=url,
+                    abstract=abstract,
+                    source="crossref",
+                ))
+            return results
+
+        except Exception as e:
+            logger.warning(f"CrossRef search failed for '{query}': {e}")
+            return []
+
+
 # --- SearchManager (aggregator) ---
 
 _CONFIG_PATH = Path("config/settings.yaml")
@@ -511,6 +599,7 @@ _PROVIDER_CLASSES: dict[str, type[SearchProvider]] = {
     "arxiv": ArxivProvider,
     "pubmed": PubMedProvider,
     "biorxiv": BiorxivProvider,
+    "crossref": CrossRefProvider,
 }
 
 

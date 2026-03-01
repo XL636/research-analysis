@@ -547,6 +547,21 @@
   - 验收：相比固定流水线，结果覆盖度和相关性明显提升，能处理模糊/宽泛查询
   - 依赖：T-85
 
+- [x] **T-87: CrossRef 搜索源 + 中文数据库快捷链接**
+  - 目标：新增 CrossRef 搜索源覆盖有 DOI 的中文论文；中文查询时自动生成知网/万方/百度学术快捷链接
+  - 步骤：
+    - ① CrossRefProvider 实现（CrossRef Works API，JATS XML 清理）
+    - ② settings.yaml + _PROVIDER_CLASSES 注册
+    - ③ _DOMAIN_PROVIDERS 所有领域追加 crossref
+    - ④ _contains_chinese + _build_chinese_db_links 工具函数
+    - ⑤ SmartSearchOutput / SmartSearchResponse 新增 chinese_db_links 字段
+    - ⑥ API 路由透传 chinese_db_links
+    - ⑦ 前端 CrossRef 按钮 + 琥珀色中文数据库链接卡片
+    - ⑧ i18n 3+3 个新 key
+    - ⑨ CLI source_label 更新 + 中文链接输出
+  - 验收：CrossRef 搜索可用，中文查询触发快捷链接
+  - 依赖：T-86
+
 ---
 
 ## Backlog（想法池）

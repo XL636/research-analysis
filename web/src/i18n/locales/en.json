@@ -148,6 +148,9 @@
   "settings.searchProviderDesc.pubmed": "Biomedical literature database with 36M+ citations",
   "settings.searchProviderDesc.biorxiv": "Biology and medical preprint servers",
   "settings.searchProviderKeyHint.pubmed": "Add NCBI API key for higher rate limits (works without key)",
+  "settings.searchProvider.crossref": "CrossRef",
+  "settings.searchProviderDesc.crossref": "Open scholarly metadata, covers Chinese journal papers with DOIs",
+  "settings.searchProviderKeyHint.crossref": "Add your email to enter the Polite Pool for faster responses",
   "settings.searchProviderEnabled": "Enable this search provider",
   "settings.searchProviderKeyHint.semantic_scholar": "Add an API key for higher rate limits (works without key at free tier)",
   "settings.searchProviderKeyHint.openalex": "Add your email to enter the Polite Pool for faster responses",
@@ -411,5 +414,8 @@
   "paperSearch.domainDetected": "Detected Domain",
   "paperSearch.searchLog": "Search Log",
   "paperSearch.showSearchLog": "Show search process",
-  "paperSearch.hideSearchLog": "Hide search process"
+  "paperSearch.hideSearchLog": "Hide search process",
+  "paperSearch.providerCrossRef": "CrossRef",
+  "paperSearch.chineseDbTitle": "Chinese Database Quick Search",
+  "paperSearch.chineseDbDesc": "Chinese query detected — search directly in Chinese academic databases"
 }

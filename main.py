@@ -833,6 +833,7 @@ def paper_search(
             "medrxiv": "medRxiv",
             "semantic_scholar": "S2",
             "openalex": "OpenAlex",
+            "crossref": "CrossRef",
         }.get(r.source, r.source)
         table.add_row(str(i), title, authors, r.year, source_label, url)
 
@@ -938,10 +939,17 @@ def smart_search(
             "medrxiv": "medRxiv",
             "semantic_scholar": "S2",
             "openalex": "OpenAlex",
+            "crossref": "CrossRef",
         }.get(r.source, r.source)
         table.add_row(str(i), score_str, title, r.year, source_label, reason)
 
     console.print(table)
+
+    # T-87: 中文数据库快捷链接
+    if output.chinese_db_links:
+        console.print("\n[bold amber]中文数据库快捷搜索:[/bold amber]")
+        for link in output.chinese_db_links:
+            console.print(f"  [blue]{link['name']}[/blue]: {link['url']}")
 
     if save:
         saved = _save_smart_results_to_kb(output.results)

@@ -421,6 +421,11 @@ export interface SmartSearchResultItem extends PaperSearchResultItem {
   relevance_reason: string
 }
 
+export interface ChineseDbLink {
+  name: string
+  url: string
+}
+
 export interface SmartSearchResponse {
   query: string
   interpreted_intent: string
@@ -433,6 +438,8 @@ export interface SmartSearchResponse {
   search_log?: string[]
   domain_detected?: string
   quality_score?: number
+  // T-87: 中文数据库快捷链接
+  chinese_db_links?: ChineseDbLink[]
 }
 
 export interface SaveToKBResponse {

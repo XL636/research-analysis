@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import json
+import re
 import time
 from dataclasses import dataclass, field
 from typing import Any
+from urllib.parse import quote
 
 from loguru import logger
 from pydantic import BaseModel, Field
@@ -56,26 +58,59 @@ class SmartSearchOutput(BaseModel):
     search_log: list[str] = Field(default_factory=list)
     domain_detected: str = ""
     quality_score: float = 0.0
+    # T-87: 中文数据库快捷链接
+    chinese_db_links: list[dict[str, str]] = Field(default_factory=list)
 
 
 # --- Internal State ---
 
 _DOMAIN_PROVIDERS: dict[str, list[str]] = {
-    "medical": ["pubmed", "semantic_scholar"],
-    "biomedical": ["pubmed", "biorxiv", "semantic_scholar"],
-    "biology": ["pubmed", "biorxiv", "semantic_scholar"],
-    "neuroscience": ["pubmed", "semantic_scholar"],
-    "chemistry": ["pubmed", "semantic_scholar", "openalex"],
-    "computer_science": ["arxiv", "semantic_scholar", "openalex"],
-    "ai": ["arxiv", "semantic_scholar", "openalex"],
-    "machine_learning": ["arxiv", "semantic_scholar"],
-    "physics": ["arxiv", "openalex"],
-    "mathematics": ["arxiv", "openalex"],
-    "general": ["semantic_scholar", "openalex", "arxiv", "pubmed"],
+    "medical": ["pubmed", "semantic_scholar", "crossref"],
+    "biomedical": ["pubmed", "biorxiv", "semantic_scholar", "crossref"],
+    "biology": ["pubmed", "biorxiv", "semantic_scholar", "crossref"],
+    "neuroscience": ["pubmed", "semantic_scholar", "crossref"],
+    "chemistry": ["pubmed", "semantic_scholar", "openalex", "crossref"],
+    "computer_science": ["arxiv", "semantic_scholar", "openalex", "crossref"],
+    "ai": ["arxiv", "semantic_scholar", "openalex", "crossref"],
+    "machine_learning": ["arxiv", "semantic_scholar", "crossref"],
+    "physics": ["arxiv", "openalex", "crossref"],
+    "mathematics": ["arxiv", "openalex", "crossref"],
+    "general": ["semantic_scholar", "openalex", "arxiv", "pubmed", "crossref"],
 }
 
 _MAX_ITERATIONS = 4
 _TIMEOUT_SECONDS = 100  # API 120s - 20s buffer
+
+# --- T-87: 中文数据库快捷链接 ---
+
+_CHINESE_DB_LINKS: list[dict[str, str]] = [
+    {
+        "name": "中国知网 (CNKI)",
+        "url_template": "https://search.cnki.com.cn/Search/Result?content={query}",
+    },
+    {
+        "name": "万方数据",
+        "url_template": "https://s.wanfangdata.com.cn/paper?q={query}",
+    },
+    {
+        "name": "百度学术",
+        "url_template": "https://xueshu.baidu.com/s?wd={query}",
+    },
+]
+
+
+def _contains_chinese(text: str) -> bool:
+    """检测文本是否包含中文字符."""
+    return bool(re.search(r"[\u4e00-\u9fff]", text))
+
+
+def _build_chinese_db_links(query: str) -> list[dict[str, str]]:
+    """为中文查询生成知网/万方/百度学术的快捷搜索链接."""
+    encoded = quote(query)
+    return [
+        {"name": item["name"], "url": item["url_template"].format(query=encoded)}
+        for item in _CHINESE_DB_LINKS
+    ]
 
 
 @dataclass
@@ -193,6 +228,11 @@ class PaperSearchAgent(BaseAgent):
         # 去重关键词
         unique_keywords = list(dict.fromkeys(state.all_keywords))
 
+        # T-87: 中文查询时生成快捷链接
+        chinese_db_links: list[dict[str, str]] = []
+        if _contains_chinese(input_data.query):
+            chinese_db_links = _build_chinese_db_links(input_data.query)
+
         return SmartSearchOutput(
             query=input_data.query,
             interpreted_intent=state.intent,
@@ -204,6 +244,7 @@ class PaperSearchAgent(BaseAgent):
             search_log=state.search_log,
             domain_detected=state.domain,
             quality_score=last_quality,
+            chinese_db_links=chinese_db_links,
         )
 
     # --- Phase 0: 意图理解 ---

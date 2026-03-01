@@ -104,6 +104,7 @@ async def smart_search(req: SmartSearchRequest):
             search_log=output.search_log,
             domain_detected=output.domain_detected,
             quality_score=output.quality_score,
+            chinese_db_links=output.chinese_db_links,
         )
     except Exception as e:
         logger.error(f"Smart search failed: {e}")

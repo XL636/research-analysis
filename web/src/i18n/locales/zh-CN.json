@@ -148,6 +148,9 @@
   "settings.searchProviderDesc.pubmed": "生物医学文献数据库，覆盖 3600 万+ 引用",
   "settings.searchProviderDesc.biorxiv": "生物学和医学预印本服务器",
   "settings.searchProviderKeyHint.pubmed": "配置 NCBI API Key 可提升请求限额（不配置也可使用）",
+  "settings.searchProvider.crossref": "CrossRef",
+  "settings.searchProviderDesc.crossref": "开放学术元数据，覆盖有 DOI 的中文期刊论文",
+  "settings.searchProviderKeyHint.crossref": "配置邮箱可进入 Polite Pool，获得更快响应速度",
   "settings.searchProviderEnabled": "启用此搜索源",
   "settings.searchProviderKeyHint.semantic_scholar": "配置 API Key 可提升请求限额（不配置也可使用免费额度）",
   "settings.searchProviderKeyHint.openalex": "配置邮箱可进入 Polite Pool，获得更快响应速度",
@@ -411,5 +414,8 @@
   "paperSearch.domainDetected": "检测领域",
   "paperSearch.searchLog": "搜索日志",
   "paperSearch.showSearchLog": "查看搜索过程",
-  "paperSearch.hideSearchLog": "收起搜索过程"
+  "paperSearch.hideSearchLog": "收起搜索过程",
+  "paperSearch.providerCrossRef": "CrossRef",
+  "paperSearch.chineseDbTitle": "中文数据库快捷搜索",
+  "paperSearch.chineseDbDesc": "检测到中文查询，以下链接可直接在国内学术数据库中搜索"
 }

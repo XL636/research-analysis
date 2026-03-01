@@ -108,6 +108,12 @@ search_providers:
     enabled: true
     timeout: 15
     max_results: 5
+  crossref:
+    base_url: https://api.crossref.org
+    api_key_env: CROSSREF_EMAIL
+    enabled: true
+    timeout: 15
+    max_results: 5
 analysis_modes:
   quick:
     label_zh: 快速摘要

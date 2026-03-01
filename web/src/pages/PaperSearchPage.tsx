@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { Search, Loader2, Sparkles, Zap, ChevronDown, ChevronUp } from 'lucide-react'
+import { Search, Loader2, Sparkles, Zap, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { usePaperSearch, useSmartSearch, useSaveToKB, useDownloadAndAnalyze } from '../hooks/usePaperSearch'
 import SearchResultCard from '../components/paper-search/SearchResultCard'
@@ -14,6 +14,7 @@ const PROVIDER_OPTIONS = [
   { key: 'arxiv', labelKey: 'paperSearch.providerArxiv' },
   { key: 'semantic_scholar', labelKey: 'paperSearch.providerS2' },
   { key: 'openalex', labelKey: 'paperSearch.providerOpenAlex' },
+  { key: 'crossref', labelKey: 'paperSearch.providerCrossRef' },
 ]
 
 export default function PaperSearchPage() {
@@ -301,6 +302,32 @@ export default function PaperSearchPage() {
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Chinese DB links card */}
+      {!showLoading && isSmartMode && smartData?.chinese_db_links && smartData.chinese_db_links.length > 0 && (
+        <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+          <p className="text-sm font-medium text-amber-900 mb-1">
+            {t('paperSearch.chineseDbTitle')}
+          </p>
+          <p className="text-xs text-amber-600 mb-3">
+            {t('paperSearch.chineseDbDesc')}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {smartData.chinese_db_links.map((link, i) => (
+              <a
+                key={i}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm bg-amber-100 text-amber-800 rounded-lg hover:bg-amber-200 transition-colors"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                {link.name}
+              </a>
+            ))}
+          </div>
         </div>
       )}
 
