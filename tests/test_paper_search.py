@@ -9,6 +9,7 @@ import pytest
 
 from src.core.search_client import (
     BiorxivProvider,
+    CrossRefProvider,
     ExternalSearchResult,
     PubMedProvider,
     SearchManager,
@@ -490,7 +491,283 @@ class TestProviderRegistration:
         assert "biorxiv" in _PROVIDER_CLASSES
         assert _PROVIDER_CLASSES["biorxiv"] is BiorxivProvider
 
-    def test_all_five_providers_registered(self):
+    def test_all_providers_registered(self):
         from src.core.search_client import _PROVIDER_CLASSES
-        expected = {"semantic_scholar", "openalex", "arxiv", "pubmed", "biorxiv"}
+        expected = {"semantic_scholar", "openalex", "arxiv", "pubmed", "biorxiv", "crossref"}
         assert set(_PROVIDER_CLASSES.keys()) == expected
+
+    def test_crossref_registered(self):
+        from src.core.search_client import _PROVIDER_CLASSES
+        assert "crossref" in _PROVIDER_CLASSES
+        assert _PROVIDER_CLASSES["crossref"] is CrossRefProvider
+
+
+# --- CrossRef Provider ---
+
+
+CROSSREF_RESPONSE = {
+    "message": {
+        "items": [
+            {
+                "title": ["Deep Learning for Text Classification"],
+                "author": [
+                    {"family": "Zhang", "given": "Wei"},
+                    {"family": "Li", "given": "Ming"},
+                ],
+                "published": {"date-parts": [[2024]]},
+                "container-title": ["Nature Machine Intelligence"],
+                "DOI": "10.1038/s42256-024-001",
+                "URL": "https://doi.org/10.1038/s42256-024-001",
+                "abstract": "<jats:p>A novel approach to text classification.</jats:p>",
+            },
+            {
+                "title": [""],
+                "author": [],
+                "published": {"date-parts": [[2023]]},
+                "container-title": [],
+                "DOI": "",
+                "URL": "",
+                "abstract": "",
+            },
+            {
+                "title": ["Transformer Architectures Survey"],
+                "author": [
+                    {"family": "Smith", "given": "John"},
+                    {"family": "Brown", "given": "Alice"},
+                    {"family": "Chen", "given": "Lei"},
+                    {"family": "Wang", "given": "Jun"},
+                    {"family": "Park", "given": "Soo"},
+                    {"family": "Kim", "given": "Hyun"},
+                ],
+                "published": {"date-parts": [[2023]]},
+                "container-title": ["ACL Proceedings"],
+                "DOI": "10.18653/v1/2023.acl-001",
+                "URL": "",
+                "abstract": "",
+            },
+        ]
+    }
+}
+
+
+class TestCrossRefProvider:
+    def _make_provider(self) -> CrossRefProvider:
+        config = SearchProviderConfig(
+            name="crossref",
+            base_url="https://api.crossref.org",
+            api_key_env="",
+            enabled=True,
+            timeout=15,
+            max_results=10,
+        )
+        return CrossRefProvider(config)
+
+    def test_search_parses_results(self):
+        provider = self._make_provider()
+
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = CROSSREF_RESPONSE
+        mock_resp.raise_for_status = MagicMock()
+
+        provider._client.get = MagicMock(return_value=mock_resp)
+
+        results = provider.search("deep learning", max_results=5)
+
+        # Empty-title entry should be skipped
+        assert len(results) == 2
+
+        # First result
+        assert results[0].title == "Deep Learning for Text Classification"
+        assert results[0].source == "crossref"
+        assert results[0].year == "2024"
+        assert results[0].doi == "10.1038/s42256-024-001"
+        assert results[0].venue == "Nature Machine Intelligence"
+        assert "Zhang Wei" in results[0].authors
+        # Abstract JATS tags should be stripped
+        assert "<jats:p>" not in results[0].abstract
+        assert "novel approach" in results[0].abstract
+
+    def test_search_truncates_authors(self):
+        provider = self._make_provider()
+
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = CROSSREF_RESPONSE
+        mock_resp.raise_for_status = MagicMock()
+
+        provider._client.get = MagicMock(return_value=mock_resp)
+
+        results = provider.search("test", max_results=5)
+
+        # Third item (index 1 after skip) has 6 authors → truncate to 5 + et al.
+        assert "et al." in results[1].authors
+
+    def test_search_url_fallback_to_doi(self):
+        provider = self._make_provider()
+
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = CROSSREF_RESPONSE
+        mock_resp.raise_for_status = MagicMock()
+
+        provider._client.get = MagicMock(return_value=mock_resp)
+
+        results = provider.search("test", max_results=5)
+
+        # Third item has empty URL but has DOI → should fallback
+        assert results[1].url == "https://doi.org/10.18653/v1/2023.acl-001"
+
+    def test_year_parsing_none_value(self):
+        """Bug 2: date_parts: [[None]] should not produce 'None' string."""
+        provider = self._make_provider()
+
+        data = {
+            "message": {
+                "items": [
+                    {
+                        "title": ["Paper A"],
+                        "author": [],
+                        "published": {"date-parts": [[None]]},
+                        "container-title": [],
+                        "DOI": "10.1000/a",
+                        "URL": "",
+                        "abstract": "",
+                    }
+                ]
+            }
+        }
+
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = data
+        mock_resp.raise_for_status = MagicMock()
+        provider._client.get = MagicMock(return_value=mock_resp)
+
+        results = provider.search("test")
+        assert results[0].year == ""
+
+    def test_year_parsing_empty_inner(self):
+        """date_parts: [[]] should return empty string."""
+        provider = self._make_provider()
+
+        data = {
+            "message": {
+                "items": [
+                    {
+                        "title": ["Paper B"],
+                        "author": [],
+                        "published": {"date-parts": [[]]},
+                        "container-title": [],
+                        "DOI": "10.1000/b",
+                        "URL": "",
+                        "abstract": "",
+                    }
+                ]
+            }
+        }
+
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = data
+        mock_resp.raise_for_status = MagicMock()
+        provider._client.get = MagicMock(return_value=mock_resp)
+
+        results = provider.search("test")
+        assert results[0].year == ""
+
+    def test_year_parsing_string_value(self):
+        """date_parts: [["2024"]] (string not int) should return empty string."""
+        provider = self._make_provider()
+
+        data = {
+            "message": {
+                "items": [
+                    {
+                        "title": ["Paper C"],
+                        "author": [],
+                        "published": {"date-parts": [["2024"]]},
+                        "container-title": [],
+                        "DOI": "10.1000/c",
+                        "URL": "",
+                        "abstract": "",
+                    }
+                ]
+            }
+        }
+
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = data
+        mock_resp.raise_for_status = MagicMock()
+        provider._client.get = MagicMock(return_value=mock_resp)
+
+        results = provider.search("test")
+        assert results[0].year == ""
+
+    def test_year_parsing_normal(self):
+        """date_parts: [[2024]] (int) should return '2024'."""
+        provider = self._make_provider()
+
+        data = {
+            "message": {
+                "items": [
+                    {
+                        "title": ["Paper D"],
+                        "author": [],
+                        "published": {"date-parts": [[2024]]},
+                        "container-title": [],
+                        "DOI": "10.1000/d",
+                        "URL": "",
+                        "abstract": "",
+                    }
+                ]
+            }
+        }
+
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = data
+        mock_resp.raise_for_status = MagicMock()
+        provider._client.get = MagicMock(return_value=mock_resp)
+
+        results = provider.search("test")
+        assert results[0].year == "2024"
+
+    def test_search_handles_error(self):
+        provider = self._make_provider()
+        provider._client.get = MagicMock(side_effect=Exception("Timeout"))
+
+        results = provider.search("test")
+        assert results == []
+
+
+# --- CLI resource cleanup (try/finally) ---
+
+
+class TestCLIResourceCleanup:
+    @patch("src.core.search_client.SearchManager")
+    def test_paper_search_closes_on_exception(self, MockSM):
+        """paper-search should call sm.close() even when search raises."""
+        from typer.testing import CliRunner
+        from main import app
+
+        mock_sm = MockSM.return_value
+        mock_sm.has_providers = True
+        mock_sm.search.side_effect = RuntimeError("boom")
+
+        runner = CliRunner()
+        result = runner.invoke(app, ["paper-search", "test"])
+
+        # close() must be called despite the exception
+        mock_sm.close.assert_called_once()
+
+    @patch("src.core.search_client.SearchManager")
+    def test_smart_search_closes_on_exception(self, MockSM):
+        """smart-search should call sm.close() even when agent.process raises."""
+        from typer.testing import CliRunner
+        from main import app
+
+        mock_sm = MockSM.return_value
+        mock_sm.has_providers = True
+
+        runner = CliRunner()
+
+        with patch("src.agents.paper_search.PaperSearchAgent") as MockAgent:
+            MockAgent.return_value.process.side_effect = RuntimeError("boom")
+            result = runner.invoke(app, ["smart-search", "test"])
+
+        mock_sm.close.assert_called_once()
