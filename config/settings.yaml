@@ -66,7 +66,7 @@ agent_models:
   research: glm-5
   polish: glm-5
   reader: glm-4-plus
-  paper_search: glm-4-flash
+  paper_search: glm-4-plus
 pipeline:
   max_review_retries: 2
   output_dir: ./output
