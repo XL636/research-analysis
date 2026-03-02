@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- Paper Search: 论文 AI 对话 — 搜索结果卡片新增"AI 对话"按钮，弹出模态对话框，基于论文元数据 SSE 流式问答
+- Paper Search: API POST /api/paper-search/chat — SSE 流式端点，构造论文上下文 system prompt + glm-4-flash 模型
+- Knowledge Base: 知识库详情页新增「论文原文」Tab — 当存在 parsed_text 时显示第三个 Tab，展示解析后的完整原文
+- Knowledge Base: documents 表新增 parsed_text 列 — Pipeline 分析时自动存储 ParsedDocument.full_text
+- i18n: 新增 6 个翻译 key — tabOriginal + 5 个 paperSearch.chat* key (zh-CN + en)
+
+### Fixed
+- Paper Search: 修复「分析并存入知识库」不生效 — PDF 下载失败时改用 LLM 从摘要生成结构化 AnalysisResult，不再走 store_metadata_only 空白路径
+- Paper Search: save-to-kb 端点同步修复 — 用 _analyze_from_metadata + store_analysis 替代 store_metadata_only
+
 ### Tests
 - Paper Search: 新增 TestCrossRefProvider 测试类（8 个测试）— 解析、year 边界、错误处理 (T-87)
 - Paper Search: 新增 TestCLIResourceCleanup 测试类（2 个测试）— 异常后资源清理 (T-87)
