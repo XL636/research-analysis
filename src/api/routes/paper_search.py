@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 from src.api.schemas import (
     DownloadAnalyzeRequest,
     DownloadAnalyzeResponse,
+    DownloadPdfRequest,
     PaperChatRequest,
     PaperSearchResponse,
     PaperSearchResult,
@@ -37,6 +38,7 @@ def _analyze_from_metadata(
     doi: str = "",
     url: str = "",
     source: str = "",
+    mode: str = "quick",
 ) -> "AnalysisResult":
     """用 LLM 从标题+摘要生成结构化 AnalysisResult."""
     from src.core.llm_client import LLMClient
@@ -44,27 +46,59 @@ def _analyze_from_metadata(
 
     try:
         llm = LLMClient()
-        prompt = (
-            "请基于以下论文信息生成结构化分析（JSON 格式）。\n\n"
+
+        meta_block = (
             f"标题：{title}\n"
             f"作者：{authors}\n"
             f"年份：{year}\n"
             f"期刊/会议：{venue}\n"
-            f"摘要：{abstract}\n\n"
-            "返回 JSON，字段如下：\n"
-            "{\n"
-            '  "document_title": "论文标题",\n'
-            '  "paper_type": "empirical/theoretical/survey/opinion/technical 之一",\n'
-            '  "summary": "200字左右的中文摘要总结",\n'
-            '  "key_findings": [{"finding": "发现", "evidence": "证据", "significance": "意义"}],\n'
-            '  "methodology": {"approach": "方法", "strengths": ["优势"], "limitations": ["局限"]},\n'
-            '  "contributions": ["贡献1", "贡献2"],\n'
-            '  "limitations": ["局限1"],\n'
-            '  "future_work": ["方向1"],\n'
-            '  "tags": ["标签1", "标签2"],\n'
-            '  "relevance_score": 7.0\n'
-            "}"
+            f"摘要：{abstract}\n"
         )
+
+        if mode in ("standard", "deep"):
+            depth_hint = "深入" if mode == "deep" else "较详细"
+            prompt = (
+                f"请基于以下论文信息进行{depth_hint}的结构化分析（JSON 格式）。\n\n"
+                f"{meta_block}\n"
+                "要求：\n"
+                "1. summary 至少 400 字，涵盖背景、方法、结果和意义\n"
+                "2. key_findings 至少列出 3 项，每项含 finding/evidence/significance\n"
+                "3. methodology 需详细描述 approach，并给出具体的 strengths 和 limitations\n"
+                "4. contributions 至少 3 项\n"
+                "5. limitations 和 future_work 各至少 2 项\n"
+                "6. tags 至少 4 个关键词\n\n"
+                "返回 JSON，字段如下：\n"
+                "{\n"
+                '  "document_title": "论文标题",\n'
+                '  "paper_type": "empirical/theoretical/survey/opinion/technical 之一",\n'
+                '  "summary": "详细中文摘要总结",\n'
+                '  "key_findings": [{"finding": "发现", "evidence": "证据", "significance": "意义"}],\n'
+                '  "methodology": {"approach": "方法", "strengths": ["优势"], "limitations": ["局限"]},\n'
+                '  "contributions": ["贡献1", "贡献2", "贡献3"],\n'
+                '  "limitations": ["局限1", "局限2"],\n'
+                '  "future_work": ["方向1", "方向2"],\n'
+                '  "tags": ["标签1", "标签2", "标签3", "标签4"],\n'
+                '  "relevance_score": 7.0\n'
+                "}"
+            )
+        else:
+            prompt = (
+                "请基于以下论文信息生成结构化分析（JSON 格式）。\n\n"
+                f"{meta_block}\n"
+                "返回 JSON，字段如下：\n"
+                "{\n"
+                '  "document_title": "论文标题",\n'
+                '  "paper_type": "empirical/theoretical/survey/opinion/technical 之一",\n'
+                '  "summary": "200字左右的中文摘要总结",\n'
+                '  "key_findings": [{"finding": "发现", "evidence": "证据", "significance": "意义"}],\n'
+                '  "methodology": {"approach": "方法", "strengths": ["优势"], "limitations": ["局限"]},\n'
+                '  "contributions": ["贡献1", "贡献2"],\n'
+                '  "limitations": ["局限1"],\n'
+                '  "future_work": ["方向1"],\n'
+                '  "tags": ["标签1", "标签2"],\n'
+                '  "relevance_score": 7.0\n'
+                "}"
+            )
 
         result_dict = llm.chat_json("glm-4-flash", [{"role": "user", "content": prompt}])
         # 确保 document_title 存在
@@ -175,8 +209,32 @@ async def save_to_kb(req: SaveToKBRequest):
     from src.store.knowledge_base import KnowledgeBase
 
     try:
+        # 非 quick 模式：先尝试下载 PDF + Pipeline 完整分析
+        if req.mode in ("standard", "deep") and req.url:
+            try:
+                pdf_path = await asyncio.to_thread(_try_download_pdf, req.url, req.title)
+                if pdf_path and pdf_path.exists():
+                    from src.core.engine import Pipeline
+
+                    pipeline = Pipeline(mode=req.mode)
+                    await asyncio.to_thread(
+                        pipeline.run,
+                        input_files=[str(pdf_path)],
+                        output_format="markdown",
+                        synthesize=False,
+                    )
+                    kb = KnowledgeBase()
+                    results = kb.search(req.title, limit=1)
+                    doc_id = results[0]["id"] if results else 0
+                    return SaveToKBResponse(
+                        success=True, doc_id=doc_id,
+                        message=f"已下载 PDF 并以{req.mode}模式分析入库",
+                    )
+            except Exception as e:
+                logger.warning(f"Pipeline analysis in save_to_kb failed: {e}, falling back to metadata analysis")
+
+        # quick 模式 或 Pipeline 失败 fallback：用 LLM 从元数据生成分析
         kb = KnowledgeBase()
-        # 用 LLM 从元数据生成结构化分析后存储，避免 metadata_only 导致详情页空白
         analysis = _analyze_from_metadata(
             title=req.title,
             abstract=req.abstract,
@@ -186,12 +244,14 @@ async def save_to_kb(req: SaveToKBRequest):
             doi=req.doi,
             url=req.url,
             source=req.source,
+            mode=req.mode,
         )
         doc_id = kb.store_analysis(
             analysis=analysis,
             file_path=req.url or "",
             file_type="paper_search",
             source_type="paper_search",
+            parsed_text=req.abstract or "",
         )
         return SaveToKBResponse(success=True, doc_id=doc_id, message="已保存到知识库")
     except Exception as e:
@@ -225,7 +285,7 @@ def _do_download_and_analyze(req: DownloadAnalyzeRequest) -> DownloadAnalyzeResp
         try:
             from src.core.engine import Pipeline
 
-            pipeline = Pipeline(mode="quick")
+            pipeline = Pipeline(mode=req.mode)
             pipeline.run(
                 input_files=[str(pdf_path)],
                 output_format="markdown",
@@ -257,12 +317,14 @@ def _do_download_and_analyze(req: DownloadAnalyzeRequest) -> DownloadAnalyzeResp
                     doi=req.doi,
                     url=req.url,
                     source=req.source,
+                    mode=req.mode,
                 )
                 doc_id = kb.store_analysis(
                     analysis=analysis,
                     file_path=req.url or "",
                     file_type="paper_search",
                     source_type="paper_search",
+                    parsed_text=req.abstract or "",
                 )
                 return DownloadAnalyzeResponse(
                     success=True,
@@ -301,12 +363,14 @@ def _do_download_and_analyze(req: DownloadAnalyzeRequest) -> DownloadAnalyzeResp
                 doi=req.doi,
                 url=req.url,
                 source=req.source,
+                mode=req.mode,
             )
             doc_id = kb.store_analysis(
                 analysis=analysis,
                 file_path=req.url or "",
                 file_type="paper_search",
                 source_type="paper_search",
+                parsed_text=req.abstract or "",
             )
             return DownloadAnalyzeResponse(
                 success=True,
@@ -396,6 +460,17 @@ async def paper_chat(req: PaperChatRequest):
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+@router.post("/download-pdf")
+async def download_pdf(req: DownloadPdfRequest):
+    """直接下载论文 PDF 文件."""
+    from fastapi.responses import FileResponse
+
+    pdf_path = await asyncio.to_thread(_try_download_pdf, req.url, req.title or "paper")
+    if not pdf_path or not pdf_path.exists():
+        raise HTTPException(status_code=404, detail="PDF 下载失败")
+    return FileResponse(pdf_path, filename=pdf_path.name, media_type="application/pdf")
 
 
 def _try_download_pdf(url: str, title: str) -> Path | None:

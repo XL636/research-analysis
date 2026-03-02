@@ -429,5 +429,10 @@
   "paperSearch.chatWith": "与 AI 讨论: {{title}}",
   "paperSearch.chatEmpty": "向 AI 提问关于这篇论文的问题",
   "paperSearch.chatHint": "例如：这篇论文的主要创新点是什么？",
-  "paperSearch.chatPlaceholder": "输入你的问题..."
+  "paperSearch.chatPlaceholder": "输入你的问题...",
+  "paperSearch.modeQuick": "快速",
+  "paperSearch.modeStandard": "标准",
+  "paperSearch.modeDeep": "深度",
+  "paperSearch.downloadPdf": "下载 PDF",
+  "paperSearch.downloadPdfFailed": "PDF 下载失败"
 }

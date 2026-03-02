@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import { Search, Loader2, Sparkles, Zap, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { usePaperSearch, useSmartSearch, useSaveToKB, useDownloadAndAnalyze } from '../hooks/usePaperSearch'
+import { downloadPdf } from '../api/paperSearch'
 import SearchResultCard from '../components/paper-search/SearchResultCard'
 import PaperChatDialog from '../components/paper-search/PaperChatDialog'
 import type { PaperSearchResultItem, SmartSearchResponse } from '../types'
@@ -41,6 +42,7 @@ export default function PaperSearchPage() {
   const [savedMap, setSavedMap] = useState<Record<string, number>>(pageCache?.savedMap ?? {})
   const [savingKey, setSavingKey] = useState<string | null>(null)
   const [downloadingKey, setDownloadingKey] = useState<string | null>(null)
+  const [downloadingPdfKey, setDownloadingPdfKey] = useState<string | null>(null)
   const [showSearchLog, setShowSearchLog] = useState(false)
   const [chatPaper, setChatPaper] = useState<PaperSearchResultItem | null>(null)
 
@@ -117,7 +119,7 @@ export default function PaperSearchPage() {
 
   const resultKey = (r: PaperSearchResultItem) => `${r.source}:${r.title}`
 
-  const handleSave = async (result: PaperSearchResultItem) => {
+  const handleSave = async (result: PaperSearchResultItem, mode: string) => {
     const key = resultKey(result)
     setSavingKey(key)
     try {
@@ -130,6 +132,7 @@ export default function PaperSearchPage() {
         url: result.url,
         abstract: result.abstract,
         source: result.source,
+        mode,
       })
       if (resp.success) {
         setSavedMap(prev => ({ ...prev, [key]: resp.doc_id }))
@@ -139,7 +142,7 @@ export default function PaperSearchPage() {
     }
   }
 
-  const handleDownload = async (result: PaperSearchResultItem) => {
+  const handleDownload = async (result: PaperSearchResultItem, mode: string) => {
     const key = resultKey(result)
     setDownloadingKey(key)
     try {
@@ -152,12 +155,25 @@ export default function PaperSearchPage() {
         venue: result.venue,
         abstract: result.abstract,
         source: result.source,
+        mode,
       })
       if (resp.success && resp.doc_id) {
         setSavedMap(prev => ({ ...prev, [key]: resp.doc_id }))
       }
     } finally {
       setDownloadingKey(null)
+    }
+  }
+
+  const handleDownloadPdf = async (result: PaperSearchResultItem) => {
+    const key = resultKey(result)
+    setDownloadingPdfKey(key)
+    try {
+      await downloadPdf(result.url, result.title)
+    } catch {
+      // toast or silent fail — user sees browser download fail
+    } finally {
+      setDownloadingPdfKey(null)
     }
   }
 
@@ -390,9 +406,11 @@ export default function PaperSearchPage() {
                 result={result}
                 onSave={handleSave}
                 onDownload={handleDownload}
+                onDownloadPdf={handleDownloadPdf}
                 onChat={setChatPaper}
                 isSaving={savingKey === resultKey(result)}
                 isDownloading={downloadingKey === resultKey(result)}
+                isDownloadingPdf={downloadingPdfKey === resultKey(result)}
                 savedDocId={savedMap[resultKey(result)] ?? null}
               />
             ))}

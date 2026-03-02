@@ -525,6 +525,7 @@ class SaveToKBRequest(BaseModel):
     url: str = ""
     abstract: str = ""
     source: str = ""
+    mode: str = "quick"
 
 
 class SaveToKBResponse(BaseModel):
@@ -542,6 +543,12 @@ class DownloadAnalyzeRequest(BaseModel):
     venue: str = ""
     abstract: str = ""
     source: str = ""
+    mode: str = "quick"
+
+
+class DownloadPdfRequest(BaseModel):
+    url: str
+    title: str = ""
 
 
 class DownloadAnalyzeResponse(BaseModel):

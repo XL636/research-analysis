@@ -36,6 +36,7 @@ export async function saveToKB(paper: {
   url?: string
   abstract?: string
   source?: string
+  mode?: string
 }): Promise<SaveToKBResponse> {
   const { data } = await api.post('/paper-search/save-to-kb', paper)
   return data
@@ -50,11 +51,27 @@ export async function downloadAndAnalyze(paper: {
   venue?: string
   abstract?: string
   source?: string
+  mode?: string
 }): Promise<DownloadAnalyzeResponse> {
   const { data } = await api.post('/paper-search/download-and-analyze', paper, {
     timeout: 120000,
   })
   return data
+}
+
+export async function downloadPdf(url: string, title: string): Promise<void> {
+  const resp = await fetch('/api/paper-search/download-pdf', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url, title }),
+  })
+  if (!resp.ok) throw new Error(`Download failed: ${resp.status}`)
+  const blob = await resp.blob()
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = title.slice(0, 60) + '.pdf'
+  a.click()
+  URL.revokeObjectURL(a.href)
 }
 
 // --- Paper Chat SSE ---

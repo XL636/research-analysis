@@ -429,5 +429,10 @@
   "paperSearch.chatWith": "Chat about: {{title}}",
   "paperSearch.chatEmpty": "Ask AI about this paper",
   "paperSearch.chatHint": "e.g., What are the key contributions of this paper?",
-  "paperSearch.chatPlaceholder": "Type your question..."
+  "paperSearch.chatPlaceholder": "Type your question...",
+  "paperSearch.modeQuick": "Quick",
+  "paperSearch.modeStandard": "Standard",
+  "paperSearch.modeDeep": "Deep",
+  "paperSearch.downloadPdf": "Download PDF",
+  "paperSearch.downloadPdfFailed": "PDF download failed"
 }
