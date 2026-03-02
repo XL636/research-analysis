@@ -50,6 +50,9 @@ class SearchProvider(ABC):
     def __init__(self, config: SearchProviderConfig) -> None:
         self.config = config
         self._client = httpx.Client(timeout=config.timeout, follow_redirects=True)
+        self._consecutive_failures: int = 0
+        self._circuit_open: bool = False  # True = skip this provider
+        self._circuit_breaker_limit: int = 2
 
     @property
     def name(self) -> str:
@@ -86,6 +89,8 @@ class SemanticScholarProvider(SearchProvider):
     """Semantic Scholar Academic Graph API."""
 
     def search(self, query: str, max_results: int = 5) -> list[ExternalSearchResult]:
+        if self._circuit_open:
+            return []
         try:
             headers: dict[str, str] = {}
             api_key = os.environ.get(self.config.api_key_env or "", "")
@@ -140,6 +145,14 @@ class SemanticScholarProvider(SearchProvider):
                 ))
             return results
 
+        except httpx.HTTPStatusError as e:
+            self._consecutive_failures += 1
+            if self._consecutive_failures >= self._circuit_breaker_limit:
+                self._circuit_open = True
+                logger.warning(f"Semantic Scholar circuit-breaker tripped after {self._consecutive_failures} failures, skipping future requests")
+            else:
+                logger.warning(f"Semantic Scholar search failed for '{query}': {e}")
+            return []
         except Exception as e:
             logger.warning(f"Semantic Scholar search failed for '{query}': {e}")
             return []

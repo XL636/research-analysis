@@ -26,7 +26,7 @@ export async function smartSearchPapers(params: {
     providers: params.providers ? params.providers.split(',') : undefined,
   }
   const { data } = await api.post('/paper-search/smart-search', body, {
-    timeout: 120000,
+    timeout: 300000,
   })
   return data
 }
