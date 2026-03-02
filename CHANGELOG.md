@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- KnowledgeBase: 消除重复初始化 — 类级 `_initialized_paths` 标志 + double-checked locking，同一 db_path 只执行一次迁移 SQL
+- Pipeline: doc_id 穿透 — `_analyze_and_store()` 返回 `(AnalysisResult, doc_id)` 元组，`PipelineContext.doc_ids` 收集，`_pipeline_analyze` 不再需要 FTS 搜索找回 doc_id
+
 ### Added
 - Paper Search: 分析模式选择 — 搜索结果卡片新增 quick/standard/deep 三档模式 pill 选择器，standard/deep 尝试下载 PDF + Pipeline 完整分析
 - Paper Search: PDF 直接下载 — 新增「下载 PDF」按钮，后端 POST /download-pdf 端点返回 FileResponse，前端触发浏览器下载

@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import csv
-import io
 import json
 import sqlite3
+import threading
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
@@ -17,6 +17,9 @@ from src.core.models import AnalysisResult
 
 class KnowledgeBase:
     """知识库：SQLite + FTS5 全文搜索."""
+
+    _initialized_paths: set[str] = set()  # 类级: 已完成初始化的 db 路径
+    _init_lock: threading.Lock = threading.Lock()
 
     def __init__(self, db_path: str | None = None):
         if db_path is None:
@@ -33,7 +36,14 @@ class KnowledgeBase:
 
         self.db_path = db_path
         Path(db_path).parent.mkdir(parents=True, exist_ok=True)
-        self._init_db()
+
+        # 只有首次遇到该 db_path 时执行完整初始化
+        resolved = str(Path(db_path).resolve())
+        if resolved not in KnowledgeBase._initialized_paths:
+            with KnowledgeBase._init_lock:
+                if resolved not in KnowledgeBase._initialized_paths:
+                    self._init_db()
+                    KnowledgeBase._initialized_paths.add(resolved)
 
     @staticmethod
     def _beijing_now() -> str:

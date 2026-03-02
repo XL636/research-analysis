@@ -15,7 +15,7 @@ from src.agents.analyzer import AnalyzerAgent
 from src.agents.generator import GeneratorAgent
 from src.agents.parser import ParserAgent
 from src.core.llm_client import LLMClient
-from src.core.models import PipelineContext, UsageStats
+from src.core.models import AnalysisResult, PipelineContext, UsageStats
 from src.outputs.markdown_writer import write_markdown
 
 console = Console()
@@ -107,11 +107,15 @@ class Pipeline:
             # Step 2: Analyze (parallel when multiple documents)
             task = progress.add_task("🔍 深度分析...", total=None)
             if len(ctx.parsed_documents) > 1 and self.max_concurrency > 1:
-                ctx.analyses = list(self._analyze_parallel(ctx.parsed_documents, progress, task))
+                pairs = list(self._analyze_parallel(ctx.parsed_documents, progress, task))
+                ctx.analyses = [a for a, _ in pairs]
+                ctx.doc_ids = [did for _, did in pairs if did is not None]
             else:
                 for doc in ctx.parsed_documents:
-                    result = self._analyze_and_store(doc)
-                    ctx.analyses.append(result)
+                    analysis, doc_id = self._analyze_and_store(doc)
+                    ctx.analyses.append(analysis)
+                    if doc_id is not None:
+                        ctx.doc_ids.append(doc_id)
             progress.update(task, description=f"✅ 分析完成 ({len(ctx.analyses)} 篇)")
 
             # Step 3: Synthesize (optional)
@@ -175,22 +179,21 @@ class Pipeline:
 
         return ctx
 
-    def _analyze_and_store(self, doc) -> "AnalysisResult":
-        """分析单个文档并存入知识库."""
-        from src.core.models import AnalysisResult  # noqa: F811
-
+    def _analyze_and_store(self, doc) -> tuple[AnalysisResult, int | None]:
+        """分析单个文档并存入知识库，返回 (分析结果, doc_id)."""
         analysis = self.analyzer.process(doc)
+        doc_id = None
         try:
             from src.store.knowledge_base import KnowledgeBase
             kb = KnowledgeBase()
-            kb.store_analysis(analysis, file_path=doc.file_path, file_type=doc.file_type.value, parsed_text=doc.full_text)
+            doc_id = kb.store_analysis(analysis, file_path=doc.file_path, file_type=doc.file_type.value, parsed_text=doc.full_text)
         except Exception:
             logger.debug("KB store failed", exc_info=True)
-        return analysis
+        return analysis, doc_id
 
     def _analyze_parallel(self, documents: list, progress=None, task_id=None):
-        """并行分析多个文档."""
-        results = [None] * len(documents)
+        """并行分析多个文档，返回 list[tuple[AnalysisResult, int | None]]."""
+        results: list[tuple | None] = [None] * len(documents)
         with ThreadPoolExecutor(max_workers=self.max_concurrency) as executor:
             future_to_idx = {
                 executor.submit(self._analyze_and_store, doc): idx

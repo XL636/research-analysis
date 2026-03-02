@@ -177,17 +177,14 @@ def _metadata_analyze_and_store(
 def _pipeline_analyze(pdf_path: Path, title: str, mode: str) -> int:
     """运行 Pipeline 分析 PDF 并返回 doc_id."""
     from src.core.engine import Pipeline
-    from src.store.knowledge_base import KnowledgeBase
 
     pipeline = Pipeline(mode=mode)
-    pipeline.run(
+    ctx = pipeline.run(
         input_files=[str(pdf_path)],
         output_format="markdown",
         synthesize=False,
     )
-    kb = KnowledgeBase()
-    results = kb.search(title, limit=1)
-    return results[0]["id"] if results else 0
+    return ctx.doc_ids[0] if ctx.doc_ids else 0
 
 
 def _get_search_manager():

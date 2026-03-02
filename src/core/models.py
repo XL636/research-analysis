@@ -201,6 +201,7 @@ class PipelineContext(BaseModel):
     input_files: list[str] = Field(default_factory=list)
     parsed_documents: list[ParsedDocument] = Field(default_factory=list)
     analyses: list[AnalysisResult] = Field(default_factory=list)
+    doc_ids: list[int] = Field(default_factory=list)
     synthesis: SynthesisResult | None = None
     report: Report | None = None
     review: ReviewFeedback | None = None
