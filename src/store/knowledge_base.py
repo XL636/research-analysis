@@ -144,6 +144,20 @@ class KnowledgeBase:
                 conn.commit()
                 logger.info("source_type migration completed")
 
+            # parsed_text 迁移
+            parsed_text_migrated = conn.execute(
+                "SELECT value FROM _meta WHERE key = 'parsed_text_migrated'"
+            ).fetchone()
+            if not parsed_text_migrated:
+                cols = [r[1] for r in conn.execute("PRAGMA table_info(documents)").fetchall()]
+                if "parsed_text" not in cols:
+                    conn.execute("ALTER TABLE documents ADD COLUMN parsed_text TEXT")
+                conn.execute(
+                    "INSERT OR REPLACE INTO _meta (key, value) VALUES ('parsed_text_migrated', '1')"
+                )
+                conn.commit()
+                logger.info("parsed_text migration completed")
+
             # metadata_only 清理迁移：删除所有仅元数据记录
             metadata_cleaned = conn.execute(
                 "SELECT value FROM _meta WHERE key = 'metadata_only_cleaned'"
@@ -175,6 +189,7 @@ class KnowledgeBase:
         file_path: str = "",
         file_type: str = "",
         source_type: str = "user_upload",
+        parsed_text: str = "",
     ) -> int:
         """存储分析结果到知识库.
 
@@ -183,6 +198,7 @@ class KnowledgeBase:
             file_path: 文件路径
             file_type: 文件类型
             source_type: 来源类型 (user_upload | auto_research | manual_reference)
+            parsed_text: 解析后的论文原文
 
         Returns:
             文档 ID
@@ -199,9 +215,9 @@ class KnowledgeBase:
 
         with self._connect() as conn:
             cursor = conn.execute(
-                """INSERT INTO documents (title, file_path, file_type, summary, content, analysis_json, source_type, created_at, updated_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                (analysis.document_title, file_path, file_type, analysis.summary, content, analysis_json, source_type, beijing_now, beijing_now),
+                """INSERT INTO documents (title, file_path, file_type, summary, content, analysis_json, source_type, parsed_text, created_at, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (analysis.document_title, file_path, file_type, analysis.summary, content, analysis_json, source_type, parsed_text, beijing_now, beijing_now),
             )
             doc_id = cursor.lastrowid
 

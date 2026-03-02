@@ -56,6 +56,7 @@ export interface DocumentDetail {
   analysis: AnalysisResult | null
   collection_id: number | null
   report_content: string | null
+  parsed_text: string | null
 }
 
 export interface UpdateTitleResponse {
@@ -440,6 +441,12 @@ export interface SmartSearchResponse {
   quality_score?: number
   // T-87: 中文数据库快捷链接
   chinese_db_links?: ChineseDbLink[]
+}
+
+export interface SaveToKBResponse {
+  success: boolean
+  doc_id: number
+  message: string
 }
 
 export interface DownloadAnalyzeResponse {

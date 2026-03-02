@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ExternalLink, Database, ChevronDown, ChevronUp, Loader2, Sparkles, Check } from 'lucide-react'
+import { ExternalLink, BookmarkPlus, Download, ChevronDown, ChevronUp, Loader2, Check, MessageSquare } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { PaperSearchResultItem, SmartSearchResultItem } from '../../types'
 
@@ -28,27 +28,29 @@ function isSmartResult(r: PaperSearchResultItem): r is SmartSearchResultItem {
 }
 
 function scoreBadgeColor(score: number): string {
-  if (score >= 0.7) return 'bg-green-100 text-green-700 border-green-200'
-  if (score >= 0.4) return 'bg-yellow-100 text-yellow-700 border-yellow-200'
+  if (score >= 7) return 'bg-green-100 text-green-700 border-green-200'
+  if (score >= 4) return 'bg-yellow-100 text-yellow-700 border-yellow-200'
   return 'bg-gray-100 text-gray-500 border-gray-200'
 }
 
 interface SearchResultCardProps {
   result: PaperSearchResultItem
+  onSave: (result: PaperSearchResultItem) => void
   onDownload: (result: PaperSearchResultItem) => void
-  onSummarize: (result: PaperSearchResultItem) => void
+  onChat?: (result: PaperSearchResultItem) => void
+  isSaving: boolean
   isDownloading: boolean
-  isSummarizing: boolean
-  summary: string | null
+  savedDocId: number | null
 }
 
 export default function SearchResultCard({
   result,
+  onSave,
   onDownload,
-  onSummarize,
+  onChat,
+  isSaving,
   isDownloading,
-  isSummarizing,
-  summary,
+  savedDocId,
 }: SearchResultCardProps) {
   const { t } = useTranslation()
   const [expanded, setExpanded] = useState(false)
@@ -89,13 +91,6 @@ export default function SearchResultCard({
         </p>
       )}
 
-      {/* AI Summary block */}
-      {summary && (
-        <div className="mt-3 p-3 bg-violet-50 border border-violet-200 rounded-lg">
-          <p className="text-sm text-violet-900 leading-relaxed">{summary}</p>
-        </div>
-      )}
-
       {/* Abstract */}
       {result.abstract && (
         <div className="mt-3">
@@ -124,23 +119,29 @@ export default function SearchResultCard({
       {/* Actions */}
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <button
-          onClick={() => onSummarize(result)}
-          disabled={isSummarizing || summary !== null}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-violet-300 text-violet-700 hover:bg-violet-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          onClick={() => onSave(result)}
+          disabled={isSaving || savedDocId !== null}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
-          {isSummarizing ? (
+          {isSaving ? (
             <Loader2 className="h-4 w-4 animate-spin" />
-          ) : summary !== null ? (
-            <Check className="h-4 w-4 text-violet-600" />
+          ) : savedDocId !== null ? (
+            <Check className="h-4 w-4 text-green-600" />
           ) : (
-            <Sparkles className="h-4 w-4" />
+            <BookmarkPlus className="h-4 w-4" />
           )}
-          {isSummarizing
-            ? t('paperSearch.summarizing')
-            : summary !== null
-              ? t('paperSearch.summarized')
-              : t('paperSearch.aiSummary')}
+          {savedDocId !== null ? t('paperSearch.saved') : t('paperSearch.saveToKB')}
         </button>
+
+        {onChat && (
+          <button
+            onClick={() => onChat(result)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-primary-300 text-primary-700 hover:bg-primary-50 transition-colors"
+          >
+            <MessageSquare className="h-4 w-4" />
+            {t('paperSearch.chatAbout')}
+          </button>
+        )}
 
         {result.url && (
           <>
@@ -152,9 +153,9 @@ export default function SearchResultCard({
               {isDownloading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <Database className="h-4 w-4" />
+                <Download className="h-4 w-4" />
               )}
-              {t('paperSearch.analyzeAndSave')}
+              {t('paperSearch.downloadAnalyze')}
             </button>
 
             <a

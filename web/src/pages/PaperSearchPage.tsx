@@ -1,9 +1,9 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { Search, Loader2, Sparkles, Zap, ChevronDown, ChevronUp, ExternalLink, AlertCircle } from 'lucide-react'
+import { Search, Loader2, Sparkles, Zap, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { usePaperSearch, useSmartSearch, useDownloadAndAnalyze } from '../hooks/usePaperSearch'
-import { summarizePaper } from '../api/paperSearch'
+import { usePaperSearch, useSmartSearch, useSaveToKB, useDownloadAndAnalyze } from '../hooks/usePaperSearch'
 import SearchResultCard from '../components/paper-search/SearchResultCard'
+import PaperChatDialog from '../components/paper-search/PaperChatDialog'
 import type { PaperSearchResultItem, SmartSearchResponse } from '../types'
 
 type SearchMode = 'keyword' | 'smart'
@@ -26,7 +26,7 @@ let pageCache: {
   maxResults: number
   searchMode: SearchMode
   smartData: SmartSearchResponse | null
-  summaryMap: Record<string, string>
+  savedMap: Record<string, number>
 } | null = null
 
 export default function PaperSearchPage() {
@@ -37,11 +37,12 @@ export default function PaperSearchPage() {
   const [maxResults, setMaxResults] = useState(pageCache?.maxResults ?? 5)
   const [searchMode, setSearchMode] = useState<SearchMode>(pageCache?.searchMode ?? 'keyword')
 
-  // Track per-result download/summarize state
-  const [summaryMap, setSummaryMap] = useState<Record<string, string>>(pageCache?.summaryMap ?? {})
-  const [summarizingKey, setSummarizingKey] = useState<string | null>(null)
+  // Track per-result save/download state
+  const [savedMap, setSavedMap] = useState<Record<string, number>>(pageCache?.savedMap ?? {})
+  const [savingKey, setSavingKey] = useState<string | null>(null)
   const [downloadingKey, setDownloadingKey] = useState<string | null>(null)
   const [showSearchLog, setShowSearchLog] = useState(false)
+  const [chatPaper, setChatPaper] = useState<PaperSearchResultItem | null>(null)
 
   // Cached smart search data (useMutation data is lost on unmount)
   const [cachedSmartData, setCachedSmartData] = useState<SmartSearchResponse | null>(pageCache?.smartData ?? null)
@@ -49,7 +50,7 @@ export default function PaperSearchPage() {
   const providersParam = selectedProviders.length > 0 ? selectedProviders.join(',') : undefined
 
   // Keyword search (useQuery) — React Query cache handles persistence
-  const { data: keywordData, isLoading: keywordLoading, isFetching: keywordFetching, isError: keywordError } = usePaperSearch({
+  const { data: keywordData, isLoading: keywordLoading, isFetching: keywordFetching } = usePaperSearch({
     q: searchMode === 'keyword' ? searchQuery : '',
     providers: providersParam,
     max_results: maxResults,
@@ -78,16 +79,17 @@ export default function PaperSearchPage() {
         maxResults,
         searchMode,
         smartData: cachedSmartData,
-        summaryMap,
+        savedMap,
       }
     }
   })
 
+  const saveMutation = useSaveToKB()
   const downloadMutation = useDownloadAndAnalyze()
 
   const handleSearch = useCallback(() => {
     if (!inputValue.trim()) return
-    setSummaryMap({})
+    setSavedMap({})
     if (searchMode === 'smart') {
       setCachedSmartData(null)
       smartSearch.mutate({
@@ -115,20 +117,25 @@ export default function PaperSearchPage() {
 
   const resultKey = (r: PaperSearchResultItem) => `${r.source}:${r.title}`
 
-  const handleSummarize = async (result: PaperSearchResultItem) => {
+  const handleSave = async (result: PaperSearchResultItem) => {
     const key = resultKey(result)
-    if (summaryMap[key]) return
-    setSummarizingKey(key)
+    setSavingKey(key)
     try {
-      const resp = await summarizePaper({
+      const resp = await saveMutation.mutateAsync({
         title: result.title,
-        abstract: result.abstract || '',
+        authors: result.authors,
+        year: result.year,
+        venue: result.venue,
+        doi: result.doi,
+        url: result.url,
+        abstract: result.abstract,
+        source: result.source,
       })
-      setSummaryMap(prev => ({ ...prev, [key]: resp.summary }))
-    } catch {
-      // silently fail — user can retry
+      if (resp.success) {
+        setSavedMap(prev => ({ ...prev, [key]: resp.doc_id }))
+      }
     } finally {
-      setSummarizingKey(null)
+      setSavingKey(null)
     }
   }
 
@@ -136,7 +143,7 @@ export default function PaperSearchPage() {
     const key = resultKey(result)
     setDownloadingKey(key)
     try {
-      await downloadMutation.mutateAsync({
+      const resp = await downloadMutation.mutateAsync({
         title: result.title,
         url: result.url,
         doi: result.doi,
@@ -146,6 +153,9 @@ export default function PaperSearchPage() {
         abstract: result.abstract,
         source: result.source,
       })
+      if (resp.success && resp.doc_id) {
+        setSavedMap(prev => ({ ...prev, [key]: resp.doc_id }))
+      }
     } finally {
       setDownloadingKey(null)
     }
@@ -162,7 +172,6 @@ export default function PaperSearchPage() {
   const hasSearched = isSmartMode
     ? (smartSearch.isSuccess || smartSearch.isError || !!cachedSmartData)
     : !!searchQuery
-  const hasError = isSmartMode ? smartSearch.isError : keywordError
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -379,28 +388,20 @@ export default function PaperSearchPage() {
               <SearchResultCard
                 key={`${result.source}-${result.title}-${idx}`}
                 result={result}
+                onSave={handleSave}
                 onDownload={handleDownload}
-                onSummarize={handleSummarize}
+                onChat={setChatPaper}
+                isSaving={savingKey === resultKey(result)}
                 isDownloading={downloadingKey === resultKey(result)}
-                isSummarizing={summarizingKey === resultKey(result)}
-                summary={summaryMap[resultKey(result)] ?? null}
+                savedDocId={savedMap[resultKey(result)] ?? null}
               />
             ))}
           </div>
         </>
       )}
 
-      {/* Error state */}
-      {!showLoading && hasError && (
-        <div className="text-center py-16">
-          <AlertCircle className="h-12 w-12 mx-auto mb-3 text-red-400" />
-          <p className="text-lg font-medium text-red-600">{t('paperSearch.searchError')}</p>
-          <p className="text-sm mt-1 text-gray-500">{t('paperSearch.searchErrorDesc')}</p>
-        </div>
-      )}
-
       {/* No results */}
-      {!showLoading && hasSearched && !hasError && results.length === 0 && (
+      {!showLoading && hasSearched && results.length === 0 && (
         <div className="text-center py-16 text-gray-400">
           <Search className="h-12 w-12 mx-auto mb-3 opacity-50" />
           <p className="text-lg font-medium">{t('paperSearch.noResults')}</p>
@@ -423,6 +424,11 @@ export default function PaperSearchPage() {
             {isSmartMode ? t('paperSearch.smartEmptyDesc') : t('paperSearch.emptyDesc')}
           </p>
         </div>
+      )}
+
+      {/* AI 对话弹窗 */}
+      {chatPaper && (
+        <PaperChatDialog paper={chatPaper} onClose={() => setChatPaper(null)} />
       )}
     </div>
   )

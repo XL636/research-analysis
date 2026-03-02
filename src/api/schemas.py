@@ -65,6 +65,7 @@ class DocumentDetail(BaseModel):
     analysis: dict | None = None
     collection_id: int | None = None
     report_content: str | None = None
+    parsed_text: str | None = None
 
 
 class SearchResult(BaseModel):
@@ -558,3 +559,20 @@ class SummarizeRequest(BaseModel):
 
 class SummarizeResponse(BaseModel):
     summary: str
+
+
+# --- Paper Chat ---
+
+class PaperChatMessage(BaseModel):
+    role: str  # "user" | "assistant"
+    content: str
+
+
+class PaperChatRequest(BaseModel):
+    title: str
+    abstract: str = ""
+    authors: str = ""
+    year: str = ""
+    venue: str = ""
+    message: str
+    history: list[PaperChatMessage] = Field(default_factory=list)

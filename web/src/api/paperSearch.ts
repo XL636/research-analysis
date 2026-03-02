@@ -2,8 +2,8 @@ import api from './client'
 import type {
   PaperSearchResponse,
   SmartSearchResponse,
+  SaveToKBResponse,
   DownloadAnalyzeResponse,
-  SummarizeResponse,
 } from '../types'
 
 export async function searchPapers(params: {
@@ -21,23 +21,23 @@ export async function smartSearchPapers(params: {
   max_results?: number
   language_hint?: string
 }): Promise<SmartSearchResponse> {
-  const body = {
-    ...params,
-    providers: params.providers ? params.providers.split(',') : undefined,
-  }
-  const { data } = await api.post('/paper-search/smart-search', body, {
-    timeout: 300000,
+  const { data } = await api.post('/paper-search/smart-search', params, {
+    timeout: 120000,
   })
   return data
 }
 
-export async function summarizePaper(params: {
+export async function saveToKB(paper: {
   title: string
-  abstract: string
-}): Promise<SummarizeResponse> {
-  const { data } = await api.post('/paper-search/summarize', params, {
-    timeout: 30000,
-  })
+  authors?: string
+  year?: string
+  venue?: string
+  doi?: string
+  url?: string
+  abstract?: string
+  source?: string
+}): Promise<SaveToKBResponse> {
+  const { data } = await api.post('/paper-search/save-to-kb', paper)
   return data
 }
 
@@ -55,4 +55,60 @@ export async function downloadAndAnalyze(paper: {
     timeout: 120000,
   })
   return data
+}
+
+// --- Paper Chat SSE ---
+
+export interface PaperChatMessage {
+  role: 'user' | 'assistant'
+  content: string
+}
+
+export async function streamPaperChat(
+  params: {
+    title: string
+    abstract: string
+    authors: string
+    year: string
+    venue: string
+    message: string
+    history: PaperChatMessage[]
+  },
+  onDelta: (content: string) => void,
+  onDone: () => void,
+  onError: (error: string) => void,
+): Promise<void> {
+  const resp = await fetch('/api/paper-search/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  })
+
+  if (!resp.ok) {
+    onError(`HTTP ${resp.status}: ${resp.statusText}`)
+    return
+  }
+
+  const reader = resp.body!.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buffer += decoder.decode(value, { stream: true })
+    const lines = buffer.split('\n')
+    buffer = lines.pop() || ''
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue
+      try {
+        const data = JSON.parse(line.slice(6))
+        if (data.type === 'delta') onDelta(data.content)
+        else if (data.type === 'done') onDone()
+        else if (data.type === 'error') onError(data.message)
+      } catch {
+        // 忽略格式不正确的 SSE 行
+      }
+    }
+  }
 }

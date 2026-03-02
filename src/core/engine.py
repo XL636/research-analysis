@@ -183,7 +183,7 @@ class Pipeline:
         try:
             from src.store.knowledge_base import KnowledgeBase
             kb = KnowledgeBase()
-            kb.store_analysis(analysis, file_path=doc.file_path, file_type=doc.file_type.value)
+            kb.store_analysis(analysis, file_path=doc.file_path, file_type=doc.file_type.value, parsed_text=doc.full_text)
         except Exception:
             logger.debug("KB store failed", exc_info=True)
         return analysis

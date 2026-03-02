@@ -134,7 +134,7 @@ async def get_document(
     with kb._connect() as conn:
         row = conn.execute(
             """SELECT d.id, d.title, d.file_type, d.file_path, d.summary,
-                      d.analysis_json, d.report_content, d.collection_id,
+                      d.analysis_json, d.report_content, d.parsed_text, d.collection_id,
                       strftime('%Y-%m-%d %H:%M', d.created_at) as created_at,
                       GROUP_CONCAT(t.name, ', ') as tags
                FROM documents d
@@ -163,6 +163,7 @@ async def get_document(
         analysis=analysis,
         collection_id=row["collection_id"],
         report_content=row["report_content"] or None,
+        parsed_text=row["parsed_text"] or None,
     )
 
 

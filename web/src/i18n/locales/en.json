@@ -95,6 +95,7 @@
   "detail.uncategorized": "Uncategorized",
   "detail.tabCards": "Analysis Cards",
   "detail.tabReport": "Full Report",
+  "detail.tabOriginal": "Original Text",
   "detail.downloadAs": "Download report:",
   "table.title": "Title",
   "table.type": "Type",
@@ -420,5 +421,10 @@
   "paperSearch.hideSearchLog": "Hide search process",
   "paperSearch.providerCrossRef": "CrossRef",
   "paperSearch.chineseDbTitle": "Chinese Database Quick Search",
-  "paperSearch.chineseDbDesc": "Chinese query detected — search directly in Chinese academic databases"
+  "paperSearch.chineseDbDesc": "Chinese query detected — search directly in Chinese academic databases",
+  "paperSearch.chatAbout": "AI Chat",
+  "paperSearch.chatWith": "Chat about: {{title}}",
+  "paperSearch.chatEmpty": "Ask AI about this paper",
+  "paperSearch.chatHint": "e.g., What are the key contributions of this paper?",
+  "paperSearch.chatPlaceholder": "Type your question..."
 }

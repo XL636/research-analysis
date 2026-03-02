@@ -89,7 +89,7 @@ async def run_pipeline(
                 try:
                     from src.store.knowledge_base import KnowledgeBase
                     kb = KnowledgeBase()
-                    doc_id = kb.store_analysis(analysis, file_path=doc.file_path, file_type=doc.file_type.value, source_type="user_upload")
+                    doc_id = kb.store_analysis(analysis, file_path=doc.file_path, file_type=doc.file_type.value, source_type="user_upload", parsed_text=doc.full_text)
                 except Exception:
                     logger.debug("KB store failed during pipeline", exc_info=True)
                 return index, analysis, doc_id
@@ -113,7 +113,7 @@ async def run_pipeline(
                 try:
                     from src.store.knowledge_base import KnowledgeBase
                     kb = KnowledgeBase()
-                    doc_id = kb.store_analysis(analysis, file_path=doc.file_path, file_type=doc.file_type.value, source_type="user_upload")
+                    doc_id = kb.store_analysis(analysis, file_path=doc.file_path, file_type=doc.file_type.value, source_type="user_upload", parsed_text=doc.full_text)
                     stored_doc_ids.append(doc_id)
                 except Exception:
                     logger.debug("KB store failed during pipeline", exc_info=True)

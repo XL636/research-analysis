@@ -4,13 +4,18 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, HTTPException, Query
 from loguru import logger
 
+if TYPE_CHECKING:
+    from src.core.models import AnalysisResult
+
 from src.api.schemas import (
     DownloadAnalyzeRequest,
     DownloadAnalyzeResponse,
+    PaperChatRequest,
     PaperSearchResponse,
     PaperSearchResult,
     SaveToKBRequest,
@@ -18,11 +23,62 @@ from src.api.schemas import (
     SmartSearchRequest,
     SmartSearchResponse,
     SmartSearchResultItem,
-    SummarizeRequest,
-    SummarizeResponse,
 )
 
 router = APIRouter()
+
+
+def _analyze_from_metadata(
+    title: str,
+    abstract: str,
+    authors: str = "",
+    year: str = "",
+    venue: str = "",
+    doi: str = "",
+    url: str = "",
+    source: str = "",
+) -> "AnalysisResult":
+    """用 LLM 从标题+摘要生成结构化 AnalysisResult."""
+    from src.core.llm_client import LLMClient
+    from src.core.models import AnalysisResult
+
+    try:
+        llm = LLMClient()
+        prompt = (
+            "请基于以下论文信息生成结构化分析（JSON 格式）。\n\n"
+            f"标题：{title}\n"
+            f"作者：{authors}\n"
+            f"年份：{year}\n"
+            f"期刊/会议：{venue}\n"
+            f"摘要：{abstract}\n\n"
+            "返回 JSON，字段如下：\n"
+            "{\n"
+            '  "document_title": "论文标题",\n'
+            '  "paper_type": "empirical/theoretical/survey/opinion/technical 之一",\n'
+            '  "summary": "200字左右的中文摘要总结",\n'
+            '  "key_findings": [{"finding": "发现", "evidence": "证据", "significance": "意义"}],\n'
+            '  "methodology": {"approach": "方法", "strengths": ["优势"], "limitations": ["局限"]},\n'
+            '  "contributions": ["贡献1", "贡献2"],\n'
+            '  "limitations": ["局限1"],\n'
+            '  "future_work": ["方向1"],\n'
+            '  "tags": ["标签1", "标签2"],\n'
+            '  "relevance_score": 7.0\n'
+            "}"
+        )
+
+        result_dict = llm.chat_json("glm-4-flash", [{"role": "user", "content": prompt}])
+        # 确保 document_title 存在
+        result_dict.setdefault("document_title", title)
+        return AnalysisResult.model_validate(result_dict)
+    except Exception as e:
+        logger.warning(f"LLM analysis from metadata failed: {e}")
+        # 兜底：返回仅含 summary 的 AnalysisResult
+        return AnalysisResult(
+            document_title=title,
+            summary=abstract or f"论文：{title}",
+            tags=["paper_search"],
+            relevance_score=5.0,
+        )
 
 
 def _get_search_manager():
@@ -77,7 +133,6 @@ async def smart_search(req: SmartSearchRequest):
     from src.core.llm_client import LLMClient
     from src.core.search_client import SearchManager
 
-    sm = None
     try:
         llm = LLMClient()
         sm = SearchManager()
@@ -91,6 +146,7 @@ async def smart_search(req: SmartSearchRequest):
         )
 
         output = await asyncio.to_thread(agent.process, search_input)
+        sm.close()
 
         return SmartSearchResponse(
             query=output.query,
@@ -111,9 +167,6 @@ async def smart_search(req: SmartSearchRequest):
     except Exception as e:
         logger.error(f"Smart search failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        if sm:
-            sm.close()
 
 
 @router.post("/save-to-kb", response_model=SaveToKBResponse)
@@ -123,13 +176,21 @@ async def save_to_kb(req: SaveToKBRequest):
 
     try:
         kb = KnowledgeBase()
-        doc_id = kb.store_metadata_only(
+        # 用 LLM 从元数据生成结构化分析后存储，避免 metadata_only 导致详情页空白
+        analysis = _analyze_from_metadata(
             title=req.title,
-            summary=req.abstract,
-            doi=req.doi,
-            url=req.url,
+            abstract=req.abstract,
             authors=req.authors,
             year=req.year,
+            venue=req.venue,
+            doi=req.doi,
+            url=req.url,
+            source=req.source,
+        )
+        doc_id = kb.store_analysis(
+            analysis=analysis,
+            file_path=req.url or "",
+            file_type="paper_search",
             source_type="paper_search",
         )
         return SaveToKBResponse(success=True, doc_id=doc_id, message="已保存到知识库")
@@ -165,7 +226,7 @@ def _do_download_and_analyze(req: DownloadAnalyzeRequest) -> DownloadAnalyzeResp
             from src.core.engine import Pipeline
 
             pipeline = Pipeline(mode="quick")
-            ctx = pipeline.run(
+            pipeline.run(
                 input_files=[str(pdf_path)],
                 output_format="markdown",
                 synthesize=False,
@@ -184,7 +245,77 @@ def _do_download_and_analyze(req: DownloadAnalyzeRequest) -> DownloadAnalyzeResp
             )
         except Exception as e:
             logger.warning(f"Analysis failed after download: {e}")
-            # Fallback: save metadata only
+            # Fallback: 用 LLM 从元数据生成分析
+            try:
+                kb = KnowledgeBase()
+                analysis = _analyze_from_metadata(
+                    title=req.title,
+                    abstract=req.abstract,
+                    authors=req.authors,
+                    year=req.year,
+                    venue=req.venue,
+                    doi=req.doi,
+                    url=req.url,
+                    source=req.source,
+                )
+                doc_id = kb.store_analysis(
+                    analysis=analysis,
+                    file_path=req.url or "",
+                    file_type="paper_search",
+                    source_type="paper_search",
+                )
+                return DownloadAnalyzeResponse(
+                    success=True,
+                    doc_id=doc_id,
+                    message=f"PDF 分析失败，已用 LLM 从摘要生成分析: {e}",
+                    has_analysis=True,
+                )
+            except Exception as e2:
+                logger.error(f"LLM fallback also failed: {e2}")
+                kb = KnowledgeBase()
+                doc_id = kb.store_metadata_only(
+                    title=req.title,
+                    summary=req.abstract,
+                    doi=req.doi,
+                    url=req.url,
+                    authors=req.authors,
+                    year=req.year,
+                    source_type="paper_search",
+                )
+                return DownloadAnalyzeResponse(
+                    success=True,
+                    doc_id=doc_id,
+                    message=f"分析失败，已保存元数据: {e}",
+                    has_analysis=False,
+                )
+    else:
+        # PDF 下载失败，用 LLM 从元数据生成分析
+        try:
+            kb = KnowledgeBase()
+            analysis = _analyze_from_metadata(
+                title=req.title,
+                abstract=req.abstract,
+                authors=req.authors,
+                year=req.year,
+                venue=req.venue,
+                doi=req.doi,
+                url=req.url,
+                source=req.source,
+            )
+            doc_id = kb.store_analysis(
+                analysis=analysis,
+                file_path=req.url or "",
+                file_type="paper_search",
+                source_type="paper_search",
+            )
+            return DownloadAnalyzeResponse(
+                success=True,
+                doc_id=doc_id,
+                message="PDF 下载失败，已用 LLM 从摘要生成分析",
+                has_analysis=True,
+            )
+        except Exception as e:
+            logger.error(f"LLM fallback failed: {e}")
             kb = KnowledgeBase()
             doc_id = kb.store_metadata_only(
                 title=req.title,
@@ -198,49 +329,73 @@ def _do_download_and_analyze(req: DownloadAnalyzeRequest) -> DownloadAnalyzeResp
             return DownloadAnalyzeResponse(
                 success=True,
                 doc_id=doc_id,
-                message=f"分析失败，已保存元数据: {e}",
+                message="PDF 下载失败，已保存元数据",
                 has_analysis=False,
             )
-    else:
-        # Download failed, save metadata only
-        kb = KnowledgeBase()
-        doc_id = kb.store_metadata_only(
-            title=req.title,
-            summary=req.abstract,
-            doi=req.doi,
-            url=req.url,
-            authors=req.authors,
-            year=req.year,
-            source_type="paper_search",
-        )
-        return DownloadAnalyzeResponse(
-            success=True,
-            doc_id=doc_id,
-            message="PDF 下载失败，已保存元数据",
-            has_analysis=False,
-        )
 
 
-@router.post("/summarize", response_model=SummarizeResponse)
-async def summarize_paper(req: SummarizeRequest):
-    """用 LLM 生成论文的简短概述."""
+@router.post("/chat")
+async def paper_chat(req: PaperChatRequest):
+    """论文 AI 对话 — SSE 流式响应."""
+    import json
+    import queue
+    import threading
+
+    from fastapi.responses import StreamingResponse
+
     from src.core.llm_client import LLMClient
 
-    try:
-        llm = LLMClient()
-        lang_hint = "中文" if req.language == "zh" else "English"
-        prompt = (
-            f"请用2-3句{lang_hint}简要概述这篇论文的核心内容和主要贡献：\n\n"
-            f"标题：{req.title}\n摘要：{req.abstract}"
-        )
-        result = await asyncio.to_thread(
-            llm.chat, "glm-4-flash", [{"role": "user", "content": prompt}],
-            temperature=0.3, max_tokens=512,
-        )
-        return SummarizeResponse(summary=result.strip())
-    except Exception as e:
-        logger.error(f"Summarize failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    system_prompt = f"""你是一个学术论文助手，正在帮助用户了解以下论文：
+
+标题：{req.title}
+作者：{req.authors}
+年份：{req.year}
+期刊/会议：{req.venue}
+摘要：{req.abstract}
+
+请基于论文信息回答用户的问题。回答应准确、简洁，使用中文。如果信息不足以回答某个问题，请如实说明。"""
+
+    messages: list[dict[str, str]] = [{"role": "system", "content": system_prompt}]
+    for msg in req.history:
+        messages.append({"role": msg.role, "content": msg.content})
+    messages.append({"role": "user", "content": req.message})
+
+    q: queue.Queue = queue.Queue()
+
+    def _run():
+        try:
+            llm = LLMClient()
+            for chunk in llm.stream_chat(
+                "glm-4-flash", messages, temperature=0.7, max_tokens=2048
+            ):
+                q.put(chunk)
+        except Exception as e:
+            q.put(("error", str(e)))
+        finally:
+            q.put(None)
+
+    threading.Thread(target=_run, daemon=True).start()
+
+    async def event_generator():
+        while True:
+            try:
+                item = await asyncio.to_thread(q.get, timeout=60)
+            except Exception:
+                yield f"data: {json.dumps({'type': 'error', 'message': 'timeout'}, ensure_ascii=False)}\n\n"
+                break
+            if item is None:
+                yield f"data: {json.dumps({'type': 'done'}, ensure_ascii=False)}\n\n"
+                break
+            if isinstance(item, tuple) and item[0] == "error":
+                yield f"data: {json.dumps({'type': 'error', 'message': item[1]}, ensure_ascii=False)}\n\n"
+                break
+            yield f"data: {json.dumps({'type': 'delta', 'content': item}, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 def _try_download_pdf(url: str, title: str) -> Path | None:

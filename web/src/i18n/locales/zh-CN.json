@@ -95,6 +95,7 @@
   "detail.uncategorized": "未分类",
   "detail.tabCards": "分析卡片",
   "detail.tabReport": "完整报告",
+  "detail.tabOriginal": "论文原文",
   "detail.downloadAs": "下载报告：",
   "table.title": "标题",
   "table.type": "类型",
@@ -420,5 +421,10 @@
   "paperSearch.hideSearchLog": "收起搜索过程",
   "paperSearch.providerCrossRef": "CrossRef",
   "paperSearch.chineseDbTitle": "中文数据库快捷搜索",
-  "paperSearch.chineseDbDesc": "检测到中文查询，以下链接可直接在国内学术数据库中搜索"
+  "paperSearch.chineseDbDesc": "检测到中文查询，以下链接可直接在国内学术数据库中搜索",
+  "paperSearch.chatAbout": "AI 对话",
+  "paperSearch.chatWith": "与 AI 讨论: {{title}}",
+  "paperSearch.chatEmpty": "向 AI 提问关于这篇论文的问题",
+  "paperSearch.chatHint": "例如：这篇论文的主要创新点是什么？",
+  "paperSearch.chatPlaceholder": "输入你的问题..."
 }

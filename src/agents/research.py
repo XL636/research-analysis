@@ -269,5 +269,6 @@ class ResearchAgent(BaseAgent):
             file_path=pdf_path,
             file_type="pdf",
             source_type="auto_research",
+            parsed_text=parsed.full_text,
         )
         return doc_id

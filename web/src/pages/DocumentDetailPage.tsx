@@ -298,7 +298,7 @@ export default function DocumentDetailPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [editTitle, setEditTitle] = useState('')
-  const [activeTab, setActiveTab] = useState<'cards' | 'report'>('cards')
+  const [activeTab, setActiveTab] = useState<'cards' | 'report' | 'original'>('cards')
 
   const handleDelete = () => {
     deleteMutation.mutate(Number(id), {
@@ -500,8 +500,8 @@ export default function DocumentDetailPage() {
         )}
       </div>
 
-      {/* Tab bar (only when report_content exists) */}
-      {doc.analysis && doc.report_content && (
+      {/* Tab bar (when report_content or parsed_text exists) */}
+      {doc.analysis && (doc.report_content || doc.parsed_text) && (
         <div className="flex border-b border-gray-200 mb-6">
           <button
             type="button"
@@ -514,17 +514,32 @@ export default function DocumentDetailPage() {
           >
             {t('detail.tabCards')}
           </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('report')}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors duration-200 ${
-              activeTab === 'report'
-                ? 'border-primary-600 text-primary-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            {t('detail.tabReport')}
-          </button>
+          {doc.report_content && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('report')}
+              className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors duration-200 ${
+                activeTab === 'report'
+                  ? 'border-primary-600 text-primary-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              {t('detail.tabReport')}
+            </button>
+          )}
+          {doc.parsed_text && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('original')}
+              className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors duration-200 ${
+                activeTab === 'original'
+                  ? 'border-primary-600 text-primary-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              {t('detail.tabOriginal')}
+            </button>
+          )}
         </div>
       )}
 
@@ -533,6 +548,10 @@ export default function DocumentDetailPage() {
         activeTab === 'report' && doc.report_content ? (
           <div className="bg-surface-card rounded-xl shadow-sm p-8">
             <MarkdownRenderer content={doc.report_content} />
+          </div>
+        ) : activeTab === 'original' && doc.parsed_text ? (
+          <div className="bg-surface-card rounded-xl shadow-sm p-8">
+            <MarkdownRenderer content={doc.parsed_text} />
           </div>
         ) : (
           <AnalysisCards analysis={doc.analysis} />
