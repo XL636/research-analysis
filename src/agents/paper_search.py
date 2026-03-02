@@ -384,12 +384,14 @@ class PaperSearchAgent(BaseAgent):
         if not abstracts:
             return []
 
+        sep = "\n---\n"
+        abstracts_text = sep.join(abstracts)
         prompt = (
             "## Deep Read: Extract New Search Terms\n\n"
             f"Original query: {state.query}\n"
             f"Intent: {state.intent}\n"
             f"Keywords already used: {state.all_keywords}\n\n"
-            f"Paper abstracts to analyze:\n{'\n---\n'.join(abstracts)}\n\n"
+            f"Paper abstracts to analyze:\n{abstracts_text}\n\n"
             "Extract 2-4 NEW English search keywords/phrases from these abstracts that could help "
             "find more relevant papers. Focus on:\n"
             "- Field-specific terminology not yet in our keyword list\n"
