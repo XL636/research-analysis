@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Paper Search: 分析模式选择 — 搜索结果卡片新增 quick/standard/deep 三档模式 pill 选择器，standard/deep 尝试下载 PDF + Pipeline 完整分析
+- Paper Search: PDF 直接下载 — 新增「下载 PDF」按钮，后端 POST /download-pdf 端点返回 FileResponse，前端触发浏览器下载
+- Paper Search: _analyze_from_metadata 根据 mode 调整 prompt 详细程度（standard/deep 要求更多维度分析）
+
+### Fixed
+- Paper Search: 修复知识库「原文」Tab 不显示 — 所有 kb.store_analysis() 调用补全 parsed_text=req.abstract，原文 Tab 现可正常显示
+
+### Added
 - Paper Search: 论文 AI 对话 — 搜索结果卡片新增"AI 对话"按钮，弹出模态对话框，基于论文元数据 SSE 流式问答
 - Paper Search: API POST /api/paper-search/chat — SSE 流式端点，构造论文上下文 system prompt + glm-4-flash 模型
 - Knowledge Base: 知识库详情页新增「论文原文」Tab — 当存在 parsed_text 时显示第三个 Tab，展示解析后的完整原文
