@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - 全量测试 198 passed (pytest) + 30 passed (vitest)
 
 ### Fixed
+- Smart Search: 修复评分徽章颜色阈值 — scoreBadgeColor 从 0-10 刻度改为 0-1 刻度，匹配后端 relevance_score 范围
 - Smart Search: 修复智能搜索"闪一下就消失"— 前端 providers 字符串→数组 + 后端 validator 兼容双类型 (T-87)
 - Smart Search: 修复 Docker 环境 Python 3.11 f-string 反斜杠语法错误导致 500 (T-87)
 - Smart Search: 修复前端超时（120s→300s）+ Semantic Scholar 429 熔断机制避免无谓等待 (T-87)

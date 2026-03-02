@@ -28,8 +28,8 @@ function isSmartResult(r: PaperSearchResultItem): r is SmartSearchResultItem {
 }
 
 function scoreBadgeColor(score: number): string {
-  if (score >= 7) return 'bg-green-100 text-green-700 border-green-200'
-  if (score >= 4) return 'bg-yellow-100 text-yellow-700 border-yellow-200'
+  if (score >= 0.7) return 'bg-green-100 text-green-700 border-green-200'
+  if (score >= 0.4) return 'bg-yellow-100 text-yellow-700 border-yellow-200'
   return 'bg-gray-100 text-gray-500 border-gray-200'
 }
 
