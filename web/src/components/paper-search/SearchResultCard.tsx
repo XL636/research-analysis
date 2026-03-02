@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { ExternalLink, BookmarkPlus, Download, FileDown, ChevronDown, ChevronUp, Loader2, Check, MessageSquare } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import type { PaperSearchResultItem, SmartSearchResultItem } from '../../types'
+import type { PaperSearchResultItem, SmartSearchResultItem, PaperAnalysisMode } from '../../types'
 
 const SOURCE_COLORS: Record<string, string> = {
   pubmed: 'bg-emerald-100 text-emerald-700',
@@ -23,7 +23,13 @@ const SOURCE_LABELS: Record<string, string> = {
   crossref: 'CrossRef',
 }
 
-type AnalysisMode = 'quick' | 'standard' | 'deep'
+const MODE_OPTIONS: { value: PaperAnalysisMode; labelKey: string }[] = [
+  { value: 'quick', labelKey: 'paperSearch.modeQuick' },
+  { value: 'standard', labelKey: 'paperSearch.modeStandard' },
+  { value: 'deep', labelKey: 'paperSearch.modeDeep' },
+]
+
+const ACTION_BTN = 'inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
 
 function isSmartResult(r: PaperSearchResultItem): r is SmartSearchResultItem {
   return 'relevance_score' in r
@@ -37,8 +43,8 @@ function scoreBadgeColor(score: number): string {
 
 interface SearchResultCardProps {
   result: PaperSearchResultItem
-  onSave: (result: PaperSearchResultItem, mode: AnalysisMode) => void
-  onDownload: (result: PaperSearchResultItem, mode: AnalysisMode) => void
+  onSave: (result: PaperSearchResultItem, mode: PaperAnalysisMode) => void
+  onDownload: (result: PaperSearchResultItem, mode: PaperAnalysisMode) => void
   onDownloadPdf?: (result: PaperSearchResultItem) => void
   onChat?: (result: PaperSearchResultItem) => void
   isSaving: boolean
@@ -60,16 +66,10 @@ export default function SearchResultCard({
 }: SearchResultCardProps) {
   const { t } = useTranslation()
   const [expanded, setExpanded] = useState(false)
-  const [mode, setMode] = useState<AnalysisMode>('quick')
+  const [mode, setMode] = useState<PaperAnalysisMode>('quick')
 
   const badgeColor = SOURCE_COLORS[result.source] || 'bg-gray-100 text-gray-700'
   const sourceLabel = SOURCE_LABELS[result.source] || result.source
-
-  const modeOptions: { value: AnalysisMode; labelKey: string }[] = [
-    { value: 'quick', labelKey: 'paperSearch.modeQuick' },
-    { value: 'standard', labelKey: 'paperSearch.modeStandard' },
-    { value: 'deep', labelKey: 'paperSearch.modeDeep' },
-  ]
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-shadow">
@@ -131,7 +131,7 @@ export default function SearchResultCard({
 
       {/* Mode selector */}
       <div className="mt-3 flex items-center gap-1.5">
-        {modeOptions.map(({ value, labelKey }) => (
+        {MODE_OPTIONS.map(({ value, labelKey }) => (
           <button
             key={value}
             onClick={() => setMode(value)}
@@ -151,7 +151,7 @@ export default function SearchResultCard({
         <button
           onClick={() => onSave(result, mode)}
           disabled={isSaving || savedDocId !== null}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className={ACTION_BTN}
         >
           {isSaving ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -178,7 +178,7 @@ export default function SearchResultCard({
             <button
               onClick={() => onDownload(result, mode)}
               disabled={isDownloading}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className={ACTION_BTN}
             >
               {isDownloading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -192,7 +192,7 @@ export default function SearchResultCard({
               <button
                 onClick={() => onDownloadPdf(result)}
                 disabled={isDownloadingPdf}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className={ACTION_BTN}
               >
                 {isDownloadingPdf ? (
                   <Loader2 className="h-4 w-4 animate-spin" />

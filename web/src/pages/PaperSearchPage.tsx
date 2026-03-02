@@ -5,7 +5,7 @@ import { usePaperSearch, useSmartSearch, useSaveToKB, useDownloadAndAnalyze } fr
 import { downloadPdf } from '../api/paperSearch'
 import SearchResultCard from '../components/paper-search/SearchResultCard'
 import PaperChatDialog from '../components/paper-search/PaperChatDialog'
-import type { PaperSearchResultItem, SmartSearchResponse } from '../types'
+import type { PaperSearchResultItem, SmartSearchResponse, PaperAnalysisMode } from '../types'
 
 type SearchMode = 'keyword' | 'smart'
 
@@ -119,7 +119,7 @@ export default function PaperSearchPage() {
 
   const resultKey = (r: PaperSearchResultItem) => `${r.source}:${r.title}`
 
-  const handleSave = async (result: PaperSearchResultItem, mode: string) => {
+  const handleSave = async (result: PaperSearchResultItem, mode: PaperAnalysisMode) => {
     const key = resultKey(result)
     setSavingKey(key)
     try {
@@ -142,7 +142,7 @@ export default function PaperSearchPage() {
     }
   }
 
-  const handleDownload = async (result: PaperSearchResultItem, mode: string) => {
+  const handleDownload = async (result: PaperSearchResultItem, mode: PaperAnalysisMode) => {
     const key = resultKey(result)
     setDownloadingKey(key)
     try {
@@ -170,8 +170,8 @@ export default function PaperSearchPage() {
     setDownloadingPdfKey(key)
     try {
       await downloadPdf(result.url, result.title)
-    } catch {
-      // toast or silent fail — user sees browser download fail
+    } catch (err) {
+      console.error('PDF download failed:', err)
     } finally {
       setDownloadingPdfKey(null)
     }

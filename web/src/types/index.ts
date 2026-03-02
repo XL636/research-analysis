@@ -1,3 +1,6 @@
+// Paper search analysis mode (quick/standard/deep)
+export type PaperAnalysisMode = 'quick' | 'standard' | 'deep'
+
 // Analysis Modes
 export interface AnalysisModeInfo {
   id: string

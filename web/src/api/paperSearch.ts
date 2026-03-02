@@ -4,6 +4,7 @@ import type {
   SmartSearchResponse,
   SaveToKBResponse,
   DownloadAnalyzeResponse,
+  PaperAnalysisMode,
 } from '../types'
 
 export async function searchPapers(params: {
@@ -36,7 +37,7 @@ export async function saveToKB(paper: {
   url?: string
   abstract?: string
   source?: string
-  mode?: string
+  mode?: PaperAnalysisMode
 }): Promise<SaveToKBResponse> {
   const { data } = await api.post('/paper-search/save-to-kb', paper)
   return data
@@ -51,7 +52,7 @@ export async function downloadAndAnalyze(paper: {
   venue?: string
   abstract?: string
   source?: string
-  mode?: string
+  mode?: PaperAnalysisMode
 }): Promise<DownloadAnalyzeResponse> {
   const { data } = await api.post('/paper-search/download-and-analyze', paper, {
     timeout: 120000,
@@ -60,18 +61,18 @@ export async function downloadAndAnalyze(paper: {
 }
 
 export async function downloadPdf(url: string, title: string): Promise<void> {
-  const resp = await fetch('/api/paper-search/download-pdf', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url, title }),
+  const { data } = await api.post('/paper-search/download-pdf', { url, title }, {
+    responseType: 'blob',
+    timeout: 60000,
   })
-  if (!resp.ok) throw new Error(`Download failed: ${resp.status}`)
-  const blob = await resp.blob()
+  const blobUrl = URL.createObjectURL(data as Blob)
   const a = document.createElement('a')
-  a.href = URL.createObjectURL(blob)
+  a.href = blobUrl
   a.download = title.slice(0, 60) + '.pdf'
+  document.body.appendChild(a)
   a.click()
-  URL.revokeObjectURL(a.href)
+  document.body.removeChild(a)
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 100)
 }
 
 // --- Paper Chat SSE ---

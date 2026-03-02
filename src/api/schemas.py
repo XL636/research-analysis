@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
+
+AnalysisModeType = Literal["quick", "standard", "deep"]
 
 
 # --- Pipeline ---
@@ -525,7 +527,7 @@ class SaveToKBRequest(BaseModel):
     url: str = ""
     abstract: str = ""
     source: str = ""
-    mode: str = "quick"
+    mode: AnalysisModeType = "quick"
 
 
 class SaveToKBResponse(BaseModel):
@@ -543,7 +545,7 @@ class DownloadAnalyzeRequest(BaseModel):
     venue: str = ""
     abstract: str = ""
     source: str = ""
-    mode: str = "quick"
+    mode: AnalysisModeType = "quick"
 
 
 class DownloadPdfRequest(BaseModel):

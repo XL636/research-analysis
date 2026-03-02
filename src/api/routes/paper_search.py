@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import asyncio
+from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from fastapi import APIRouter, HTTPException, Query
 from loguru import logger
@@ -27,6 +28,56 @@ from src.api.schemas import (
 )
 
 router = APIRouter()
+
+# --- Shared types and constants ---
+
+AnalysisMode = Literal["quick", "standard", "deep"]
+
+_JSON_SCHEMA_TEMPLATE = (
+    '{{\n'
+    '  "document_title": "论文标题",\n'
+    '  "paper_type": "empirical/theoretical/survey/opinion/technical 之一",\n'
+    '  "summary": "{summary_hint}",\n'
+    '  "key_findings": [{{"finding": "发现", "evidence": "证据", "significance": "意义"}}],\n'
+    '  "methodology": {{"approach": "方法", "strengths": ["优势"], "limitations": ["局限"]}},\n'
+    '  "contributions": [{contributions}],\n'
+    '  "limitations": [{limitations}],\n'
+    '  "future_work": [{future_work}],\n'
+    '  "tags": [{tags}],\n'
+    '  "relevance_score": 7.0\n'
+    '}}'
+)
+
+_SCHEMA_PARAMS = {
+    "quick": {
+        "summary_hint": "200字左右的中文摘要总结",
+        "contributions": '"贡献1", "贡献2"',
+        "limitations": '"局限1"',
+        "future_work": '"方向1"',
+        "tags": '"标签1", "标签2"',
+    },
+    "detailed": {
+        "summary_hint": "详细中文摘要总结",
+        "contributions": '"贡献1", "贡献2", "贡献3"',
+        "limitations": '"局限1", "局限2"',
+        "future_work": '"方向1", "方向2"',
+        "tags": '"标签1", "标签2", "标签3", "标签4"',
+    },
+}
+
+
+def _build_json_schema(mode: str) -> str:
+    params = _SCHEMA_PARAMS["detailed" if mode in ("standard", "deep") else "quick"]
+    return _JSON_SCHEMA_TEMPLATE.format(**params)
+
+
+# --- Shared helper: metadata → AnalysisResult + store ---
+
+@dataclass
+class _AnalyzeAndStoreResult:
+    doc_id: int
+    message: str
+    has_analysis: bool
 
 
 def _analyze_from_metadata(
@@ -55,6 +106,8 @@ def _analyze_from_metadata(
             f"摘要：{abstract}\n"
         )
 
+        json_schema = _build_json_schema(mode)
+
         if mode in ("standard", "deep"):
             depth_hint = "深入" if mode == "deep" else "较详细"
             prompt = (
@@ -67,37 +120,13 @@ def _analyze_from_metadata(
                 "4. contributions 至少 3 项\n"
                 "5. limitations 和 future_work 各至少 2 项\n"
                 "6. tags 至少 4 个关键词\n\n"
-                "返回 JSON，字段如下：\n"
-                "{\n"
-                '  "document_title": "论文标题",\n'
-                '  "paper_type": "empirical/theoretical/survey/opinion/technical 之一",\n'
-                '  "summary": "详细中文摘要总结",\n'
-                '  "key_findings": [{"finding": "发现", "evidence": "证据", "significance": "意义"}],\n'
-                '  "methodology": {"approach": "方法", "strengths": ["优势"], "limitations": ["局限"]},\n'
-                '  "contributions": ["贡献1", "贡献2", "贡献3"],\n'
-                '  "limitations": ["局限1", "局限2"],\n'
-                '  "future_work": ["方向1", "方向2"],\n'
-                '  "tags": ["标签1", "标签2", "标签3", "标签4"],\n'
-                '  "relevance_score": 7.0\n'
-                "}"
+                f"返回 JSON，字段如下：\n{json_schema}"
             )
         else:
             prompt = (
                 "请基于以下论文信息生成结构化分析（JSON 格式）。\n\n"
                 f"{meta_block}\n"
-                "返回 JSON，字段如下：\n"
-                "{\n"
-                '  "document_title": "论文标题",\n'
-                '  "paper_type": "empirical/theoretical/survey/opinion/technical 之一",\n'
-                '  "summary": "200字左右的中文摘要总结",\n'
-                '  "key_findings": [{"finding": "发现", "evidence": "证据", "significance": "意义"}],\n'
-                '  "methodology": {"approach": "方法", "strengths": ["优势"], "limitations": ["局限"]},\n'
-                '  "contributions": ["贡献1", "贡献2"],\n'
-                '  "limitations": ["局限1"],\n'
-                '  "future_work": ["方向1"],\n'
-                '  "tags": ["标签1", "标签2"],\n'
-                '  "relevance_score": 7.0\n'
-                "}"
+                f"返回 JSON，字段如下：\n{json_schema}"
             )
 
         result_dict = llm.chat_json("glm-4-flash", [{"role": "user", "content": prompt}])
@@ -113,6 +142,52 @@ def _analyze_from_metadata(
             tags=["paper_search"],
             relevance_score=5.0,
         )
+
+
+def _metadata_analyze_and_store(
+    *,
+    title: str,
+    abstract: str,
+    authors: str,
+    year: str,
+    venue: str,
+    doi: str,
+    url: str,
+    source: str,
+    mode: str,
+) -> _AnalyzeAndStoreResult:
+    """LLM 从元数据生成分析 + 存入知识库（共享逻辑）."""
+    from src.store.knowledge_base import KnowledgeBase
+
+    kb = KnowledgeBase()
+    analysis = _analyze_from_metadata(
+        title=title, abstract=abstract, authors=authors, year=year,
+        venue=venue, doi=doi, url=url, source=source, mode=mode,
+    )
+    doc_id = kb.store_analysis(
+        analysis=analysis,
+        file_path=url or "",
+        file_type="paper_search",
+        source_type="paper_search",
+        parsed_text=abstract or "",
+    )
+    return _AnalyzeAndStoreResult(doc_id=doc_id, message="已保存到知识库", has_analysis=True)
+
+
+def _pipeline_analyze(pdf_path: Path, title: str, mode: str) -> int:
+    """运行 Pipeline 分析 PDF 并返回 doc_id."""
+    from src.core.engine import Pipeline
+    from src.store.knowledge_base import KnowledgeBase
+
+    pipeline = Pipeline(mode=mode)
+    pipeline.run(
+        input_files=[str(pdf_path)],
+        output_format="markdown",
+        synthesize=False,
+    )
+    kb = KnowledgeBase()
+    results = kb.search(title, limit=1)
+    return results[0]["id"] if results else 0
 
 
 def _get_search_manager():
@@ -206,26 +281,15 @@ async def smart_search(req: SmartSearchRequest):
 @router.post("/save-to-kb", response_model=SaveToKBResponse)
 async def save_to_kb(req: SaveToKBRequest):
     """保存论文元数据到知识库."""
-    from src.store.knowledge_base import KnowledgeBase
-
     try:
         # 非 quick 模式：先尝试下载 PDF + Pipeline 完整分析
         if req.mode in ("standard", "deep") and req.url:
             try:
                 pdf_path = await asyncio.to_thread(_try_download_pdf, req.url, req.title)
                 if pdf_path and pdf_path.exists():
-                    from src.core.engine import Pipeline
-
-                    pipeline = Pipeline(mode=req.mode)
-                    await asyncio.to_thread(
-                        pipeline.run,
-                        input_files=[str(pdf_path)],
-                        output_format="markdown",
-                        synthesize=False,
+                    doc_id = await asyncio.to_thread(
+                        _pipeline_analyze, pdf_path, req.title, req.mode,
                     )
-                    kb = KnowledgeBase()
-                    results = kb.search(req.title, limit=1)
-                    doc_id = results[0]["id"] if results else 0
                     return SaveToKBResponse(
                         success=True, doc_id=doc_id,
                         message=f"已下载 PDF 并以{req.mode}模式分析入库",
@@ -233,27 +297,14 @@ async def save_to_kb(req: SaveToKBRequest):
             except Exception as e:
                 logger.warning(f"Pipeline analysis in save_to_kb failed: {e}, falling back to metadata analysis")
 
-        # quick 模式 或 Pipeline 失败 fallback：用 LLM 从元数据生成分析
-        kb = KnowledgeBase()
-        analysis = _analyze_from_metadata(
-            title=req.title,
-            abstract=req.abstract,
-            authors=req.authors,
-            year=req.year,
-            venue=req.venue,
-            doi=req.doi,
-            url=req.url,
-            source=req.source,
-            mode=req.mode,
+        # quick 模式 或 Pipeline 失败 fallback
+        result = await asyncio.to_thread(
+            _metadata_analyze_and_store,
+            title=req.title, abstract=req.abstract, authors=req.authors,
+            year=req.year, venue=req.venue, doi=req.doi,
+            url=req.url, source=req.source, mode=req.mode,
         )
-        doc_id = kb.store_analysis(
-            analysis=analysis,
-            file_path=req.url or "",
-            file_type="paper_search",
-            source_type="paper_search",
-            parsed_text=req.abstract or "",
-        )
-        return SaveToKBResponse(success=True, doc_id=doc_id, message="已保存到知识库")
+        return SaveToKBResponse(success=True, doc_id=result.doc_id, message=result.message)
     except Exception as e:
         logger.error(f"Save to KB failed: {e}")
         return SaveToKBResponse(success=False, message=str(e))
@@ -277,58 +328,30 @@ def _do_download_and_analyze(req: DownloadAnalyzeRequest) -> DownloadAnalyzeResp
     """同步执行下载 + 分析流程."""
     from src.store.knowledge_base import KnowledgeBase
 
+    meta_kwargs = dict(
+        title=req.title, abstract=req.abstract, authors=req.authors,
+        year=req.year, venue=req.venue, doi=req.doi,
+        url=req.url, source=req.source, mode=req.mode,
+    )
+
     # Try to download PDF
     pdf_path = _try_download_pdf(req.url, req.title)
 
     if pdf_path and pdf_path.exists():
         # Parse + Analyze via pipeline
         try:
-            from src.core.engine import Pipeline
-
-            pipeline = Pipeline(mode=req.mode)
-            pipeline.run(
-                input_files=[str(pdf_path)],
-                output_format="markdown",
-                synthesize=False,
-            )
-
-            # The pipeline stores to KB automatically; find the doc
-            kb = KnowledgeBase()
-            results = kb.search(req.title, limit=1)
-            doc_id = results[0]["id"] if results else 0
-
+            doc_id = _pipeline_analyze(pdf_path, req.title, req.mode)
             return DownloadAnalyzeResponse(
-                success=True,
-                doc_id=doc_id,
-                message="下载并分析完成",
-                has_analysis=True,
+                success=True, doc_id=doc_id,
+                message="下载并分析完成", has_analysis=True,
             )
         except Exception as e:
             logger.warning(f"Analysis failed after download: {e}")
             # Fallback: 用 LLM 从元数据生成分析
             try:
-                kb = KnowledgeBase()
-                analysis = _analyze_from_metadata(
-                    title=req.title,
-                    abstract=req.abstract,
-                    authors=req.authors,
-                    year=req.year,
-                    venue=req.venue,
-                    doi=req.doi,
-                    url=req.url,
-                    source=req.source,
-                    mode=req.mode,
-                )
-                doc_id = kb.store_analysis(
-                    analysis=analysis,
-                    file_path=req.url or "",
-                    file_type="paper_search",
-                    source_type="paper_search",
-                    parsed_text=req.abstract or "",
-                )
+                result = _metadata_analyze_and_store(**meta_kwargs)
                 return DownloadAnalyzeResponse(
-                    success=True,
-                    doc_id=doc_id,
+                    success=True, doc_id=result.doc_id,
                     message=f"PDF 分析失败，已用 LLM 从摘要生成分析: {e}",
                     has_analysis=True,
                 )
@@ -336,45 +359,21 @@ def _do_download_and_analyze(req: DownloadAnalyzeRequest) -> DownloadAnalyzeResp
                 logger.error(f"LLM fallback also failed: {e2}")
                 kb = KnowledgeBase()
                 doc_id = kb.store_metadata_only(
-                    title=req.title,
-                    summary=req.abstract,
-                    doi=req.doi,
-                    url=req.url,
-                    authors=req.authors,
-                    year=req.year,
+                    title=req.title, summary=req.abstract, doi=req.doi,
+                    url=req.url, authors=req.authors, year=req.year,
                     source_type="paper_search",
                 )
                 return DownloadAnalyzeResponse(
-                    success=True,
-                    doc_id=doc_id,
+                    success=True, doc_id=doc_id,
                     message=f"分析失败，已保存元数据: {e}",
                     has_analysis=False,
                 )
     else:
         # PDF 下载失败，用 LLM 从元数据生成分析
         try:
-            kb = KnowledgeBase()
-            analysis = _analyze_from_metadata(
-                title=req.title,
-                abstract=req.abstract,
-                authors=req.authors,
-                year=req.year,
-                venue=req.venue,
-                doi=req.doi,
-                url=req.url,
-                source=req.source,
-                mode=req.mode,
-            )
-            doc_id = kb.store_analysis(
-                analysis=analysis,
-                file_path=req.url or "",
-                file_type="paper_search",
-                source_type="paper_search",
-                parsed_text=req.abstract or "",
-            )
+            result = _metadata_analyze_and_store(**meta_kwargs)
             return DownloadAnalyzeResponse(
-                success=True,
-                doc_id=doc_id,
+                success=True, doc_id=result.doc_id,
                 message="PDF 下载失败，已用 LLM 从摘要生成分析",
                 has_analysis=True,
             )
@@ -382,17 +381,12 @@ def _do_download_and_analyze(req: DownloadAnalyzeRequest) -> DownloadAnalyzeResp
             logger.error(f"LLM fallback failed: {e}")
             kb = KnowledgeBase()
             doc_id = kb.store_metadata_only(
-                title=req.title,
-                summary=req.abstract,
-                doi=req.doi,
-                url=req.url,
-                authors=req.authors,
-                year=req.year,
+                title=req.title, summary=req.abstract, doi=req.doi,
+                url=req.url, authors=req.authors, year=req.year,
                 source_type="paper_search",
             )
             return DownloadAnalyzeResponse(
-                success=True,
-                doc_id=doc_id,
+                success=True, doc_id=doc_id,
                 message="PDF 下载失败，已保存元数据",
                 has_analysis=False,
             )
@@ -465,12 +459,19 @@ async def paper_chat(req: PaperChatRequest):
 @router.post("/download-pdf")
 async def download_pdf(req: DownloadPdfRequest):
     """直接下载论文 PDF 文件."""
+    from fastapi import BackgroundTasks
     from fastapi.responses import FileResponse
 
     pdf_path = await asyncio.to_thread(_try_download_pdf, req.url, req.title or "paper")
     if not pdf_path or not pdf_path.exists():
         raise HTTPException(status_code=404, detail="PDF 下载失败")
-    return FileResponse(pdf_path, filename=pdf_path.name, media_type="application/pdf")
+
+    bg = BackgroundTasks()
+    bg.add_task(pdf_path.unlink, missing_ok=True)
+    return FileResponse(
+        pdf_path, filename=pdf_path.name, media_type="application/pdf",
+        background=bg,
+    )
 
 
 def _try_download_pdf(url: str, title: str) -> Path | None:
