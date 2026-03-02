@@ -75,6 +75,7 @@ async def smart_search(req: SmartSearchRequest):
     from src.core.llm_client import LLMClient
     from src.core.search_client import SearchManager
 
+    sm = None
     try:
         llm = LLMClient()
         sm = SearchManager()
@@ -88,7 +89,6 @@ async def smart_search(req: SmartSearchRequest):
         )
 
         output = await asyncio.to_thread(agent.process, search_input)
-        sm.close()
 
         return SmartSearchResponse(
             query=output.query,
@@ -109,6 +109,9 @@ async def smart_search(req: SmartSearchRequest):
     except Exception as e:
         logger.error(f"Smart search failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if sm:
+            sm.close()
 
 
 @router.post("/save-to-kb", response_model=SaveToKBResponse)

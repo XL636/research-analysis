@@ -91,7 +91,7 @@ search_providers:
     timeout: 10
     max_results: 5
   arxiv:
-    base_url: http://export.arxiv.org/api
+    base_url: https://export.arxiv.org/api
     api_key_env: ''
     enabled: true
     timeout: 15

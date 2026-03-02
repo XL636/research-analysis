@@ -386,6 +386,8 @@
   "paperSearch.providerOpenAlex": "OpenAlex",
   "paperSearch.perProvider": "per source",
   "paperSearch.resultCount": "{{count}} results from {{providers}} sources",
+  "paperSearch.searchError": "Search request failed",
+  "paperSearch.searchErrorDesc": "Please check your network connection or try again later",
   "paperSearch.noResults": "No papers found",
   "paperSearch.noResultsDesc": "Try different keywords or adjust search providers",
   "paperSearch.emptyTitle": "Search Academic Papers",

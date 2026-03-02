@@ -386,6 +386,8 @@
   "paperSearch.providerOpenAlex": "OpenAlex",
   "paperSearch.perProvider": "条/源",
   "paperSearch.resultCount": "共 {{count}} 条结果，来自 {{providers}} 个搜索源",
+  "paperSearch.searchError": "搜索请求失败",
+  "paperSearch.searchErrorDesc": "请检查网络连接或稍后重试",
   "paperSearch.noResults": "未找到相关论文",
   "paperSearch.noResultsDesc": "尝试不同的关键词或调整搜索源",
   "paperSearch.emptyTitle": "搜索学术论文",

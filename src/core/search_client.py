@@ -49,7 +49,7 @@ class SearchProvider(ABC):
 
     def __init__(self, config: SearchProviderConfig) -> None:
         self.config = config
-        self._client = httpx.Client(timeout=config.timeout)
+        self._client = httpx.Client(timeout=config.timeout, follow_redirects=True)
 
     @property
     def name(self) -> str:
@@ -174,7 +174,7 @@ class OpenAlexProvider(SearchProvider):
                 params={
                     "search": query,
                     "per_page": min(max_results, self.config.max_results),
-                    "select": "id,title,authorships,publication_year,primary_location,doi,abstract_inverted_index,open_access,best_oa_url",
+                    "select": "id,title,authorships,publication_year,primary_location,doi,abstract_inverted_index,open_access,best_oa_location",
                 },
                 headers=headers,
             )
@@ -211,9 +211,12 @@ class OpenAlexProvider(SearchProvider):
                     work.get("abstract_inverted_index")
                 )
 
-                # Prefer OA PDF URL from OpenAlex
+                # Prefer OA URL from OpenAlex
                 oa_info = work.get("open_access") or {}
                 oa_url = oa_info.get("oa_url", "") or ""
+                if not oa_url:
+                    best_oa = work.get("best_oa_location") or {}
+                    oa_url = best_oa.get("pdf_url", "") or best_oa.get("landing_page_url", "") or ""
                 url = oa_url if oa_url else (work.get("doi", "") or "")
 
                 results.append(ExternalSearchResult(

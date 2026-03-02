@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { Search, Loader2, Sparkles, Zap, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react'
+import { Search, Loader2, Sparkles, Zap, ChevronDown, ChevronUp, ExternalLink, AlertCircle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { usePaperSearch, useSmartSearch, useSaveToKB, useDownloadAndAnalyze } from '../hooks/usePaperSearch'
 import SearchResultCard from '../components/paper-search/SearchResultCard'
@@ -48,7 +48,7 @@ export default function PaperSearchPage() {
   const providersParam = selectedProviders.length > 0 ? selectedProviders.join(',') : undefined
 
   // Keyword search (useQuery) — React Query cache handles persistence
-  const { data: keywordData, isLoading: keywordLoading, isFetching: keywordFetching } = usePaperSearch({
+  const { data: keywordData, isLoading: keywordLoading, isFetching: keywordFetching, isError: keywordError } = usePaperSearch({
     q: searchMode === 'keyword' ? searchQuery : '',
     providers: providersParam,
     max_results: maxResults,
@@ -170,6 +170,7 @@ export default function PaperSearchPage() {
   const hasSearched = isSmartMode
     ? (smartSearch.isSuccess || smartSearch.isError || !!cachedSmartData)
     : !!searchQuery
+  const hasError = isSmartMode ? smartSearch.isError : keywordError
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -397,8 +398,17 @@ export default function PaperSearchPage() {
         </>
       )}
 
+      {/* Error state */}
+      {!showLoading && hasError && (
+        <div className="text-center py-16">
+          <AlertCircle className="h-12 w-12 mx-auto mb-3 text-red-400" />
+          <p className="text-lg font-medium text-red-600">{t('paperSearch.searchError')}</p>
+          <p className="text-sm mt-1 text-gray-500">{t('paperSearch.searchErrorDesc')}</p>
+        </div>
+      )}
+
       {/* No results */}
-      {!showLoading && hasSearched && results.length === 0 && (
+      {!showLoading && hasSearched && !hasError && results.length === 0 && (
         <div className="text-center py-16 text-gray-400">
           <Search className="h-12 w-12 mx-auto mb-3 opacity-50" />
           <p className="text-lg font-medium">{t('paperSearch.noResults')}</p>
