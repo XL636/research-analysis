@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { searchPapers, smartSearchPapers, saveToKB, downloadAndAnalyze } from '../api/paperSearch'
+import { searchPapers, smartSearchPapers, downloadAndAnalyze } from '../api/paperSearch'
 
 export function usePaperSearch(params: {
   q: string
@@ -17,16 +17,6 @@ export function usePaperSearch(params: {
 export function useSmartSearch() {
   return useMutation({
     mutationFn: smartSearchPapers,
-  })
-}
-
-export function useSaveToKB() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: saveToKB,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['documents'] })
-    },
   })
 }
 

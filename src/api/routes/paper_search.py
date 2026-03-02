@@ -18,6 +18,8 @@ from src.api.schemas import (
     SmartSearchRequest,
     SmartSearchResponse,
     SmartSearchResultItem,
+    SummarizeRequest,
+    SummarizeResponse,
 )
 
 router = APIRouter()
@@ -217,6 +219,28 @@ def _do_download_and_analyze(req: DownloadAnalyzeRequest) -> DownloadAnalyzeResp
             message="PDF 下载失败，已保存元数据",
             has_analysis=False,
         )
+
+
+@router.post("/summarize", response_model=SummarizeResponse)
+async def summarize_paper(req: SummarizeRequest):
+    """用 LLM 生成论文的简短概述."""
+    from src.core.llm_client import LLMClient
+
+    try:
+        llm = LLMClient()
+        lang_hint = "中文" if req.language == "zh" else "English"
+        prompt = (
+            f"请用2-3句{lang_hint}简要概述这篇论文的核心内容和主要贡献：\n\n"
+            f"标题：{req.title}\n摘要：{req.abstract}"
+        )
+        result = await asyncio.to_thread(
+            llm.chat, "glm-4-flash", [{"role": "user", "content": prompt}],
+            temperature=0.3, max_tokens=512,
+        )
+        return SummarizeResponse(summary=result.strip())
+    except Exception as e:
+        logger.error(f"Summarize failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 def _try_download_pdf(url: str, title: str) -> Path | None:

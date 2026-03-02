@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ExternalLink, BookmarkPlus, Download, ChevronDown, ChevronUp, Loader2, Check } from 'lucide-react'
+import { ExternalLink, Database, ChevronDown, ChevronUp, Loader2, Sparkles, Check } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { PaperSearchResultItem, SmartSearchResultItem } from '../../types'
 
@@ -35,20 +35,20 @@ function scoreBadgeColor(score: number): string {
 
 interface SearchResultCardProps {
   result: PaperSearchResultItem
-  onSave: (result: PaperSearchResultItem) => void
   onDownload: (result: PaperSearchResultItem) => void
-  isSaving: boolean
+  onSummarize: (result: PaperSearchResultItem) => void
   isDownloading: boolean
-  savedDocId: number | null
+  isSummarizing: boolean
+  summary: string | null
 }
 
 export default function SearchResultCard({
   result,
-  onSave,
   onDownload,
-  isSaving,
+  onSummarize,
   isDownloading,
-  savedDocId,
+  isSummarizing,
+  summary,
 }: SearchResultCardProps) {
   const { t } = useTranslation()
   const [expanded, setExpanded] = useState(false)
@@ -89,6 +89,13 @@ export default function SearchResultCard({
         </p>
       )}
 
+      {/* AI Summary block */}
+      {summary && (
+        <div className="mt-3 p-3 bg-violet-50 border border-violet-200 rounded-lg">
+          <p className="text-sm text-violet-900 leading-relaxed">{summary}</p>
+        </div>
+      )}
+
       {/* Abstract */}
       {result.abstract && (
         <div className="mt-3">
@@ -117,18 +124,22 @@ export default function SearchResultCard({
       {/* Actions */}
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <button
-          onClick={() => onSave(result)}
-          disabled={isSaving || savedDocId !== null}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          onClick={() => onSummarize(result)}
+          disabled={isSummarizing || summary !== null}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-violet-300 text-violet-700 hover:bg-violet-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
-          {isSaving ? (
+          {isSummarizing ? (
             <Loader2 className="h-4 w-4 animate-spin" />
-          ) : savedDocId !== null ? (
-            <Check className="h-4 w-4 text-green-600" />
+          ) : summary !== null ? (
+            <Check className="h-4 w-4 text-violet-600" />
           ) : (
-            <BookmarkPlus className="h-4 w-4" />
+            <Sparkles className="h-4 w-4" />
           )}
-          {savedDocId !== null ? t('paperSearch.saved') : t('paperSearch.saveToKB')}
+          {isSummarizing
+            ? t('paperSearch.summarizing')
+            : summary !== null
+              ? t('paperSearch.summarized')
+              : t('paperSearch.aiSummary')}
         </button>
 
         {result.url && (
@@ -141,9 +152,9 @@ export default function SearchResultCard({
               {isDownloading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <Download className="h-4 w-4" />
+                <Database className="h-4 w-4" />
               )}
-              {t('paperSearch.downloadAnalyze')}
+              {t('paperSearch.analyzeAndSave')}
             </button>
 
             <a

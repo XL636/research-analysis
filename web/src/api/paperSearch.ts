@@ -2,8 +2,8 @@ import api from './client'
 import type {
   PaperSearchResponse,
   SmartSearchResponse,
-  SaveToKBResponse,
   DownloadAnalyzeResponse,
+  SummarizeResponse,
 } from '../types'
 
 export async function searchPapers(params: {
@@ -31,17 +31,13 @@ export async function smartSearchPapers(params: {
   return data
 }
 
-export async function saveToKB(paper: {
+export async function summarizePaper(params: {
   title: string
-  authors?: string
-  year?: string
-  venue?: string
-  doi?: string
-  url?: string
-  abstract?: string
-  source?: string
-}): Promise<SaveToKBResponse> {
-  const { data } = await api.post('/paper-search/save-to-kb', paper)
+  abstract: string
+}): Promise<SummarizeResponse> {
+  const { data } = await api.post('/paper-search/summarize', params, {
+    timeout: 30000,
+  })
   return data
 }
 

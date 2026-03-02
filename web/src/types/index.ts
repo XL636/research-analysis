@@ -442,15 +442,13 @@ export interface SmartSearchResponse {
   chinese_db_links?: ChineseDbLink[]
 }
 
-export interface SaveToKBResponse {
-  success: boolean
-  doc_id: number
-  message: string
-}
-
 export interface DownloadAnalyzeResponse {
   success: boolean
   doc_id: number
   message: string
   has_analysis: boolean
+}
+
+export interface SummarizeResponse {
+  summary: string
 }

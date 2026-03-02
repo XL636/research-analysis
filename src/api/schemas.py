@@ -548,3 +548,13 @@ class DownloadAnalyzeResponse(BaseModel):
     doc_id: int = 0
     message: str = ""
     has_analysis: bool = False
+
+
+class SummarizeRequest(BaseModel):
+    title: str
+    abstract: str
+    language: str = "zh"
+
+
+class SummarizeResponse(BaseModel):
+    summary: str

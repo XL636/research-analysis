@@ -1,7 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { Search, Loader2, Sparkles, Zap, ChevronDown, ChevronUp, ExternalLink, AlertCircle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { usePaperSearch, useSmartSearch, useSaveToKB, useDownloadAndAnalyze } from '../hooks/usePaperSearch'
+import { usePaperSearch, useSmartSearch, useDownloadAndAnalyze } from '../hooks/usePaperSearch'
+import { summarizePaper } from '../api/paperSearch'
 import SearchResultCard from '../components/paper-search/SearchResultCard'
 import type { PaperSearchResultItem, SmartSearchResponse } from '../types'
 
@@ -25,7 +26,7 @@ let pageCache: {
   maxResults: number
   searchMode: SearchMode
   smartData: SmartSearchResponse | null
-  savedMap: Record<string, number>
+  summaryMap: Record<string, string>
 } | null = null
 
 export default function PaperSearchPage() {
@@ -36,9 +37,9 @@ export default function PaperSearchPage() {
   const [maxResults, setMaxResults] = useState(pageCache?.maxResults ?? 5)
   const [searchMode, setSearchMode] = useState<SearchMode>(pageCache?.searchMode ?? 'keyword')
 
-  // Track per-result save/download state
-  const [savedMap, setSavedMap] = useState<Record<string, number>>(pageCache?.savedMap ?? {})
-  const [savingKey, setSavingKey] = useState<string | null>(null)
+  // Track per-result download/summarize state
+  const [summaryMap, setSummaryMap] = useState<Record<string, string>>(pageCache?.summaryMap ?? {})
+  const [summarizingKey, setSummarizingKey] = useState<string | null>(null)
   const [downloadingKey, setDownloadingKey] = useState<string | null>(null)
   const [showSearchLog, setShowSearchLog] = useState(false)
 
@@ -77,17 +78,16 @@ export default function PaperSearchPage() {
         maxResults,
         searchMode,
         smartData: cachedSmartData,
-        savedMap,
+        summaryMap,
       }
     }
   })
 
-  const saveMutation = useSaveToKB()
   const downloadMutation = useDownloadAndAnalyze()
 
   const handleSearch = useCallback(() => {
     if (!inputValue.trim()) return
-    setSavedMap({})
+    setSummaryMap({})
     if (searchMode === 'smart') {
       setCachedSmartData(null)
       smartSearch.mutate({
@@ -115,25 +115,20 @@ export default function PaperSearchPage() {
 
   const resultKey = (r: PaperSearchResultItem) => `${r.source}:${r.title}`
 
-  const handleSave = async (result: PaperSearchResultItem) => {
+  const handleSummarize = async (result: PaperSearchResultItem) => {
     const key = resultKey(result)
-    setSavingKey(key)
+    if (summaryMap[key]) return
+    setSummarizingKey(key)
     try {
-      const resp = await saveMutation.mutateAsync({
+      const resp = await summarizePaper({
         title: result.title,
-        authors: result.authors,
-        year: result.year,
-        venue: result.venue,
-        doi: result.doi,
-        url: result.url,
-        abstract: result.abstract,
-        source: result.source,
+        abstract: result.abstract || '',
       })
-      if (resp.success) {
-        setSavedMap(prev => ({ ...prev, [key]: resp.doc_id }))
-      }
+      setSummaryMap(prev => ({ ...prev, [key]: resp.summary }))
+    } catch {
+      // silently fail — user can retry
     } finally {
-      setSavingKey(null)
+      setSummarizingKey(null)
     }
   }
 
@@ -141,7 +136,7 @@ export default function PaperSearchPage() {
     const key = resultKey(result)
     setDownloadingKey(key)
     try {
-      const resp = await downloadMutation.mutateAsync({
+      await downloadMutation.mutateAsync({
         title: result.title,
         url: result.url,
         doi: result.doi,
@@ -151,9 +146,6 @@ export default function PaperSearchPage() {
         abstract: result.abstract,
         source: result.source,
       })
-      if (resp.success && resp.doc_id) {
-        setSavedMap(prev => ({ ...prev, [key]: resp.doc_id }))
-      }
     } finally {
       setDownloadingKey(null)
     }
@@ -387,11 +379,11 @@ export default function PaperSearchPage() {
               <SearchResultCard
                 key={`${result.source}-${result.title}-${idx}`}
                 result={result}
-                onSave={handleSave}
                 onDownload={handleDownload}
-                isSaving={savingKey === resultKey(result)}
+                onSummarize={handleSummarize}
                 isDownloading={downloadingKey === resultKey(result)}
-                savedDocId={savedMap[resultKey(result)] ?? null}
+                isSummarizing={summarizingKey === resultKey(result)}
+                summary={summaryMap[resultKey(result)] ?? null}
               />
             ))}
           </div>
