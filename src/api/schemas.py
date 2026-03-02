@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 # --- Pipeline ---
@@ -477,6 +477,13 @@ class SmartSearchRequest(BaseModel):
     providers: list[str] | None = None
     max_results: int = 20
     language_hint: str = "auto"
+
+    @field_validator("providers", mode="before")
+    @classmethod
+    def parse_providers(cls, v):
+        if isinstance(v, str):
+            return [p.strip() for p in v.split(",") if p.strip()]
+        return v
 
 
 class SmartSearchResultItem(BaseModel):

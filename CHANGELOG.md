@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - 全量测试 198 passed (pytest) + 30 passed (vitest)
 
 ### Fixed
+- Smart Search: 修复智能搜索"闪一下就消失"— 前端 providers 字符串→数组 + 后端 validator 兼容双类型 (T-87)
 - Web: 论文搜索结果切换页面后不再消失 — 模块级缓存保存搜索状态，Smart Search 数据额外缓存 (T-87)
 - Paper Search: SearchResultCard 补全 crossref 来源的颜色和标签映射 (T-87)
 - Paper Search: CrossRef 日期解析增加 None/非 int 类型安全检查，防止显示 "None" (T-87)
