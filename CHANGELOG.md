@@ -15,6 +15,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Fixed
 - Paper Search: 修复知识库「原文」Tab 不显示 — 所有 kb.store_analysis() 调用补全 parsed_text=req.abstract，原文 Tab 现可正常显示
 
+### Changed
+- Paper Search: mode 字段改用 Literal["quick","standard","deep"]，Pydantic 自动拒绝无效值
+- Paper Search: 提取 _metadata_analyze_and_store() / _pipeline_analyze() 共享辅助函数，消除 save_to_kb 与 download_and_analyze 逻辑重复
+- Paper Search: download-pdf 端点添加 BackgroundTasks 清理临时文件，防止磁盘增长
+- Paper Search: downloadPdf 改用 axios + 修复 blob URL 跨浏览器竞态
+- Paper Search: 前端 PaperAnalysisMode 类型统一导出，全链路类型一致
+
 ### Added
 - Paper Search: 论文 AI 对话 — 搜索结果卡片新增"AI 对话"按钮，弹出模态对话框，基于论文元数据 SSE 流式问答
 - Paper Search: API POST /api/paper-search/chat — SSE 流式端点，构造论文上下文 system prompt + glm-4-flash 模型
