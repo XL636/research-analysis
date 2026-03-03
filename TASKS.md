@@ -562,6 +562,14 @@
   - 验收：CrossRef 搜索可用，中文查询触发快捷链接
   - 依赖：T-86
 
+## Phase 12: 测试体系改进 `[完成]`
+
+- [x] **T-88: 测试体系改进 — 防止「测试通过但功能坏了」**
+  - 目标：引入 respx 传输层 mock + 架构守护 + API 集成 + 冒烟测试，堵住 MagicMock 反模式漏洞
+  - 步骤：① pyproject.toml 加 respx + pytest markers → ② 测试 fixtures（sample.pdf + html_landing.html） → ③ PaperDownloader 契约测试（17 个，respx 拦截 httpx） → ④ 真实 HTTP 冒烟测试（5 个，@pytest.mark.smoke） → ⑤ 架构守护测试（4 个，AST 分析源码约束） → ⑥ API 集成测试（7 个，TestClient + mock 内部依赖）
+  - 验收：`uv run pytest` 226 passed，`uv run pytest -m smoke` 5 个冒烟测试可运行
+  - 依赖：无
+
 ---
 
 ## Backlog（想法池）
