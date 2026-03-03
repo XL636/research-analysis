@@ -59,6 +59,10 @@ uv run ruff check src/               # 代码检查
 
 ## Workflow Rules
 
+- 每次完成功能开发或 bug 修复后，commit 之前：
+  1. 运行 `uv run pytest` 确保所有测试通过
+  2. 如果改动涉及 HTTP/下载相关代码，额外运行 `uv run pytest tests/test_paper_downloader.py tests/test_architecture.py -v`
+  3. 测试失败则必须修复后再 commit，不允许跳过
 - 每次完成一个 task 后：
   1. 在 TASKS.md 中将对应 task 标记为 `[x]`
   2. 更新 PROGRESS.md（完成数、百分比、已完成列表）
