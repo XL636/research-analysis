@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, HTTPException, Query
 from loguru import logger
@@ -29,48 +29,6 @@ from src.api.schemas import (
 
 router = APIRouter()
 
-# --- Shared types and constants ---
-
-AnalysisMode = Literal["quick", "standard", "deep"]
-
-_JSON_SCHEMA_TEMPLATE = (
-    '{{\n'
-    '  "document_title": "论文标题",\n'
-    '  "paper_type": "empirical/theoretical/survey/opinion/technical 之一",\n'
-    '  "summary": "{summary_hint}",\n'
-    '  "key_findings": [{{"finding": "发现", "evidence": "证据", "significance": "意义"}}],\n'
-    '  "methodology": {{"approach": "方法", "strengths": ["优势"], "limitations": ["局限"]}},\n'
-    '  "contributions": [{contributions}],\n'
-    '  "limitations": [{limitations}],\n'
-    '  "future_work": [{future_work}],\n'
-    '  "tags": [{tags}],\n'
-    '  "relevance_score": 7.0\n'
-    '}}'
-)
-
-_SCHEMA_PARAMS = {
-    "quick": {
-        "summary_hint": "200字左右的中文摘要总结",
-        "contributions": '"贡献1", "贡献2"',
-        "limitations": '"局限1"',
-        "future_work": '"方向1"',
-        "tags": '"标签1", "标签2"',
-    },
-    "detailed": {
-        "summary_hint": "详细中文摘要总结",
-        "contributions": '"贡献1", "贡献2", "贡献3"',
-        "limitations": '"局限1", "局限2"',
-        "future_work": '"方向1", "方向2"',
-        "tags": '"标签1", "标签2", "标签3", "标签4"',
-    },
-}
-
-
-def _build_json_schema(mode: str) -> str:
-    params = _SCHEMA_PARAMS["detailed" if mode in ("standard", "deep") else "quick"]
-    return _JSON_SCHEMA_TEMPLATE.format(**params)
-
-
 # --- Shared helper: metadata → AnalysisResult + store ---
 
 @dataclass
@@ -91,50 +49,55 @@ def _analyze_from_metadata(
     source: str = "",
     mode: str = "quick",
 ) -> "AnalysisResult":
-    """用 LLM 从标题+摘要生成结构化 AnalysisResult."""
+    """用 AnalyzerAgent 从标题+摘要生成结构化 AnalysisResult.
+
+    复用项目已有的 AnalyzerAgent + 分析模式配置（quick/standard/deep），
+    与 Pipeline 分析共享同一套 prompt 和模型。
+    """
+    import yaml
+
+    from src.agents.analyzer import AnalyzerAgent
     from src.core.llm_client import LLMClient
-    from src.core.models import AnalysisResult
+    from src.core.models import AnalysisResult, FileType, ParsedDocument
 
     try:
-        llm = LLMClient()
+        config_path = "config/settings.yaml"
 
-        meta_block = (
-            f"标题：{title}\n"
-            f"作者：{authors}\n"
-            f"年份：{year}\n"
-            f"期刊/会议：{venue}\n"
-            f"摘要：{abstract}\n"
+        # 从 settings.yaml 读取分析模式配置（与 Pipeline 一致）
+        analyzer_prompt = None
+        max_text_length = 8000
+        with open(config_path, encoding="utf-8") as f:
+            config = yaml.safe_load(f)
+        mode_conf = config.get("analysis_modes", {}).get(mode, {})
+        if mode_conf:
+            analyzer_prompt = mode_conf.get("analyzer_prompt")
+            max_text_length = mode_conf.get("max_text_length", 8000)
+
+        # 从元数据构造 ParsedDocument
+        parsed_doc = ParsedDocument(
+            file_path=url or "",
+            file_type=FileType.PDF,
+            title=title,
+            authors=[a.strip() for a in authors.split(",") if a.strip()] if authors else [],
+            abstract=abstract,
+            raw_text=abstract or "",
+            metadata={
+                k: v for k, v in {
+                    "year": year, "venue": venue, "doi": doi, "source": source,
+                }.items() if v
+            },
         )
 
-        json_schema = _build_json_schema(mode)
-
-        if mode in ("standard", "deep"):
-            depth_hint = "深入" if mode == "deep" else "较详细"
-            prompt = (
-                f"请基于以下论文信息进行{depth_hint}的结构化分析（JSON 格式）。\n\n"
-                f"{meta_block}\n"
-                "要求：\n"
-                "1. summary 至少 400 字，涵盖背景、方法、结果和意义\n"
-                "2. key_findings 至少列出 3 项，每项含 finding/evidence/significance\n"
-                "3. methodology 需详细描述 approach，并给出具体的 strengths 和 limitations\n"
-                "4. contributions 至少 3 项\n"
-                "5. limitations 和 future_work 各至少 2 项\n"
-                "6. tags 至少 4 个关键词\n\n"
-                f"返回 JSON，字段如下：\n{json_schema}"
-            )
-        else:
-            prompt = (
-                "请基于以下论文信息生成结构化分析（JSON 格式）。\n\n"
-                f"{meta_block}\n"
-                f"返回 JSON，字段如下：\n{json_schema}"
-            )
-
-        result_dict = llm.chat_json("glm-4-flash", [{"role": "user", "content": prompt}])
-        # 确保 document_title 存在
-        result_dict.setdefault("document_title", title)
-        return AnalysisResult.model_validate(result_dict)
+        # 用 AnalyzerAgent 分析（使用配置的模型 + 模式 prompt）
+        llm = LLMClient(config_path)
+        analyzer = AnalyzerAgent(
+            llm, config_path,
+            prompt_override=analyzer_prompt,
+            max_text_length=max_text_length,
+        )
+        return analyzer.process(parsed_doc)
     except Exception as e:
-        logger.warning(f"LLM analysis from metadata failed: {e}")
+        logger.warning(f"AnalyzerAgent analysis from metadata failed: {e}")
         # 兜底：返回仅含 summary 的 AnalysisResult
         return AnalysisResult(
             document_title=title,
