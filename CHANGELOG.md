@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Knowledge Base: 完整原文 Tab 默认不渲染内容，点击「加载原文」按钮后显示，支持收起
 - i18n: 新增 5 个 detail.* 翻译 key（tabAbstract/abstractOnlyNote/loadOriginal/collapseText/originalNotLoaded）
 
+### Changed
+- Paper Search: _analyze_from_metadata() 重构为使用 AnalyzerAgent — 复用 settings.yaml 模型配置 + 分析模式 prompt（quick/standard/deep），支持 paper_type 识别和自适应分析维度
+- Paper Search: 移除 ad-hoc JSON schema 模板（_JSON_SCHEMA_TEMPLATE / _SCHEMA_PARAMS / _build_json_schema），-81 行代码
+
 ### Fixed
 - Smart Search: 中文查询无 LLM 时搜不到论文 — 新增 80+ 学术术语词典 fallback（中文→英文翻译 + 领域检测），无需 LLM 也能正确生成英文关键词
 - Smart Search: LLM 排序分数解析崩溃 — `relevance_score` 字段 LLM 可能返回文字描述而非数字，添加安全解析
