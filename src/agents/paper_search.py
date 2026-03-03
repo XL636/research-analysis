@@ -75,6 +75,16 @@ _DOMAIN_PROVIDERS: dict[str, list[str]] = {
     "machine_learning": ["arxiv", "semantic_scholar", "crossref"],
     "physics": ["arxiv", "openalex", "crossref"],
     "mathematics": ["arxiv", "openalex", "crossref"],
+    "economics": ["openalex", "crossref", "semantic_scholar"],
+    "finance": ["openalex", "crossref", "semantic_scholar"],
+    "business": ["openalex", "crossref", "semantic_scholar"],
+    "management": ["openalex", "crossref", "semantic_scholar"],
+    "social_science": ["openalex", "crossref", "semantic_scholar"],
+    "psychology": ["pubmed", "openalex", "crossref", "semantic_scholar"],
+    "education": ["openalex", "crossref", "semantic_scholar"],
+    "law": ["openalex", "crossref", "semantic_scholar"],
+    "environmental": ["openalex", "crossref", "semantic_scholar", "pubmed"],
+    "engineering": ["arxiv", "openalex", "crossref", "semantic_scholar"],
     "general": ["semantic_scholar", "openalex", "arxiv", "pubmed", "crossref"],
 }
 
@@ -111,6 +121,164 @@ def _build_chinese_db_links(query: str) -> list[dict[str, str]]:
         {"name": item["name"], "url": item["url_template"].format(query=encoded)}
         for item in _CHINESE_DB_LINKS
     ]
+
+
+# --- 无 LLM Fallback: 中文学术术语 → 英文关键词 ---
+
+# 术语词典：中文片段 → (英文关键词列表, 领域标签)
+# 匹配采用最长子串优先
+_ACADEMIC_TERM_MAP: list[tuple[str, list[str], str]] = [
+    # --- 经济学 / 金融 / 商业 ---
+    ("代理理论", ["agency theory"], "economics"),
+    ("代理成本", ["agency cost"], "economics"),
+    ("代理经济", ["agency economics", "agency theory"], "economics"),
+    ("代理商业", ["agency business", "agency theory"], "business"),
+    ("代理问题", ["agency problem", "principal-agent problem"], "economics"),
+    ("委托代理", ["principal-agent", "agency theory"], "economics"),
+    ("资本市场", ["capital market"], "finance"),
+    ("股票市场", ["stock market", "equity market"], "finance"),
+    ("市场反应", ["market reaction", "market response"], "finance"),
+    ("资产定价", ["asset pricing"], "finance"),
+    ("公司治理", ["corporate governance"], "finance"),
+    ("信息不对称", ["information asymmetry", "asymmetric information"], "economics"),
+    ("道德风险", ["moral hazard"], "economics"),
+    ("逆向选择", ["adverse selection"], "economics"),
+    ("行为金融", ["behavioral finance"], "finance"),
+    ("风险管理", ["risk management"], "finance"),
+    ("投资组合", ["portfolio", "portfolio management"], "finance"),
+    ("金融市场", ["financial market"], "finance"),
+    ("货币政策", ["monetary policy"], "economics"),
+    ("财政政策", ["fiscal policy"], "economics"),
+    ("宏观经济", ["macroeconomics"], "economics"),
+    ("微观经济", ["microeconomics"], "economics"),
+    ("博弈论", ["game theory"], "economics"),
+    ("供应链", ["supply chain"], "business"),
+    ("创新", ["innovation"], "business"),
+    ("企业家精神", ["entrepreneurship"], "business"),
+    ("并购", ["mergers and acquisitions", "M&A"], "finance"),
+    ("IPO", ["initial public offering", "IPO"], "finance"),
+    ("会计", ["accounting"], "business"),
+    ("审计", ["auditing"], "business"),
+    ("盈余管理", ["earnings management"], "finance"),
+    ("股利", ["dividend"], "finance"),
+    ("ESG", ["ESG", "environmental social governance"], "finance"),
+    ("可持续发展", ["sustainable development", "sustainability"], "environmental"),
+    ("碳排放", ["carbon emission"], "environmental"),
+    ("绿色金融", ["green finance"], "finance"),
+    # --- 管理学 ---
+    ("组织行为", ["organizational behavior"], "management"),
+    ("人力资源", ["human resource management"], "management"),
+    ("战略管理", ["strategic management"], "management"),
+    ("领导力", ["leadership"], "management"),
+    ("知识管理", ["knowledge management"], "management"),
+    ("项目管理", ["project management"], "management"),
+    # --- 计算机 / AI ---
+    ("机器学习", ["machine learning"], "machine_learning"),
+    ("深度学习", ["deep learning"], "ai"),
+    ("自然语言处理", ["natural language processing", "NLP"], "ai"),
+    ("计算机视觉", ["computer vision"], "ai"),
+    ("大语言模型", ["large language model", "LLM"], "ai"),
+    ("人工智能", ["artificial intelligence"], "ai"),
+    ("强化学习", ["reinforcement learning"], "ai"),
+    ("神经网络", ["neural network"], "ai"),
+    ("推荐系统", ["recommendation system", "recommender system"], "computer_science"),
+    ("区块链", ["blockchain"], "computer_science"),
+    ("数据挖掘", ["data mining"], "computer_science"),
+    ("知识图谱", ["knowledge graph"], "computer_science"),
+    # --- 医学 / 生物 ---
+    ("基因编辑", ["gene editing", "CRISPR"], "biomedical"),
+    ("蛋白质", ["protein"], "biology"),
+    ("药物", ["drug", "pharmaceutical"], "medical"),
+    ("临床试验", ["clinical trial"], "medical"),
+    ("流行病", ["epidemic", "epidemiology"], "medical"),
+    ("免疫", ["immunology", "immune"], "medical"),
+    ("癌症", ["cancer", "oncology"], "medical"),
+    # --- 教育 / 心理 / 社科 ---
+    ("教育", ["education"], "education"),
+    ("心理", ["psychology", "psychological"], "psychology"),
+    ("认知", ["cognition", "cognitive"], "psychology"),
+    ("社会", ["social", "society"], "social_science"),
+    ("政策", ["policy"], "social_science"),
+    # --- 通用学术词 ---
+    ("实证研究", ["empirical study", "empirical research"], ""),
+    ("实验", ["experiment", "experimental"], ""),
+    ("综述", ["review", "survey"], ""),
+    ("元分析", ["meta-analysis"], ""),
+    ("回归分析", ["regression analysis"], ""),
+    ("因果", ["causality", "causal"], ""),
+    ("影响", ["impact", "effect"], ""),
+    ("关系", ["relationship", "relation"], ""),
+    ("机制", ["mechanism"], ""),
+    ("模型", ["model"], ""),
+    ("效率", ["efficiency"], ""),
+    ("绩效", ["performance"], ""),
+]
+
+# 按中文术语长度降序排序（最长匹配优先）
+_ACADEMIC_TERM_MAP.sort(key=lambda x: len(x[0]), reverse=True)
+
+
+def _fallback_translate_and_detect(query: str) -> tuple[list[str], str, str]:
+    """无 LLM 时的 fallback：基于术语词典将中文查询翻译为英文关键词 + 检测领域.
+
+    Uses overlapping scan (not greedy consume) so "资本市场反应" matches both
+    "资本市场" → capital market AND "市场反应" → market reaction.
+
+    Returns:
+        (english_keywords, detected_domain, interpreted_intent)
+    """
+    if not _contains_chinese(query):
+        return [query], "general", query
+
+    keywords: list[str] = []
+    domain_votes: dict[str, int] = {}
+    matched_cn: list[str] = []
+
+    # 非消耗式扫描：在原始 query 上匹配所有术语（允许重叠）
+    for cn_term, en_terms, domain in _ACADEMIC_TERM_MAP:
+        if cn_term in query:
+            keywords.extend(en_terms)
+            matched_cn.append(cn_term)
+            if domain:
+                domain_votes[domain] = domain_votes.get(domain, 0) + 1
+
+    # 领域投票
+    detected_domain = "general"
+    if domain_votes:
+        detected_domain = max(domain_votes, key=lambda k: domain_votes[k])
+
+    # 生成组合短语：取每个匹配术语的首选英文词做组合
+    if len(matched_cn) >= 2:
+        term_groups: list[str] = []
+        seen_terms: set[str] = set()
+        for cn_term, en_terms, _ in _ACADEMIC_TERM_MAP:
+            if cn_term in matched_cn and en_terms[0] not in seen_terms:
+                term_groups.append(en_terms[0])
+                seen_terms.add(en_terms[0])
+        if len(term_groups) >= 2:
+            combined = " ".join(term_groups[:3])
+            keywords.insert(0, combined)
+
+    # 去重并保序
+    seen: set[str] = set()
+    unique_keywords: list[str] = []
+    for kw in keywords:
+        kw_lower = kw.lower()
+        if kw_lower not in seen:
+            seen.add(kw_lower)
+            unique_keywords.append(kw)
+
+    if not unique_keywords:
+        logger.warning(f"[paper_search] Fallback: no terms matched for '{query}', using raw query")
+        unique_keywords = [query]
+
+    intent = f"Research on {', '.join(unique_keywords[:3])}" if unique_keywords else query
+
+    logger.info(
+        f"[paper_search] Fallback translate: '{query}' → keywords={unique_keywords}, domain={detected_domain}"
+    )
+
+    return unique_keywords, detected_domain, intent
 
 
 @dataclass
@@ -251,14 +419,17 @@ class PaperSearchAgent(BaseAgent):
 
     def _understand_query(self, state: _AgentLoopState) -> None:
         """LLM 理解用户意图、检测领域、生成关键词."""
+        available_domains = ", ".join(sorted(_DOMAIN_PROVIDERS.keys()))
         prompt = (
             "## Phase 0: Intent Understanding, Domain Detection & Keyword Generation\n\n"
             f"User query: {state.query}\n\n"
             "Tasks:\n"
             "1. Understand the user's research intent\n"
-            "2. Detect the research domain (choose from: medical, biomedical, biology, neuroscience, "
-            "chemistry, computer_science, ai, machine_learning, physics, mathematics, general)\n"
-            "3. Generate 4-8 English search keywords/phrases for academic paper search\n\n"
+            f"2. Detect the research domain (choose from: {available_domains})\n"
+            "3. Generate 4-8 English search keywords/phrases for academic paper search\n"
+            "   - If the query is in Chinese, translate it to English academic terms\n"
+            "   - Include both broad and specific keywords\n"
+            "   - Include canonical terminology for the research area\n\n"
             "Respond in JSON:\n"
             '{"interpreted_intent": "...", "research_domain": "...", "keywords": ["...", ...]}'
         )
@@ -270,10 +441,12 @@ class PaperSearchAgent(BaseAgent):
             if not state.all_keywords:
                 state.all_keywords = [state.query]
         except Exception as e:
-            logger.warning(f"[paper_search] Phase 0 failed: {e}, using raw query")
-            state.intent = state.query
-            state.domain = "general"
-            state.all_keywords = [state.query]
+            logger.warning(f"[paper_search] Phase 0 LLM failed: {e}, using fallback translator")
+            # Fallback: 用术语词典翻译中文 → 英文
+            keywords, domain, intent = _fallback_translate_and_detect(state.query)
+            state.intent = intent
+            state.domain = domain
+            state.all_keywords = keywords
 
     # --- Provider 选择 ---
 
@@ -446,15 +619,8 @@ class PaperSearchAgent(BaseAgent):
             result = self._call_llm_json(prompt)
             ranked_items = result.get("ranked_papers", [])
         except Exception as e:
-            logger.warning(f"[paper_search] Ranking failed: {e}, returning all with default score")
-            return [
-                RankedPaper(
-                    **c.model_dump(),
-                    relevance_score=0.5,
-                    relevance_reason="LLM ranking unavailable",
-                )
-                for c in candidates
-            ]
+            logger.warning(f"[paper_search] Ranking failed: {e}, using keyword-based fallback ranking")
+            return self._fallback_rank(query, intent, candidates)
 
         ranked_papers: list[RankedPaper] = []
         for item in ranked_items:
@@ -471,3 +637,58 @@ class PaperSearchAgent(BaseAgent):
 
         ranked_papers.sort(key=lambda p: p.relevance_score, reverse=True)
         return ranked_papers
+
+    # --- Fallback 排序（无 LLM）---
+
+    @staticmethod
+    def _fallback_rank(
+        query: str,
+        intent: str,
+        candidates: list[ExternalSearchResult],
+    ) -> list[RankedPaper]:
+        """基于关键词匹配的 fallback 排序，无需 LLM."""
+        # 提取搜索关键词（从 intent 和 query 中）
+        if _contains_chinese(query):
+            _, _, intent_text = _fallback_translate_and_detect(query)
+        else:
+            intent_text = intent or query
+
+        # 构建关键词集合（小写，去停用词）
+        stop_words = {"the", "a", "an", "of", "in", "on", "and", "or", "for", "to", "with", "is", "are", "research"}
+        raw_terms = re.split(r"[\s,;]+", intent_text.lower().replace("research on ", ""))
+        search_terms = {t for t in raw_terms if t and t not in stop_words and len(t) > 1}
+
+        ranked: list[RankedPaper] = []
+        for c in candidates:
+            text = f"{c.title} {c.abstract}".lower()
+            if not text.strip():
+                continue
+
+            # 计算关键词命中率
+            hits = sum(1 for term in search_terms if term in text)
+            term_score = hits / max(len(search_terms), 1)
+
+            # 标题命中额外加权（标题相关性更高）
+            title_lower = c.title.lower()
+            title_hits = sum(1 for term in search_terms if term in title_lower)
+            title_bonus = title_hits * 0.1
+
+            # 有摘要的论文稍微加分
+            abstract_bonus = 0.05 if c.abstract else 0.0
+
+            score = min(term_score + title_bonus + abstract_bonus, 1.0)
+
+            # 生成简短的匹配说明
+            matched = [t for t in search_terms if t in text]
+            reason = f"Keywords matched: {', '.join(sorted(matched)[:5])}" if matched else "Low keyword overlap"
+
+            ranked.append(
+                RankedPaper(
+                    **c.model_dump(),
+                    relevance_score=round(score, 3),
+                    relevance_reason=reason,
+                )
+            )
+
+        ranked.sort(key=lambda p: p.relevance_score, reverse=True)
+        return ranked
