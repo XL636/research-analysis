@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Smart Search: 中文查询无 LLM 时搜不到论文 — 新增 80+ 学术术语词典 fallback（中文→英文翻译 + 领域检测），无需 LLM 也能正确生成英文关键词
 - Smart Search: LLM 排序分数解析崩溃 — `relevance_score` 字段 LLM 可能返回文字描述而非数字，添加安全解析
 - Smart Search: 前端超时显示"未找到论文" — Agent 多轮迭代耗时超 120s，降低迭代上限(4→3)和内部超时(100→60s)，前端超时 120→180s
+- Smart Search: 评分 badge 颜色阈值修正 — scoreBadgeColor 阈值从 7/4 (0-10 scale) 改为 0.7/0.4 (0-1 scale)，分数显示改为百分比(如 90%)
 
 ### Added
 - Smart Search: 无 LLM fallback 排序 — 基于关键词匹配的相关性评分，替代全部 0.5 默认分
