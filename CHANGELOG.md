@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- Knowledge Base: paper_search 保存论文时自动生成 report_content，详情页显示「完整报告」Tab
+- Knowledge Base: 存量论文首次访问时懒生成 report_content 并回写数据库
+- Knowledge Base: DocumentDetail API 返回 source_type 字段，前端可区分论文来源
+- Knowledge Base: paper_search 仅含摘要的论文，原文 Tab 改名「摘要」并加琥珀色提示条
+- Knowledge Base: 完整原文 Tab 默认不渲染内容，点击「加载原文」按钮后显示，支持收起
+- i18n: 新增 5 个 detail.* 翻译 key（tabAbstract/abstractOnlyNote/loadOriginal/collapseText/originalNotLoaded）
+
 ### Fixed
 - Smart Search: 中文查询无 LLM 时搜不到论文 — 新增 80+ 学术术语词典 fallback（中文→英文翻译 + 领域检测），无需 LLM 也能正确生成英文关键词
 - Smart Search: LLM 排序分数解析崩溃 — `relevance_score` 字段 LLM 可能返回文字描述而非数字，添加安全解析
