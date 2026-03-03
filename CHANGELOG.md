@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- Paper Search: PDF 下载功能对非 arXiv 来源（PubMed、CrossRef、bioRxiv、OpenAlex 等）无法下载 — 改用 PaperDownloader 支持 arXiv + Unpaywall DOI→OA + 直链三级下载策略，前端传递 doi 启用 Unpaywall 查找
+
 ### Added
 - Knowledge Base: paper_search 保存论文时自动生成 report_content，详情页显示「完整报告」Tab
 - Knowledge Base: 存量论文首次访问时懒生成 report_content 并回写数据库
