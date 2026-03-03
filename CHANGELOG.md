@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Fixed
+- Smart Search: 中文查询无 LLM 时搜不到论文 — 新增 80+ 学术术语词典 fallback（中文→英文翻译 + 领域检测），无需 LLM 也能正确生成英文关键词
+- Smart Search: LLM 排序分数解析崩溃 — `relevance_score` 字段 LLM 可能返回文字描述而非数字，添加安全解析
+- Smart Search: 前端超时显示"未找到论文" — Agent 多轮迭代耗时超 120s，降低迭代上限(4→3)和内部超时(100→60s)，前端超时 120→180s
+
+### Added
+- Smart Search: 无 LLM fallback 排序 — 基于关键词匹配的相关性评分，替代全部 0.5 默认分
+- Smart Search: 扩展 10 个学科领域映射 — economics/finance/business/management/social_science/psychology/education/law/environmental/engineering
+
+### Fixed
 - KnowledgeBase: 消除重复初始化 — 类级 `_initialized_paths` 标志 + double-checked locking，同一 db_path 只执行一次迁移 SQL
 - Pipeline: doc_id 穿透 — `_analyze_and_store()` 返回 `(AnalysisResult, doc_id)` 元组，`PipelineContext.doc_ids` 收集，`_pipeline_analyze` 不再需要 FTS 搜索找回 doc_id
 
