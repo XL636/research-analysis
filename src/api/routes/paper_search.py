@@ -171,6 +171,16 @@ def _metadata_analyze_and_store(
         source_type="paper_search",
         parsed_text=abstract or "",
     )
+
+    # 生成 report_content 以便详情页显示"完整报告" Tab
+    try:
+        from src.api.routes.knowledge import _analysis_to_report
+        report = _analysis_to_report(analysis)
+        if report.content:
+            kb.update_report_content(doc_id, report.content)
+    except Exception as e:
+        logger.warning(f"Failed to generate report_content for doc {doc_id}: {e}")
+
     return _AnalyzeAndStoreResult(doc_id=doc_id, message="已保存到知识库", has_analysis=True)
 
 

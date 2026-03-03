@@ -18,6 +18,9 @@ import {
   Check,
   X,
   FolderOpen,
+  Info,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import {
@@ -299,6 +302,7 @@ export default function DocumentDetailPage() {
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [editTitle, setEditTitle] = useState('')
   const [activeTab, setActiveTab] = useState<'cards' | 'report' | 'original'>('cards')
+  const [originalLoaded, setOriginalLoaded] = useState(false)
 
   const handleDelete = () => {
     deleteMutation.mutate(Number(id), {
@@ -501,47 +505,52 @@ export default function DocumentDetailPage() {
       </div>
 
       {/* Tab bar (when report_content or parsed_text exists) */}
-      {doc.analysis && (doc.report_content || doc.parsed_text) && (
-        <div className="flex border-b border-gray-200 mb-6">
-          <button
-            type="button"
-            onClick={() => setActiveTab('cards')}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors duration-200 ${
-              activeTab === 'cards'
-                ? 'border-primary-600 text-primary-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            {t('detail.tabCards')}
-          </button>
-          {doc.report_content && (
+      {doc.analysis && (doc.report_content || doc.parsed_text) && (() => {
+        const isPaperSearch = doc.source_type === 'paper_search'
+        const isAbstractOnly = isPaperSearch && (!doc.parsed_text || doc.parsed_text.length < 1000)
+        const originalTabLabel = isAbstractOnly ? t('detail.tabAbstract') : t('detail.tabOriginal')
+        return (
+          <div className="flex border-b border-gray-200 mb-6">
             <button
               type="button"
-              onClick={() => setActiveTab('report')}
+              onClick={() => setActiveTab('cards')}
               className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors duration-200 ${
-                activeTab === 'report'
+                activeTab === 'cards'
                   ? 'border-primary-600 text-primary-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              {t('detail.tabReport')}
+              {t('detail.tabCards')}
             </button>
-          )}
-          {doc.parsed_text && (
-            <button
-              type="button"
-              onClick={() => setActiveTab('original')}
-              className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors duration-200 ${
-                activeTab === 'original'
-                  ? 'border-primary-600 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              {t('detail.tabOriginal')}
-            </button>
-          )}
-        </div>
-      )}
+            {doc.report_content && (
+              <button
+                type="button"
+                onClick={() => setActiveTab('report')}
+                className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors duration-200 ${
+                  activeTab === 'report'
+                    ? 'border-primary-600 text-primary-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                {t('detail.tabReport')}
+              </button>
+            )}
+            {doc.parsed_text && (
+              <button
+                type="button"
+                onClick={() => setActiveTab('original')}
+                className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors duration-200 ${
+                  activeTab === 'original'
+                    ? 'border-primary-600 text-primary-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                {originalTabLabel}
+              </button>
+            )}
+          </div>
+        )
+      })()}
 
       {/* Analysis content or empty state */}
       {doc.analysis && !(doc.analysis as any).metadata_only ? (
@@ -549,11 +558,57 @@ export default function DocumentDetailPage() {
           <div className="bg-surface-card rounded-xl shadow-sm p-8">
             <MarkdownRenderer content={doc.report_content} />
           </div>
-        ) : activeTab === 'original' && doc.parsed_text ? (
-          <div className="bg-surface-card rounded-xl shadow-sm p-8">
-            <MarkdownRenderer content={doc.parsed_text} />
-          </div>
-        ) : (
+        ) : activeTab === 'original' && doc.parsed_text ? (() => {
+          const isPaperSearch = doc.source_type === 'paper_search'
+          const isAbstractOnly = isPaperSearch && doc.parsed_text!.length < 1000
+
+          if (isAbstractOnly) {
+            // 场景 A：paper_search 仅有摘要 — 直接显示 + 提示
+            return (
+              <div className="bg-surface-card rounded-xl shadow-sm p-8">
+                <div className="flex items-start gap-3 mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                  <Info className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                  <p className="text-sm text-amber-800">{t('detail.abstractOnlyNote')}</p>
+                </div>
+                <MarkdownRenderer content={doc.parsed_text!} />
+              </div>
+            )
+          }
+
+          // 场景 B：完整原文 — 懒加载
+          return (
+            <div className="bg-surface-card rounded-xl shadow-sm p-8">
+              {originalLoaded ? (
+                <>
+                  <MarkdownRenderer content={doc.parsed_text!} />
+                  <div className="mt-6 flex justify-center">
+                    <button
+                      type="button"
+                      onClick={() => setOriginalLoaded(false)}
+                      className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 border border-gray-300 hover:border-gray-400 rounded-lg px-4 py-2 transition-all duration-200"
+                    >
+                      <ChevronUp className="h-4 w-4" />
+                      {t('detail.collapseText')}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <FileText className="h-12 w-12 text-gray-300 mb-4" />
+                  <p className="text-gray-500 mb-4">{t('detail.originalNotLoaded')}</p>
+                  <button
+                    type="button"
+                    onClick={() => setOriginalLoaded(true)}
+                    className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-600 hover:text-primary-700 border border-primary-300 hover:border-primary-400 rounded-lg px-4 py-2 transition-all duration-200"
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                    {t('detail.loadOriginal')}
+                  </button>
+                </div>
+              )}
+            </div>
+          )
+        })() : (
           <AnalysisCards analysis={doc.analysis} />
         )
       ) : (

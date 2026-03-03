@@ -68,6 +68,7 @@ class DocumentDetail(BaseModel):
     collection_id: int | None = None
     report_content: str | None = None
     parsed_text: str | None = None
+    source_type: str = "user_upload"
 
 
 class SearchResult(BaseModel):

@@ -135,6 +135,7 @@ async def get_document(
         row = conn.execute(
             """SELECT d.id, d.title, d.file_type, d.file_path, d.summary,
                       d.analysis_json, d.report_content, d.parsed_text, d.collection_id,
+                      d.source_type,
                       strftime('%Y-%m-%d %H:%M', d.created_at) as created_at,
                       GROUP_CONCAT(t.name, ', ') as tags
                FROM documents d
@@ -152,6 +153,19 @@ async def get_document(
     if row["analysis_json"]:
         analysis = json.loads(row["analysis_json"])
 
+    report_content = row["report_content"] or None
+
+    # 存量数据懒生成 report_content
+    if not report_content and analysis and not analysis.get("metadata_only"):
+        try:
+            ar = AnalysisResult.model_validate(analysis)
+            report = _analysis_to_report(ar)
+            if report.content:
+                kb.update_report_content(doc_id, report.content)
+                report_content = report.content
+        except Exception:
+            pass
+
     return DocumentDetail(
         id=row["id"],
         title=row["title"],
@@ -162,8 +176,9 @@ async def get_document(
         date=row["created_at"] or "",
         analysis=analysis,
         collection_id=row["collection_id"],
-        report_content=row["report_content"] or None,
+        report_content=report_content,
         parsed_text=row["parsed_text"] or None,
+        source_type=row["source_type"] or "user_upload",
     )
 
 

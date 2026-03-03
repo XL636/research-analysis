@@ -60,6 +60,7 @@ export interface DocumentDetail {
   collection_id: number | null
   report_content: string | null
   parsed_text: string | null
+  source_type: string
 }
 
 export interface UpdateTitleResponse {
