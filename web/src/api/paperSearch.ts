@@ -23,7 +23,7 @@ export async function smartSearchPapers(params: {
   language_hint?: string
 }): Promise<SmartSearchResponse> {
   const { data } = await api.post('/paper-search/smart-search', params, {
-    timeout: 120000,
+    timeout: 180000,
   })
   return data
 }

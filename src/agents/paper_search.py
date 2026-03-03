@@ -88,8 +88,8 @@ _DOMAIN_PROVIDERS: dict[str, list[str]] = {
     "general": ["semantic_scholar", "openalex", "arxiv", "pubmed", "crossref"],
 }
 
-_MAX_ITERATIONS = 4
-_TIMEOUT_SECONDS = 100  # API 120s - 20s buffer
+_MAX_ITERATIONS = 3
+_TIMEOUT_SECONDS = 60  # 留 60s 给最终排序 LLM 调用 + 网络延迟，前端 120s 超时
 
 # --- T-87: 中文数据库快捷链接 ---
 
@@ -627,11 +627,17 @@ class PaperSearchAgent(BaseAgent):
             idx = item.get("index", -1)
             if 0 <= idx < len(candidates):
                 c = candidates[idx]
+                # 安全解析 relevance_score（LLM 可能返回字符串而非数字）
+                raw_score = item.get("relevance_score", 0.5)
+                try:
+                    score = float(raw_score)
+                except (ValueError, TypeError):
+                    score = 0.5
                 ranked_papers.append(
                     RankedPaper(
                         **c.model_dump(),
-                        relevance_score=float(item.get("relevance_score", 0.5)),
-                        relevance_reason=item.get("relevance_reason", ""),
+                        relevance_score=score,
+                        relevance_reason=str(item.get("relevance_reason", "")),
                     )
                 )
 
