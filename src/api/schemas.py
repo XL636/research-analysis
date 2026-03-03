@@ -552,6 +552,7 @@ class DownloadAnalyzeRequest(BaseModel):
 class DownloadPdfRequest(BaseModel):
     url: str
     title: str = ""
+    doi: str = ""
 
 
 class DownloadAnalyzeResponse(BaseModel):

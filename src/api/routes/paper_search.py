@@ -255,7 +255,7 @@ async def save_to_kb(req: SaveToKBRequest):
         # 非 quick 模式：先尝试下载 PDF + Pipeline 完整分析
         if req.mode in ("standard", "deep") and req.url:
             try:
-                pdf_path = await asyncio.to_thread(_try_download_pdf, req.url, req.title)
+                pdf_path = await asyncio.to_thread(_try_download_pdf, req.url, req.title, req.doi)
                 if pdf_path and pdf_path.exists():
                     doc_id = await asyncio.to_thread(
                         _pipeline_analyze, pdf_path, req.title, req.mode,
@@ -305,7 +305,7 @@ def _do_download_and_analyze(req: DownloadAnalyzeRequest) -> DownloadAnalyzeResp
     )
 
     # Try to download PDF
-    pdf_path = _try_download_pdf(req.url, req.title)
+    pdf_path = _try_download_pdf(req.url, req.title, req.doi)
 
     if pdf_path and pdf_path.exists():
         # Parse + Analyze via pipeline
@@ -432,9 +432,9 @@ async def download_pdf(req: DownloadPdfRequest):
     from fastapi import BackgroundTasks
     from fastapi.responses import FileResponse
 
-    pdf_path = await asyncio.to_thread(_try_download_pdf, req.url, req.title or "paper")
+    pdf_path = await asyncio.to_thread(_try_download_pdf, req.url, req.title or "paper", req.doi)
     if not pdf_path or not pdf_path.exists():
-        raise HTTPException(status_code=404, detail="PDF 下载失败")
+        raise HTTPException(status_code=404, detail="PDF 下载失败，该论文可能无开放获取版本")
 
     bg = BackgroundTasks()
     bg.add_task(pdf_path.unlink, missing_ok=True)
@@ -444,33 +444,12 @@ async def download_pdf(req: DownloadPdfRequest):
     )
 
 
-def _try_download_pdf(url: str, title: str) -> Path | None:
-    """Attempt to download a PDF from URL."""
-    import httpx
+def _try_download_pdf(url: str, title: str, doi: str = "") -> Path | None:
+    """Attempt to download a PDF using PaperDownloader (arXiv + Unpaywall + direct)."""
+    from src.utils.paper_downloader import PaperDownloader
 
     download_dir = Path("downloads/papers")
     download_dir.mkdir(parents=True, exist_ok=True)
 
-    # Sanitize filename
-    safe_name = "".join(c if c.isalnum() or c in " -_" else "_" for c in title[:60])
-    pdf_path = download_dir / f"{safe_name}.pdf"
-
-    try:
-        with httpx.Client(timeout=30, follow_redirects=True) as client:
-            # If arXiv abs URL, convert to PDF
-            if "arxiv.org/abs/" in url:
-                url = url.replace("/abs/", "/pdf/") + ".pdf"
-
-            resp = client.get(url)
-            resp.raise_for_status()
-
-            content_type = resp.headers.get("content-type", "")
-            if "pdf" not in content_type and not resp.content[:5] == b"%PDF-":
-                logger.warning(f"URL did not return PDF: {content_type}")
-                return None
-
-            pdf_path.write_bytes(resp.content)
-            return pdf_path
-    except Exception as e:
-        logger.warning(f"PDF download failed from {url}: {e}")
-        return None
+    downloader = PaperDownloader(download_dir=str(download_dir))
+    return downloader.download(url=url, doi=doi)

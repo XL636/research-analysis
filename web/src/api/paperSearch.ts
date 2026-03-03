@@ -60,8 +60,8 @@ export async function downloadAndAnalyze(paper: {
   return data
 }
 
-export async function downloadPdf(url: string, title: string): Promise<void> {
-  const { data } = await api.post('/paper-search/download-pdf', { url, title }, {
+export async function downloadPdf(url: string, title: string, doi?: string): Promise<void> {
+  const { data } = await api.post('/paper-search/download-pdf', { url, title, doi: doi || '' }, {
     responseType: 'blob',
     timeout: 60000,
   })

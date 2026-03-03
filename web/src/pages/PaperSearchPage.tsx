@@ -169,7 +169,7 @@ export default function PaperSearchPage() {
     const key = resultKey(result)
     setDownloadingPdfKey(key)
     try {
-      await downloadPdf(result.url, result.title)
+      await downloadPdf(result.url, result.title, result.doi)
     } catch (err) {
       console.error('PDF download failed:', err)
     } finally {
