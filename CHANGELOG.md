@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- Testing: PaperDownloader 契约测试 — 17 个 respx 传输层 mock 测试，覆盖 content-type 拒绝、%PDF 魔数验证、超大文件中止、arXiv/Unpaywall 下载、优先级策略
+- Testing: 架构守护测试 — 4 个 AST 分析测试，强制保证 _try_download_pdf 使用 PaperDownloader、_fetch_pdf 检查 content-type 和 %PDF 魔数
+- Testing: API 集成测试 — 7 个 TestClient 测试，覆盖 /search、/download-pdf、/download-and-analyze 端点
+- Testing: 真实 HTTP 冒烟测试 — 5 个 @pytest.mark.smoke 测试（arXiv 下载、Unpaywall OA、PubMed/DOI 拒绝）
+- Testing: 新增 respx 依赖 + pytest markers（smoke/e2e）配置
+
 ### Fixed
 - Paper Search: PDF 下载功能对非 arXiv 来源（PubMed、CrossRef、bioRxiv、OpenAlex 等）无法下载 — 改用 PaperDownloader 支持 arXiv + Unpaywall DOI→OA + 直链三级下载策略，前端传递 doi 启用 Unpaywall 查找
 

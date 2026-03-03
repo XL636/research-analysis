@@ -106,8 +106,12 @@
 | CLI (batch/export/import) | 12 | 全部通过 |
 | API Routes (FastAPI) | 14 | 全部通过 |
 | Paper Search (Provider + CLI + Registration) | 32 | 全部通过 |
+| PaperDownloader 契约测试 (respx) | 17 | 全部通过 |
+| API Paper Search 集成测试 | 7 | 全部通过 |
+| 架构守护测试 (AST) | 4 | 全部通过 |
+| 冒烟测试 (真实 HTTP, 默认跳过) | 5 | 需网络 |
 | Frontend Components (Vitest) | 30 | 全部通过 |
-| **合计** | **198** | **全部通过** |
+| **合计** | **231 (226 默认运行 + 5 smoke)** | **全部通过** |
 
 ## 里程碑进度
 
