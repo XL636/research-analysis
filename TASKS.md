@@ -632,13 +632,15 @@
 
 - [x] **T-97: 学习辅助后端（学习指南 + FAQ 生成）**
   - 目标：基于文档内容生成学习指南和 FAQ
-  - 步骤：① config/prompts/reader_study_guide.txt + reader_faq.txt → ② reader.py 2 个生成端点 → ③ 支持 save_as_note
+  - 步骤：① config/prompts/reader_study_guide.txt + reader_faq.txt → ② reader.py 2 个生成端点
   - 验收：API 返回结构化学习指南和 FAQ JSON
+  - Bugfix (2026-03-06): 移除 save_as_note 参数，保存笔记改为前端独立调用；STUDY_GUIDE_FOCUS_MODES 增强为结构化强制指令；temperature 0.3→0.5
   - 依赖：T-92, T-94
 
 - [x] **T-98: 学习辅助前端**
   - 目标：概览面板下方添加"生成学习指南"/"生成 FAQ"按钮和结果展示
   - 验收：点击按钮生成学习指南/FAQ 并展示，可保存为笔记
+  - Bugfix (2026-03-06): 保存按钮改为前端格式化已有数据直接保存，防重复点击；切换侧重模式重置 saved 状态
   - 依赖：T-93, T-95, T-97
 
 ---
