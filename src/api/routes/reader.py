@@ -1014,6 +1014,7 @@ async def generate_study_guide(doc_id: int, focus: str = "conceptual"):
         raise HTTPException(status_code=500, detail=f"Study guide generation failed: {e}")
 
     sections = result.get("sections", [])
+    store.save_study_cache(doc_id, "guide", sections, focus_mode=focus)
     return StudyGuideResponse(sections=sections, saved_note_id=None)
 
 
@@ -1055,7 +1056,28 @@ async def generate_faq(doc_id: int):
         raise HTTPException(status_code=500, detail=f"FAQ generation failed: {e}")
 
     questions = result.get("questions", [])
+    store.save_study_cache(doc_id, "faq", questions)
     return FaqResponse(questions=questions, saved_note_id=None)
+
+
+@router.get("/{doc_id}/study-cache/guide", response_model=StudyGuideResponse)
+async def get_study_guide_cache(doc_id: int, focus: str = "conceptual"):
+    """Get cached study guide for a document."""
+    store = _get_store()
+    cached = store.get_study_cache(doc_id, "guide", focus_mode=focus)
+    if cached is None:
+        return StudyGuideResponse(sections=[], saved_note_id=None)
+    return StudyGuideResponse(sections=cached, saved_note_id=None)
+
+
+@router.get("/{doc_id}/study-cache/faq", response_model=FaqResponse)
+async def get_faq_cache(doc_id: int):
+    """Get cached FAQ for a document."""
+    store = _get_store()
+    cached = store.get_study_cache(doc_id, "faq")
+    if cached is None:
+        return FaqResponse(questions=[], saved_note_id=None)
+    return FaqResponse(questions=cached, saved_note_id=None)
 
 
 # --- Legacy endpoints (backward compatible) ---

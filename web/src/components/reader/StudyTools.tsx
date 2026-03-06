@@ -15,6 +15,8 @@ interface StudyToolsProps {
   isGeneratingGuide: boolean
   isGeneratingFaq: boolean
   docTitle?: string
+  focusMode?: FocusMode
+  onFocusModeChange?: (mode: FocusMode) => void
 }
 
 const FOCUS_MODES: { key: FocusMode; icon: typeof Lightbulb }[] = [
@@ -32,10 +34,17 @@ export default function StudyTools({
   isGeneratingGuide,
   isGeneratingFaq,
   docTitle = '',
+  focusMode: externalFocusMode,
+  onFocusModeChange,
 }: StudyToolsProps) {
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<'guide' | 'faq'>('guide')
-  const [focusMode, setFocusMode] = useState<FocusMode>('conceptual')
+  const [internalFocusMode, setInternalFocusMode] = useState<FocusMode>('conceptual')
+  const focusMode = externalFocusMode ?? internalFocusMode
+  const setFocusMode = (mode: FocusMode) => {
+    setInternalFocusMode(mode)
+    onFocusModeChange?.(mode)
+  }
   const [guideSaved, setGuideSaved] = useState(false)
   const [faqSaved, setFaqSaved] = useState(false)
 

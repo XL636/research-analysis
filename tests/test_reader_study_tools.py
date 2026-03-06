@@ -381,3 +381,112 @@ class TestNoteCreationSeparation:
         )
         assert save_resp2.status_code == 200
         assert len(store.list_notes(doc["id"])) == 2
+
+
+class TestStudyCachePersistence:
+    """Fix 3: Study guide / FAQ data persists across page refreshes."""
+
+    def test_store_save_and_get_guide_cache(self, temp_reader_store):
+        """ReaderStore can save and retrieve study guide cache."""
+        store, doc = temp_reader_store
+        sections = [{"title": "T1", "content": "C1"}, {"title": "T2", "content": "C2"}]
+
+        store.save_study_cache(doc["id"], "guide", sections, focus_mode="conceptual")
+        cached = store.get_study_cache(doc["id"], "guide", focus_mode="conceptual")
+        assert cached == sections
+
+    def test_store_save_and_get_faq_cache(self, temp_reader_store):
+        """ReaderStore can save and retrieve FAQ cache."""
+        store, doc = temp_reader_store
+        questions = [{"question": "Q1?", "answer": "A1"}]
+
+        store.save_study_cache(doc["id"], "faq", questions)
+        cached = store.get_study_cache(doc["id"], "faq")
+        assert cached == questions
+
+    def test_store_cache_returns_none_when_empty(self, temp_reader_store):
+        """No cache returns None."""
+        store, doc = temp_reader_store
+        assert store.get_study_cache(doc["id"], "guide", focus_mode="conceptual") is None
+        assert store.get_study_cache(doc["id"], "faq") is None
+
+    def test_store_cache_different_focus_modes(self, temp_reader_store):
+        """Each focus mode is cached independently."""
+        store, doc = temp_reader_store
+        store.save_study_cache(doc["id"], "guide", [{"title": "A"}], focus_mode="conceptual")
+        store.save_study_cache(doc["id"], "guide", [{"title": "B"}], focus_mode="review")
+
+        assert store.get_study_cache(doc["id"], "guide", focus_mode="conceptual") == [{"title": "A"}]
+        assert store.get_study_cache(doc["id"], "guide", focus_mode="review") == [{"title": "B"}]
+
+    def test_store_cache_upsert(self, temp_reader_store):
+        """Saving again updates existing cache (upsert)."""
+        store, doc = temp_reader_store
+        store.save_study_cache(doc["id"], "guide", [{"title": "Old"}], focus_mode="conceptual")
+        store.save_study_cache(doc["id"], "guide", [{"title": "New"}], focus_mode="conceptual")
+
+        cached = store.get_study_cache(doc["id"], "guide", focus_mode="conceptual")
+        assert cached == [{"title": "New"}]
+
+    async def test_generate_caches_result(self, reader_client, temp_reader_store):
+        """POST generate also saves to cache; GET cache retrieves it."""
+        store, doc = temp_reader_store
+
+        mock_llm = MagicMock()
+        mock_llm.chat_json.return_value = {
+            "sections": [{"title": "Cached", "content": "Content"}]
+        }
+
+        with patch("src.core.llm_client.LLMClient", return_value=mock_llm), \
+             patch("src.api.routes.reader._load_config", return_value={"agent_models": {}}):
+            resp = await reader_client.post(
+                f"/api/reader/{doc['id']}/generate/study-guide",
+                params={"focus": "conceptual"},
+            )
+            assert resp.status_code == 200
+
+        # GET cached guide without re-generating
+        with patch("src.api.routes.reader._get_store", return_value=store):
+            resp2 = await reader_client.get(
+                f"/api/reader/{doc['id']}/study-cache/guide",
+                params={"focus": "conceptual"},
+            )
+            assert resp2.status_code == 200
+            assert len(resp2.json()["sections"]) == 1
+            assert resp2.json()["sections"][0]["title"] == "Cached"
+
+    async def test_get_cache_empty_returns_empty_list(self, reader_client, temp_reader_store):
+        """GET cache for uncached doc returns empty sections/questions."""
+        _store, doc = temp_reader_store
+
+        resp = await reader_client.get(
+            f"/api/reader/{doc['id']}/study-cache/guide",
+            params={"focus": "conceptual"},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["sections"] == []
+
+        resp2 = await reader_client.get(
+            f"/api/reader/{doc['id']}/study-cache/faq",
+        )
+        assert resp2.status_code == 200
+        assert resp2.json()["questions"] == []
+
+    async def test_faq_generate_caches_result(self, reader_client, temp_reader_store):
+        """POST FAQ generate also saves to cache."""
+        store, doc = temp_reader_store
+
+        mock_llm = MagicMock()
+        mock_llm.chat_json.return_value = {
+            "questions": [{"question": "Q?", "answer": "A"}]
+        }
+
+        with patch("src.core.llm_client.LLMClient", return_value=mock_llm), \
+             patch("src.api.routes.reader._load_config", return_value={"agent_models": {}}):
+            resp = await reader_client.post(f"/api/reader/{doc['id']}/generate/faq")
+            assert resp.status_code == 200
+
+        with patch("src.api.routes.reader._get_store", return_value=store):
+            resp2 = await reader_client.get(f"/api/reader/{doc['id']}/study-cache/faq")
+            assert resp2.status_code == 200
+            assert len(resp2.json()["questions"]) == 1

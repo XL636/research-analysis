@@ -123,6 +123,22 @@ class ReaderStore:
                 )
             """)
 
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS reader_study_cache (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    document_id INTEGER NOT NULL,
+                    type TEXT NOT NULL,
+                    focus_mode TEXT DEFAULT NULL,
+                    data TEXT NOT NULL DEFAULT '[]',
+                    created_at TEXT,
+                    FOREIGN KEY (document_id) REFERENCES reader_documents(id) ON DELETE CASCADE
+                )
+            """)
+            conn.execute("""
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_study_cache_unique
+                ON reader_study_cache(document_id, type, COALESCE(focus_mode, ''))
+            """)
+
             # FTS5 index for reader_pages (contentless, shares data with reader_pages)
             conn.execute("""
                 CREATE VIRTUAL TABLE IF NOT EXISTS reader_pages_fts USING fts5(
@@ -526,3 +542,43 @@ class ReaderStore:
             cursor = conn.execute("DELETE FROM reader_notes WHERE id = ?", (note_id,))
             conn.commit()
         return cursor.rowcount > 0
+
+    # --- Study Cache ---
+
+    def save_study_cache(
+        self, doc_id: int, cache_type: str, data: list, focus_mode: str | None = None
+    ) -> None:
+        """Save or update study guide / FAQ cache."""
+        now = self._beijing_now()
+        data_json = json.dumps(data, ensure_ascii=False)
+        focus_key = focus_mode or ""
+        with self._connect() as conn:
+            existing = conn.execute(
+                "SELECT id FROM reader_study_cache WHERE document_id = ? AND type = ? AND COALESCE(focus_mode, '') = ?",
+                (doc_id, cache_type, focus_key),
+            ).fetchone()
+            if existing:
+                conn.execute(
+                    "UPDATE reader_study_cache SET data = ?, created_at = ? WHERE id = ?",
+                    (data_json, now, existing["id"]),
+                )
+            else:
+                conn.execute(
+                    "INSERT INTO reader_study_cache (document_id, type, focus_mode, data, created_at) VALUES (?, ?, ?, ?, ?)",
+                    (doc_id, cache_type, focus_mode, data_json, now),
+                )
+            conn.commit()
+
+    def get_study_cache(
+        self, doc_id: int, cache_type: str, focus_mode: str | None = None
+    ) -> list | None:
+        """Get cached study guide / FAQ. Returns parsed list or None."""
+        focus_key = focus_mode or ""
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT data FROM reader_study_cache WHERE document_id = ? AND type = ? AND COALESCE(focus_mode, '') = ?",
+                (doc_id, cache_type, focus_key),
+            ).fetchone()
+        if row:
+            return json.loads(row["data"])
+        return None

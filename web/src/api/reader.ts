@@ -236,6 +236,19 @@ export async function generateFaq(docId: number): Promise<FaqResponse> {
   return data
 }
 
+// Study cache (persisted)
+export async function getStudyGuideCache(docId: number, focus: string = 'conceptual'): Promise<StudyGuideResponse> {
+  const { data } = await api.get(`/reader/${docId}/study-cache/guide`, {
+    params: { focus },
+  })
+  return data
+}
+
+export async function getFaqCache(docId: number): Promise<FaqResponse> {
+  const { data } = await api.get(`/reader/${docId}/study-cache/faq`)
+  return data
+}
+
 // Suggested questions
 export async function getSuggestedQuestions(docId: number, pageNum: number): Promise<SuggestedQuestionsResponse> {
   const { data } = await api.get(`/reader/${docId}/suggestions`, { params: { page_num: pageNum } })

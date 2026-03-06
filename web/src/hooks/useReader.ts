@@ -26,6 +26,8 @@ import {
   deleteNote,
   generateStudyGuide,
   generateFaq,
+  getStudyGuideCache,
+  getFaqCache,
 } from '../api/reader'
 import type { ReaderChatMessage } from '../types'
 
@@ -252,17 +254,43 @@ export function useDeleteNote() {
 }
 
 // Study tools hooks
+export function useStudyGuideCache(docId: number, focus: string = 'conceptual') {
+  return useQuery({
+    queryKey: ['studyGuideCache', docId, focus],
+    queryFn: () => getStudyGuideCache(docId, focus),
+    enabled: docId > 0,
+    staleTime: Infinity,
+  })
+}
+
+export function useFaqCache(docId: number) {
+  return useQuery({
+    queryKey: ['faqCache', docId],
+    queryFn: () => getFaqCache(docId),
+    enabled: docId > 0,
+    staleTime: Infinity,
+  })
+}
+
 export function useGenerateStudyGuide() {
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({ docId, focus }: { docId: number; focus?: string }) =>
       generateStudyGuide(docId, focus),
+    onSuccess: (_data, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['studyGuideCache', vars.docId] })
+    },
   })
 }
 
 export function useGenerateFaq() {
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({ docId }: { docId: number }) =>
       generateFaq(docId),
+    onSuccess: (_data, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['faqCache', vars.docId] })
+    },
   })
 }
 

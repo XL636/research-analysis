@@ -20,6 +20,8 @@ import {
   useDeleteNote,
   useGenerateStudyGuide,
   useGenerateFaq,
+  useStudyGuideCache,
+  useFaqCache,
 } from '../hooks/useReader'
 import { getReaderFileUrl } from '../api/reader'
 import PdfPageViewer from '../components/reader/PdfPageViewer'
@@ -48,8 +50,25 @@ export default function ReaderViewPage() {
   const [rightTab, setRightTab] = useState<RightTab>('chat')
 
   // Study tools state
+  const [focusMode, setFocusMode] = useState<'conceptual' | 'practical' | 'review'>('conceptual')
   const [studyGuide, setStudyGuide] = useState<StudyGuideSection[] | null>(null)
   const [faq, setFaq] = useState<FaqItem[] | null>(null)
+
+  // Load cached study data on mount / focus change
+  const { data: guideCacheData } = useStudyGuideCache(docId, focusMode)
+  const { data: faqCacheData } = useFaqCache(docId)
+
+  useEffect(() => {
+    if (guideCacheData && guideCacheData.sections.length > 0) {
+      setStudyGuide(guideCacheData.sections as StudyGuideSection[])
+    }
+  }, [guideCacheData])
+
+  useEffect(() => {
+    if (faqCacheData && faqCacheData.questions.length > 0 && !faq) {
+      setFaq(faqCacheData.questions as FaqItem[])
+    }
+  }, [faqCacheData]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Initialize current page from document's saved progress
   useEffect(() => {
@@ -175,7 +194,8 @@ export default function ReaderViewPage() {
     deleteNote.mutate({ docId, noteId })
   }
 
-  const handleGenerateStudyGuide = (focus: string = 'conceptual') => {
+  const handleGenerateStudyGuide = (focus: 'conceptual' | 'practical' | 'review' = 'conceptual') => {
+    setFocusMode(focus)
     generateStudyGuideMutation.mutate(
       { docId, focus },
       { onSuccess: (data) => setStudyGuide(data.sections) },
@@ -351,6 +371,8 @@ export default function ReaderViewPage() {
                         isGeneratingGuide={generateStudyGuideMutation.isPending}
                         isGeneratingFaq={generateFaqMutation.isPending}
                         docTitle={doc.title}
+                        focusMode={focusMode}
+                        onFocusModeChange={setFocusMode}
                       />
                     </div>
                   )}
