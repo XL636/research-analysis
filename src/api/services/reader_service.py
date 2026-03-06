@@ -175,6 +175,47 @@ def _extract_txt_pages(file_path: str) -> list[str]:
     return pages
 
 
+def sample_document_content(store, doc_id: int, max_chars: int = 12000) -> str:
+    """Sample document content for overview/study generation.
+
+    Takes pages from beginning, middle, and end to get representative content.
+    """
+    from src.store.reader_store import ReaderStore
+    doc = store.get_document(doc_id)
+    if not doc:
+        return ""
+    total = doc["total_pages"]
+    if total == 0:
+        return ""
+
+    # Strategy: first 3 pages, middle 2, last 2 (up to total)
+    page_nums = set()
+    # First pages
+    for i in range(1, min(4, total + 1)):
+        page_nums.add(i)
+    # Middle pages
+    mid = total // 2
+    for i in range(max(1, mid - 1), min(total + 1, mid + 2)):
+        page_nums.add(i)
+    # Last pages
+    for i in range(max(1, total - 1), total + 1):
+        page_nums.add(i)
+
+    pages = store.get_pages_by_nums(doc_id, sorted(page_nums))
+    parts = []
+    char_count = 0
+    for p in pages:
+        text = p["content"]
+        if char_count + len(text) > max_chars:
+            text = text[:max_chars - char_count]
+        parts.append(f"[第 {p['page_num']} 页]\n{text}")
+        char_count += len(text)
+        if char_count >= max_chars:
+            break
+
+    return "\n\n---\n\n".join(parts)
+
+
 def _chunk_text(text: str, chunk_size: int = 2000) -> list[str]:
     """Split text into chunks of approximately chunk_size characters at paragraph boundaries."""
     paragraphs = re.split(r"\n\s*\n", text)

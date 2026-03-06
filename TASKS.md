@@ -570,6 +570,77 @@
   - 验收：`uv run pytest` 226 passed，`uv run pytest -m smoke` 5 个冒烟测试可运行
   - 依赖：无
 
+## Phase 13: 阅读辅助升级 — NotebookLM 风格 `[完成]`
+
+### 模型配置升级
+
+- [x] **T-89: settings.yaml 新增 OpenAI + Claude 模型定义**
+  - 目标：添加 gpt-4o、o4-mini、claude-sonnet-4-20250514 模型配置，LLMClient 支持 anthropic provider
+  - 步骤：① settings.yaml models 段新增 3 个模型 → ② LLMClient._get_client() 对 anthropic provider 处理 → ③ chat_json() 对不支持 json_object 的 provider 回退 prompt 引导
+  - 验收：LLMClient 可用 3 个新模型调用 chat() 和 chat_json()
+  - 依赖：无
+
+- [x] **T-90: 阅读辅助模型独立配置 + 设置页 UI**
+  - 目标：agent_models 拆分 reader/reader_agent/reader_suggestions 三个 slot，设置页新增"阅读辅助"分组
+  - 验收：设置页显示"阅读辅助"分组，切换模型后对话/Agent/推荐问题分别使用对应模型
+  - 依赖：T-89
+
+### 对话质量提升
+
+- [x] **T-91: Prompt 优化 + 引用标注 [p.X]**
+  - 目标：重写 reader_assistant.txt 和 reader_agent.txt，引入 [p.X] 引用格式，前端引用可点击跳转
+  - 验收：AI 回答中出现 [p.3] 格式引用，点击跳转到对应页码
+  - 依赖：无
+
+### 文档概览（NotebookLM Source Guide）
+
+- [x] **T-92: 文档概览后端（存储 + API + Prompt）**
+  - 目标：上传文档后可生成结构化概览（摘要、关键主题、目录结构）
+  - 步骤：① reader_store.py 新增 reader_document_overview 表 + CRUD → ② reader_service.py 新增 sample_document_content() → ③ config/prompts/reader_overview.txt → ④ reader.py GET/POST 端点
+  - 验收：API 调用返回文档概览 JSON（summary、key_topics、outline）
+  - 依赖：无
+
+- [x] **T-93: 文档概览前端 + 右侧 Tab 面板**
+  - 目标：右侧面板从单一聊天改为 Tab 模式（对话 | 概览 | 笔记），概览展示摘要/主题/目录
+  - 验收：阅读页可切换到"概览" Tab，显示文档摘要和目录，目录点击跳转页码
+  - 依赖：T-92
+
+- [x] **T-93b: 上下文增强 — 概览摘要注入**
+  - 目标：_build_page_context() 中注入文档概览摘要作为背景上下文
+  - 验收：有概览的文档，对话时 AI 能引用文档全局信息
+  - 依赖：T-92
+
+### 笔记系统
+
+- [x] **T-94: 笔记后端（存储 + API）**
+  - 目标：用户可创建/编辑/删除笔记，笔记可关联页码和来源聊天消息
+  - 步骤：① reader_store.py 新增 reader_notes 表 + CRUD → ② schemas.py 新增 Note 模型 → ③ reader.py 5 个 CRUD 端点
+  - 验收：API 5 个端点可用，按页码筛选正常
+  - 依赖：无
+
+- [x] **T-95: 笔记前端 — 面板 + 保存交互**
+  - 目标：右侧 Tab 新增"笔记"，ChatMessage 添加"保存为笔记"按钮
+  - 验收：可从 AI 回答保存笔记，笔记 Tab 显示列表，可删除
+  - 依赖：T-93, T-94
+
+- [x] **T-96: 笔记手动添加 + 页码关联**
+  - 目标：笔记面板支持手动新增笔记，显示关联页码标签
+  - 验收：可手动添加笔记并关联页码，点击页码跳转
+  - 依赖：T-95
+
+### 学习辅助
+
+- [x] **T-97: 学习辅助后端（学习指南 + FAQ 生成）**
+  - 目标：基于文档内容生成学习指南和 FAQ
+  - 步骤：① config/prompts/reader_study_guide.txt + reader_faq.txt → ② reader.py 2 个生成端点 → ③ 支持 save_as_note
+  - 验收：API 返回结构化学习指南和 FAQ JSON
+  - 依赖：T-92, T-94
+
+- [x] **T-98: 学习辅助前端**
+  - 目标：概览面板下方添加"生成学习指南"/"生成 FAQ"按钮和结果展示
+  - 验收：点击按钮生成学习指南/FAQ 并展示，可保存为笔记
+  - 依赖：T-93, T-95, T-97
+
 ---
 
 ## Backlog（想法池）

@@ -455,6 +455,65 @@ class SuggestedQuestionsResponse(BaseModel):
     cached: bool = False
 
 
+# --- Document Overview ---
+
+class OutlineItem(BaseModel):
+    title: str = ""
+    page_num: int = 0
+    description: str = ""
+
+
+class DocumentOverviewResponse(BaseModel):
+    id: int = 0
+    document_id: int
+    summary: str = ""
+    key_topics: list[str] = Field(default_factory=list)
+    outline: list[OutlineItem] = Field(default_factory=list)
+    created_at: str = ""
+    updated_at: str = ""
+
+
+# --- Notes ---
+
+class CreateNoteRequest(BaseModel):
+    content: str
+    page_num: int | None = None
+    source: str = "manual"
+    source_message_id: int | None = None
+
+
+class UpdateNoteRequest(BaseModel):
+    content: str
+    page_num: int | None = None
+
+
+class NoteResponse(BaseModel):
+    id: int
+    document_id: int
+    content: str = ""
+    page_num: int | None = None
+    source: str = "manual"
+    source_message_id: int | None = None
+    created_at: str = ""
+    updated_at: str = ""
+
+
+class NoteListResponse(BaseModel):
+    notes: list[NoteResponse] = Field(default_factory=list)
+
+
+# --- Study Tools ---
+
+class StudyGuideResponse(BaseModel):
+    sections: list[dict] = Field(default_factory=list)
+    saved_note_id: int | None = None
+
+
+class FaqResponse(BaseModel):
+    questions: list[dict] = Field(default_factory=list)
+    saved_note_id: int | None = None
+
+
 # --- Paper Search ---
 
 class PaperSearchResult(BaseModel):

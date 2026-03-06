@@ -14,8 +14,14 @@ from fastapi.responses import FileResponse, StreamingResponse
 from loguru import logger
 
 from src.api.schemas import (
+    CreateNoteRequest,
     CreateSessionRequest,
     DeleteResponse,
+    DocumentOverviewResponse,
+    FaqResponse,
+    NoteListResponse,
+    NoteResponse,
+    OutlineItem,
     ReaderChatHistoryResponse,
     ReaderChatMessage,
     ReaderChatRequest,
@@ -26,13 +32,16 @@ from src.api.schemas import (
     ReaderProgressRequest,
     ReaderSessionListResponse,
     ReaderSessionResponse,
+    StudyGuideResponse,
     SuggestedQuestionsResponse,
+    UpdateNoteRequest,
 )
 from src.api.services.reader_service import (
     ALLOWED_EXTENSIONS,
     delete_reader_files,
     detect_file_type,
     extract_pages,
+    sample_document_content,
     save_reader_file,
 )
 from src.store.reader_store import ReaderStore
@@ -506,7 +515,11 @@ async def _prepare_chat_context(
     max_history = reader_conf.get("max_chat_history", 20)
 
     llm = LLMClient()
-    model_name = config.get("agent_models", {}).get("reader", "glm-4-plus")
+    agent_models = config.get("agent_models", {})
+    if body.agent_mode:
+        model_name = agent_models.get("reader_agent", agent_models.get("reader", "glm-4-plus"))
+    else:
+        model_name = agent_models.get("reader", "glm-4-plus")
 
     # Build page context using strategy
     page_context = _build_page_context(
@@ -528,9 +541,24 @@ async def _prepare_chat_context(
             "你是一个阅读辅助助手。基于以下页面内容回答用户问题。\n\n{page_context}"
         )
 
+    # Build overview context if available (T-93b)
+    overview_context = ""
+    try:
+        overview = store.get_overview(doc["id"])
+        if overview:
+            overview_context = f"[文档概览]\n{overview['summary']}"
+            if overview.get("key_topics"):
+                import json as _json
+                topics = _json.loads(overview["key_topics"]) if isinstance(overview["key_topics"], str) else overview["key_topics"]
+                if topics:
+                    overview_context += f"\n关键主题：{', '.join(topics)}"
+    except Exception:
+        pass
+
     system_prompt = system_prompt.replace("{document_title}", doc["title"])
     system_prompt = system_prompt.replace("{current_page}", str(body.page_num))
     system_prompt = system_prompt.replace("{page_context}", page_context)
+    system_prompt = system_prompt.replace("{overview_context}", overview_context)
 
     # Build messages: system + recent session history + current question
     messages: list[dict[str, str]] = [{"role": "system", "content": system_prompt}]
@@ -726,7 +754,8 @@ async def get_suggestions(doc_id: int, page_num: int = 1):
     # Call LLM (in thread to avoid blocking event loop)
     from src.core.llm_client import LLMClient
 
-    model_name = reader_conf.get("suggestions_model", "glm-4-flash")
+    agent_models = config.get("agent_models", {})
+    model_name = agent_models.get("reader_suggestions", reader_conf.get("suggestions_model", "glm-4-flash"))
     llm = LLMClient()
     try:
         result = await asyncio.to_thread(
@@ -746,6 +775,265 @@ async def get_suggestions(doc_id: int, page_num: int = 1):
         store.save_suggestions(doc_id, page_num, questions)
 
     return SuggestedQuestionsResponse(questions=questions, page_num=page_num, cached=False)
+
+
+# --- Document Overview ---
+
+
+@router.get("/{doc_id}/overview", response_model=DocumentOverviewResponse)
+async def get_overview(doc_id: int):
+    """Get document overview (summary, topics, outline)."""
+    store = _get_store()
+    doc = store.get_document(doc_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    overview = store.get_overview(doc_id)
+    if not overview:
+        raise HTTPException(status_code=404, detail="Overview not generated yet")
+
+    # Parse JSON fields
+    key_topics = json.loads(overview["key_topics"]) if isinstance(overview["key_topics"], str) else overview["key_topics"]
+    outline_raw = json.loads(overview["outline"]) if isinstance(overview["outline"], str) else overview["outline"]
+    outline = [OutlineItem(**item) if isinstance(item, dict) else item for item in outline_raw]
+
+    return DocumentOverviewResponse(
+        id=overview["id"],
+        document_id=doc_id,
+        summary=overview["summary"],
+        key_topics=key_topics,
+        outline=outline,
+        created_at=overview.get("created_at", ""),
+        updated_at=overview.get("updated_at", ""),
+    )
+
+
+@router.post("/{doc_id}/overview/regenerate", response_model=DocumentOverviewResponse)
+async def regenerate_overview(doc_id: int):
+    """Generate or regenerate document overview using LLM."""
+    from src.core.llm_client import LLMClient
+
+    store = _get_store()
+    doc = store.get_document(doc_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    config = _load_config()
+    agent_models = config.get("agent_models", {})
+    model_name = agent_models.get("reader", "glm-4-plus")
+
+    # Sample document content
+    sampled = sample_document_content(store, doc_id)
+    if not sampled.strip():
+        raise HTTPException(status_code=400, detail="Document has no content")
+
+    # Load prompt
+    prompt_path = Path("config/prompts/reader_overview.txt")
+    if prompt_path.exists():
+        prompt_template = prompt_path.read_text(encoding="utf-8")
+    else:
+        prompt_template = "为文档《{document_title}》生成概览JSON：{{\"summary\":\"...\",\"key_topics\":[...],\"outline\":[...]}}\n\n{sampled_content}"
+
+    prompt = prompt_template.replace("{document_title}", doc["title"])
+    prompt = prompt.replace("{sampled_content}", sampled)
+
+    llm = LLMClient()
+    try:
+        result = await asyncio.to_thread(
+            llm.chat_json,
+            model_name,
+            [{"role": "user", "content": prompt}],
+            temperature=0.3,
+            max_tokens=4096,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Overview generation failed: {e}")
+
+    summary = result.get("summary", "")
+    key_topics = result.get("key_topics", [])
+    outline = result.get("outline", [])
+
+    overview = store.save_overview(doc_id, summary, key_topics, outline)
+
+    # Parse for response
+    outline_items = [OutlineItem(**item) if isinstance(item, dict) else item for item in outline]
+
+    return DocumentOverviewResponse(
+        id=overview["id"],
+        document_id=doc_id,
+        summary=summary,
+        key_topics=key_topics,
+        outline=outline_items,
+        created_at=overview.get("created_at", ""),
+        updated_at=overview.get("updated_at", ""),
+    )
+
+
+# --- Notes ---
+
+
+@router.post("/{doc_id}/notes", response_model=NoteResponse)
+async def create_note(doc_id: int, body: CreateNoteRequest):
+    """Create a new note."""
+    store = _get_store()
+    doc = store.get_document(doc_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    note = store.create_note(
+        doc_id, body.content, body.page_num, body.source, body.source_message_id,
+    )
+    return NoteResponse(**note)
+
+
+@router.get("/{doc_id}/notes", response_model=NoteListResponse)
+async def list_notes(doc_id: int, page_num: int | None = None):
+    """List notes for a document, optionally filtered by page."""
+    store = _get_store()
+    doc = store.get_document(doc_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    notes = store.list_notes(doc_id, page_num)
+    return NoteListResponse(notes=[NoteResponse(**n) for n in notes])
+
+
+@router.get("/{doc_id}/notes/{note_id}", response_model=NoteResponse)
+async def get_note(doc_id: int, note_id: int):
+    """Get a specific note."""
+    store = _get_store()
+    note = store.get_note(note_id)
+    if not note or note["document_id"] != doc_id:
+        raise HTTPException(status_code=404, detail="Note not found")
+    return NoteResponse(**note)
+
+
+@router.put("/{doc_id}/notes/{note_id}", response_model=NoteResponse)
+async def update_note(doc_id: int, note_id: int, body: UpdateNoteRequest):
+    """Update a note."""
+    store = _get_store()
+    note = store.get_note(note_id)
+    if not note or note["document_id"] != doc_id:
+        raise HTTPException(status_code=404, detail="Note not found")
+
+    updated = store.update_note(note_id, body.content, body.page_num)
+    return NoteResponse(**updated)
+
+
+@router.delete("/{doc_id}/notes/{note_id}", response_model=DeleteResponse)
+async def delete_note(doc_id: int, note_id: int):
+    """Delete a note."""
+    store = _get_store()
+    note = store.get_note(note_id)
+    if not note or note["document_id"] != doc_id:
+        raise HTTPException(status_code=404, detail="Note not found")
+
+    store.delete_note(note_id)
+    return DeleteResponse(success=True, message="Note deleted")
+
+
+# --- Study Tools ---
+
+
+@router.post("/{doc_id}/generate/study-guide", response_model=StudyGuideResponse)
+async def generate_study_guide(doc_id: int, save_as_note: bool = False):
+    """Generate a study guide from the document."""
+    from src.core.llm_client import LLMClient
+
+    store = _get_store()
+    doc = store.get_document(doc_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    config = _load_config()
+    agent_models = config.get("agent_models", {})
+    model_name = agent_models.get("reader", "glm-4-plus")
+
+    sampled = sample_document_content(store, doc_id)
+    if not sampled.strip():
+        raise HTTPException(status_code=400, detail="Document has no content")
+
+    prompt_path = Path("config/prompts/reader_study_guide.txt")
+    if prompt_path.exists():
+        prompt = prompt_path.read_text(encoding="utf-8")
+    else:
+        prompt = "基于以下文档内容生成学习指南。返回JSON：{{\"sections\":[{{\"title\":\"...\",\"content\":\"...\"}}]}}\n\n{sampled_content}"
+
+    prompt = prompt.replace("{document_title}", doc["title"])
+    prompt = prompt.replace("{sampled_content}", sampled)
+
+    llm = LLMClient()
+    try:
+        result = await asyncio.to_thread(
+            llm.chat_json, model_name,
+            [{"role": "user", "content": prompt}],
+            temperature=0.3, max_tokens=4096,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Study guide generation failed: {e}")
+
+    sections = result.get("sections", [])
+    saved_note_id = None
+
+    if save_as_note and sections:
+        # Format as markdown note
+        lines = [f"# 学习指南 — {doc['title']}\n"]
+        for s in sections:
+            lines.append(f"## {s.get('title', '')}\n{s.get('content', '')}\n")
+        note = store.create_note(doc_id, "\n".join(lines), source="study_guide")
+        saved_note_id = note["id"]
+
+    return StudyGuideResponse(sections=sections, saved_note_id=saved_note_id)
+
+
+@router.post("/{doc_id}/generate/faq", response_model=FaqResponse)
+async def generate_faq(doc_id: int, save_as_note: bool = False):
+    """Generate FAQ from the document."""
+    from src.core.llm_client import LLMClient
+
+    store = _get_store()
+    doc = store.get_document(doc_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    config = _load_config()
+    agent_models = config.get("agent_models", {})
+    model_name = agent_models.get("reader", "glm-4-plus")
+
+    sampled = sample_document_content(store, doc_id)
+    if not sampled.strip():
+        raise HTTPException(status_code=400, detail="Document has no content")
+
+    prompt_path = Path("config/prompts/reader_faq.txt")
+    if prompt_path.exists():
+        prompt = prompt_path.read_text(encoding="utf-8")
+    else:
+        prompt = "基于以下文档内容生成FAQ。返回JSON：{{\"questions\":[{{\"question\":\"...\",\"answer\":\"...\"}}]}}\n\n{sampled_content}"
+
+    prompt = prompt.replace("{document_title}", doc["title"])
+    prompt = prompt.replace("{sampled_content}", sampled)
+
+    llm = LLMClient()
+    try:
+        result = await asyncio.to_thread(
+            llm.chat_json, model_name,
+            [{"role": "user", "content": prompt}],
+            temperature=0.3, max_tokens=4096,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"FAQ generation failed: {e}")
+
+    questions = result.get("questions", [])
+    saved_note_id = None
+
+    if save_as_note and questions:
+        lines = [f"# FAQ — {doc['title']}\n"]
+        for q in questions:
+            lines.append(f"**Q: {q.get('question', '')}**\n\nA: {q.get('answer', '')}\n")
+        note = store.create_note(doc_id, "\n".join(lines), source="faq")
+        saved_note_id = note["id"]
+
+    return FaqResponse(questions=questions, saved_note_id=saved_note_id)
 
 
 # --- Legacy endpoints (backward compatible) ---

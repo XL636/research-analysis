@@ -18,6 +18,14 @@ import {
   clearSessionChatHistory,
   getSuggestedQuestions,
   streamSessionChat,
+  getDocumentOverview,
+  regenerateOverview,
+  listNotes,
+  createNote,
+  updateNote,
+  deleteNote,
+  generateStudyGuide,
+  generateFaq,
 } from '../api/reader'
 import type { ReaderChatMessage } from '../types'
 
@@ -176,6 +184,97 @@ export function useReaderSuggestions(docId: number, pageNum: number) {
     queryFn: () => getSuggestedQuestions(docId, pageNum),
     enabled: docId > 0 && pageNum > 0,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  })
+}
+
+// Overview hooks
+export function useDocumentOverview(docId: number) {
+  return useQuery({
+    queryKey: ['documentOverview', docId],
+    queryFn: () => getDocumentOverview(docId),
+    enabled: docId > 0,
+    retry: false, // Don't retry 404 (overview not generated yet)
+  })
+}
+
+export function useRegenerateOverview() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (docId: number) => regenerateOverview(docId),
+    onSuccess: (data) => {
+      queryClient.setQueryData(['documentOverview', data.document_id], data)
+    },
+  })
+}
+
+// Notes hooks
+export function useReaderNotes(docId: number) {
+  return useQuery({
+    queryKey: ['readerNotes', docId],
+    queryFn: () => listNotes(docId),
+    enabled: docId > 0,
+  })
+}
+
+export function useCreateNote() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ docId, content, pageNum, source, sourceMessageId }: {
+      docId: number; content: string; pageNum?: number; source?: string; sourceMessageId?: number
+    }) => createNote(docId, content, pageNum, source, sourceMessageId),
+    onSuccess: (_data, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['readerNotes', vars.docId] })
+    },
+  })
+}
+
+export function useUpdateNote() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ docId, noteId, content, pageNum }: {
+      docId: number; noteId: number; content: string; pageNum?: number
+    }) => updateNote(docId, noteId, content, pageNum),
+    onSuccess: (_data, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['readerNotes', vars.docId] })
+    },
+  })
+}
+
+export function useDeleteNote() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ docId, noteId }: { docId: number; noteId: number }) =>
+      deleteNote(docId, noteId),
+    onSuccess: (_data, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['readerNotes', vars.docId] })
+    },
+  })
+}
+
+// Study tools hooks
+export function useGenerateStudyGuide() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ docId, saveAsNote }: { docId: number; saveAsNote?: boolean }) =>
+      generateStudyGuide(docId, saveAsNote),
+    onSuccess: (_data, vars) => {
+      if (vars.saveAsNote) {
+        queryClient.invalidateQueries({ queryKey: ['readerNotes', vars.docId] })
+      }
+    },
+  })
+}
+
+export function useGenerateFaq() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ docId, saveAsNote }: { docId: number; saveAsNote?: boolean }) =>
+      generateFaq(docId, saveAsNote),
+    onSuccess: (_data, vars) => {
+      if (vars.saveAsNote) {
+        queryClient.invalidateQueries({ queryKey: ['readerNotes', vars.docId] })
+      }
+    },
   })
 }
 

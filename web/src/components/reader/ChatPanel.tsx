@@ -38,6 +38,9 @@ interface ChatPanelProps {
   agentMode?: boolean
   onToggleAgent?: () => void
   agentSteps?: AgentStep[]
+  // Page jump + note save
+  onPageJump?: (page: number) => void
+  onSaveNote?: (content: string, pageNum: number) => void
 }
 
 export default function ChatPanel({
@@ -59,6 +62,8 @@ export default function ChatPanel({
   agentMode = false,
   onToggleAgent,
   agentSteps = [],
+  onPageJump,
+  onSaveNote,
 }: ChatPanelProps) {
   const { t } = useTranslation()
   const [input, setInput] = useState('')
@@ -134,7 +139,7 @@ export default function ChatPanel({
         ) : (
           <>
             {messages.map((msg) => (
-              <ChatMessage key={msg.id} message={msg} />
+              <ChatMessage key={msg.id} message={msg} onPageJump={onPageJump} onSaveNote={onSaveNote} />
             ))}
             {(isSending || isStreaming) && (
               <div className="flex justify-start mb-3">

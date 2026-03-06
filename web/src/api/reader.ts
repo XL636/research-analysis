@@ -10,6 +10,11 @@ import type {
   ReaderSessionListResponse,
   SuggestedQuestionsResponse,
   DeleteResponse,
+  DocumentOverview,
+  ReaderNote,
+  NoteListResponse,
+  StudyGuideResponse,
+  FaqResponse,
 } from '../types'
 
 export async function uploadReaderDocument(file: File): Promise<ReaderDocument> {
@@ -170,6 +175,66 @@ export async function streamSessionChat(
       }
     }
   }
+}
+
+// Document Overview
+export async function getDocumentOverview(docId: number): Promise<DocumentOverview> {
+  const { data } = await api.get(`/reader/${docId}/overview`)
+  return data
+}
+
+export async function regenerateOverview(docId: number): Promise<DocumentOverview> {
+  const { data } = await api.post(`/reader/${docId}/overview/regenerate`, {}, { timeout: 120000 })
+  return data
+}
+
+// Notes
+export async function listNotes(docId: number, pageNum?: number): Promise<ReaderNote[]> {
+  const params = pageNum !== undefined ? { page_num: pageNum } : {}
+  const { data } = await api.get<NoteListResponse>(`/reader/${docId}/notes`, { params })
+  return data.notes
+}
+
+export async function createNote(
+  docId: number,
+  content: string,
+  pageNum?: number,
+  source: string = 'manual',
+  sourceMessageId?: number,
+): Promise<ReaderNote> {
+  const { data } = await api.post(`/reader/${docId}/notes`, {
+    content, page_num: pageNum ?? null, source, source_message_id: sourceMessageId ?? null,
+  })
+  return data
+}
+
+export async function updateNote(docId: number, noteId: number, content: string, pageNum?: number): Promise<ReaderNote> {
+  const { data } = await api.put(`/reader/${docId}/notes/${noteId}`, {
+    content, page_num: pageNum ?? null,
+  })
+  return data
+}
+
+export async function deleteNote(docId: number, noteId: number): Promise<DeleteResponse> {
+  const { data } = await api.delete(`/reader/${docId}/notes/${noteId}`)
+  return data
+}
+
+// Study Tools
+export async function generateStudyGuide(docId: number, saveAsNote: boolean = false): Promise<StudyGuideResponse> {
+  const { data } = await api.post(`/reader/${docId}/generate/study-guide`, null, {
+    params: { save_as_note: saveAsNote },
+    timeout: 120000,
+  })
+  return data
+}
+
+export async function generateFaq(docId: number, saveAsNote: boolean = false): Promise<FaqResponse> {
+  const { data } = await api.post(`/reader/${docId}/generate/faq`, null, {
+    params: { save_as_note: saveAsNote },
+    timeout: 120000,
+  })
+  return data
 }
 
 // Suggested questions

@@ -10,6 +10,7 @@ import type { ProviderStatus } from '../types'
 
 const ANALYSIS_AGENTS = ['parser', 'analyzer', 'synthesizer', 'generator', 'reviewer']
 const PAPER_AGENTS = ['outline', 'writer', 'citation', 'research', 'polish']
+const READER_AGENTS = ['reader', 'reader_agent', 'reader_suggestions']
 
 export default function SettingsPage() {
   const { t } = useTranslation()
@@ -156,9 +157,28 @@ export default function SettingsPage() {
         <h3 className="text-md font-semibold text-gray-800 mb-3">
           {t('settings.agentGroupPaper')}
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">
           {agentModels
             .filter((a) => PAPER_AGENTS.includes(a.agent))
+            .map((a) => (
+              <AgentModelCard
+                key={a.agent}
+                assignment={a}
+                availableModels={availableModels}
+                onModelChange={handleModelChange}
+                onSaveKey={handleInlineKeySave}
+                isSaving={apiKeyMutation.isPending}
+              />
+            ))}
+        </div>
+
+        {/* Reader Assistant Agents */}
+        <h3 className="text-md font-semibold text-gray-800 mb-3">
+          {t('settings.agentGroupReader')}
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {agentModels
+            .filter((a) => READER_AGENTS.includes(a.agent))
             .map((a) => (
               <AgentModelCard
                 key={a.agent}

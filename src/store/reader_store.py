@@ -97,6 +97,32 @@ class ReaderStore:
                 )
             """)
 
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS reader_document_overview (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    document_id INTEGER NOT NULL UNIQUE,
+                    summary TEXT NOT NULL DEFAULT '',
+                    key_topics TEXT NOT NULL DEFAULT '[]',
+                    outline TEXT NOT NULL DEFAULT '[]',
+                    created_at TEXT,
+                    updated_at TEXT,
+                    FOREIGN KEY (document_id) REFERENCES reader_documents(id) ON DELETE CASCADE
+                )
+            """)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS reader_notes (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    document_id INTEGER NOT NULL,
+                    content TEXT NOT NULL DEFAULT '',
+                    page_num INTEGER DEFAULT NULL,
+                    source TEXT NOT NULL DEFAULT 'manual',
+                    source_message_id INTEGER DEFAULT NULL,
+                    created_at TEXT,
+                    updated_at TEXT,
+                    FOREIGN KEY (document_id) REFERENCES reader_documents(id) ON DELETE CASCADE
+                )
+            """)
+
             # FTS5 index for reader_pages (contentless, shares data with reader_pages)
             conn.execute("""
                 CREATE VIRTUAL TABLE IF NOT EXISTS reader_pages_fts USING fts5(
@@ -419,3 +445,84 @@ class ReaderStore:
                 (doc_id, page_num, json.dumps(questions, ensure_ascii=False), now),
             )
             conn.commit()
+
+    # --- Document Overview ---
+
+    def get_overview(self, doc_id: int) -> dict | None:
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT * FROM reader_document_overview WHERE document_id = ?", (doc_id,)
+            ).fetchone()
+        return dict(row) if row else None
+
+    def save_overview(self, doc_id: int, summary: str, key_topics: list[str], outline: list[dict]) -> dict:
+        now = self._beijing_now()
+        topics_json = json.dumps(key_topics, ensure_ascii=False)
+        outline_json = json.dumps(outline, ensure_ascii=False)
+        with self._connect() as conn:
+            conn.execute(
+                """INSERT INTO reader_document_overview (document_id, summary, key_topics, outline, created_at, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?)
+                   ON CONFLICT(document_id) DO UPDATE SET
+                     summary = excluded.summary,
+                     key_topics = excluded.key_topics,
+                     outline = excluded.outline,
+                     updated_at = excluded.updated_at""",
+                (doc_id, summary, topics_json, outline_json, now, now),
+            )
+            conn.commit()
+        return self.get_overview(doc_id)  # type: ignore
+
+    # --- Notes CRUD ---
+
+    def create_note(
+        self, doc_id: int, content: str, page_num: int | None = None,
+        source: str = "manual", source_message_id: int | None = None,
+    ) -> dict:
+        now = self._beijing_now()
+        with self._connect() as conn:
+            cursor = conn.execute(
+                """INSERT INTO reader_notes (document_id, content, page_num, source, source_message_id, created_at, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                (doc_id, content, page_num, source, source_message_id, now, now),
+            )
+            conn.commit()
+            note_id = cursor.lastrowid
+        return self.get_note(note_id)  # type: ignore
+
+    def get_note(self, note_id: int) -> dict | None:
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT * FROM reader_notes WHERE id = ?", (note_id,)
+            ).fetchone()
+        return dict(row) if row else None
+
+    def list_notes(self, doc_id: int, page_num: int | None = None) -> list[dict]:
+        with self._connect() as conn:
+            if page_num is not None:
+                rows = conn.execute(
+                    "SELECT * FROM reader_notes WHERE document_id = ? AND page_num = ? ORDER BY created_at DESC",
+                    (doc_id, page_num),
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    "SELECT * FROM reader_notes WHERE document_id = ? ORDER BY created_at DESC",
+                    (doc_id,),
+                ).fetchall()
+        return [dict(r) for r in rows]
+
+    def update_note(self, note_id: int, content: str, page_num: int | None = None) -> dict | None:
+        now = self._beijing_now()
+        with self._connect() as conn:
+            conn.execute(
+                "UPDATE reader_notes SET content = ?, page_num = ?, updated_at = ? WHERE id = ?",
+                (content, page_num, now, note_id),
+            )
+            conn.commit()
+        return self.get_note(note_id)
+
+    def delete_note(self, note_id: int) -> bool:
+        with self._connect() as conn:
+            cursor = conn.execute("DELETE FROM reader_notes WHERE id = ?", (note_id,))
+            conn.commit()
+        return cursor.rowcount > 0

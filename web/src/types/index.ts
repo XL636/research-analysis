@@ -403,6 +403,60 @@ export interface SuggestedQuestionsResponse {
   cached: boolean
 }
 
+// Document Overview
+export interface OutlineItem {
+  title: string
+  page_num: number
+  description: string
+}
+
+export interface DocumentOverview {
+  id: number
+  document_id: number
+  summary: string
+  key_topics: string[]
+  outline: OutlineItem[]
+  created_at: string
+  updated_at: string
+}
+
+// Notes
+export interface ReaderNote {
+  id: number
+  document_id: number
+  content: string
+  page_num: number | null
+  source: string
+  source_message_id: number | null
+  created_at: string
+  updated_at: string
+}
+
+export interface NoteListResponse {
+  notes: ReaderNote[]
+}
+
+// Study Tools
+export interface StudyGuideSection {
+  title: string
+  content: string
+}
+
+export interface StudyGuideResponse {
+  sections: StudyGuideSection[]
+  saved_note_id: number | null
+}
+
+export interface FaqItem {
+  question: string
+  answer: string
+}
+
+export interface FaqResponse {
+  questions: FaqItem[]
+  saved_note_id: number | null
+}
+
 // Paper Search
 export interface PaperSearchResultItem {
   title: string

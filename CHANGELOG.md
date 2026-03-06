@@ -8,6 +8,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Reader: OpenAI (gpt-4o, o4-mini) + Claude (claude-sonnet-4-20250514) 模型支持，LLMClient 自动处理 anthropic provider
+- Reader: 阅读辅助模型独立配置 — reader/reader_agent/reader_suggestions 三个 slot，设置页新增"阅读辅助"分组
+- Reader: AI 回答引用标注 [p.X] 格式，前端可点击蓝色标签跳转到对应页码
+- Reader: 文档概览功能（NotebookLM Source Guide 风格）— 摘要、关键主题、目录结构，LLM 自动生成
+- Reader: 右侧面板 Tab 模式（对话 | 概览 | 笔记），取代单一聊天面板
+- Reader: 笔记系统 — 从 AI 回答保存为笔记、手动添加笔记、页码关联、CRUD
+- Reader: 学习辅助工具 — 生成学习指南和 FAQ，支持保存到笔记
+- Reader: 文档概览摘要注入到对话上下文，AI 可引用文档全局信息
+- Reader: ChatMessage 保存为笔记按钮（hover 显示书签图标）
+- Prompts: reader_overview.txt, reader_study_guide.txt, reader_faq.txt 三个新 Prompt 模板
+- DB: reader_document_overview 表 + reader_notes 表
+- API: 12 个新端点（概览 2 + 笔记 5 + 学习 2 + 模型相关 3）
+- i18n: 30+ 个新翻译 key（中英双语）
+
+### Changed
+- Reader: Prompt 重写 — reader_assistant.txt 增加引用标注规范和诚实边界要求
+- Reader: reader_agent.txt 增加推理链和引用标注规范
+- LLMClient: chat_json() 对 anthropic provider 自动回退到 prompt 引导 JSON 输出
+- LLMClient: 新增 _provider_for() 方法获取模型 provider 名称
+
+### Added
 - Testing: PaperDownloader 契约测试 — 17 个 respx 传输层 mock 测试，覆盖 content-type 拒绝、%PDF 魔数验证、超大文件中止、arXiv/Unpaywall 下载、优先级策略
 - Testing: 架构守护测试 — 4 个 AST 分析测试，强制保证 _try_download_pdf 使用 PaperDownloader、_fetch_pdf 检查 content-type 和 %PDF 魔数
 - Testing: API 集成测试 — 7 个 TestClient 测试，覆盖 /search、/download-pdf、/download-and-analyze 端点

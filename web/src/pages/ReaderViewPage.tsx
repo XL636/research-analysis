@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, MessageSquare, PanelRightClose } from 'lucide-react'
+import { ArrowLeft, MessageSquare, PanelRightClose, BookOpen, FileText } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import {
   useReaderDocument,
@@ -13,13 +13,26 @@ import {
   useClearSessionChat,
   useReaderSuggestions,
   useStreamChat,
+  useDocumentOverview,
+  useRegenerateOverview,
+  useReaderNotes,
+  useCreateNote,
+  useDeleteNote,
+  useGenerateStudyGuide,
+  useGenerateFaq,
 } from '../hooks/useReader'
 import { getReaderFileUrl } from '../api/reader'
 import PdfPageViewer from '../components/reader/PdfPageViewer'
 import TextPageViewer from '../components/reader/TextPageViewer'
 import PageNavigation from '../components/reader/PageNavigation'
 import ChatPanel from '../components/reader/ChatPanel'
+import DocumentOverview from '../components/reader/DocumentOverview'
+import NotesPanel from '../components/reader/NotesPanel'
+import StudyTools from '../components/reader/StudyTools'
 import EmptyState from '../components/ui/EmptyState'
+import type { StudyGuideSection, FaqItem } from '../types'
+
+type RightTab = 'chat' | 'overview' | 'notes'
 
 export default function ReaderViewPage() {
   const { id } = useParams<{ id: string }>()
@@ -32,6 +45,11 @@ export default function ReaderViewPage() {
   const [chatOpen, setChatOpen] = useState(true)
   const [activeSessionId, setActiveSessionId] = useState(0)
   const [agentMode, setAgentMode] = useState(false)
+  const [rightTab, setRightTab] = useState<RightTab>('chat')
+
+  // Study tools state
+  const [studyGuide, setStudyGuide] = useState<StudyGuideSection[] | null>(null)
+  const [faq, setFaq] = useState<FaqItem[] | null>(null)
 
   // Initialize current page from document's saved progress
   useEffect(() => {
@@ -43,10 +61,7 @@ export default function ReaderViewPage() {
   const isPdf = doc?.file_type === 'pdf'
 
   // Fetch page content for non-PDF files
-  const { data: pageData, isLoading: pageLoading } = useReaderPage(
-    docId,
-    currentPage,
-  )
+  const { data: pageData, isLoading: pageLoading } = useReaderPage(docId, currentPage)
 
   // Prefetch adjacent pages
   useReaderPage(docId, currentPage > 1 ? currentPage - 1 : 0)
@@ -64,7 +79,6 @@ export default function ReaderViewPage() {
     if (sessions.length > 0 && activeSessionId === 0) {
       setActiveSessionId(sessions[0].id)
     }
-    // If active session was deleted, switch to first available
     if (sessions.length > 0 && !sessions.find((s) => s.id === activeSessionId)) {
       setActiveSessionId(sessions[0].id)
     }
@@ -74,8 +88,20 @@ export default function ReaderViewPage() {
   const { data: chatHistoryData } = useSessionChatHistory(docId, activeSessionId)
   const streamChat = useStreamChat()
   const clearChat = useClearSessionChat()
-
   const chatMessages = chatHistoryData?.messages || []
+
+  // Overview
+  const { data: overview, isLoading: overviewLoading, isError: overviewError } = useDocumentOverview(docId)
+  const regenerateOverview = useRegenerateOverview()
+
+  // Notes
+  const { data: notes = [], isLoading: notesLoading } = useReaderNotes(docId)
+  const createNote = useCreateNote()
+  const deleteNote = useDeleteNote()
+
+  // Study tools
+  const generateStudyGuideMutation = useGenerateStudyGuide()
+  const generateFaqMutation = useGenerateFaq()
 
   // Suggestions with debounced page
   const [debouncedPage, setDebouncedPage] = useState(currentPage)
@@ -97,7 +123,6 @@ export default function ReaderViewPage() {
   // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      // Don't capture when typing in input/textarea
       const tag = (e.target as HTMLElement)?.tagName
       if (tag === 'INPUT' || tag === 'TEXTAREA') return
 
@@ -130,16 +155,38 @@ export default function ReaderViewPage() {
   const handleSessionCreate = () => {
     createSession.mutate(
       { docId },
-      {
-        onSuccess: (newSession) => {
-          setActiveSessionId(newSession.id)
-        },
-      }
+      { onSuccess: (newSession) => setActiveSessionId(newSession.id) },
     )
   }
 
   const handleSessionDelete = (sessionId: number) => {
     deleteSession.mutate({ docId, sessionId })
+  }
+
+  const handleSaveNote = (content: string, pageNum: number) => {
+    createNote.mutate({ docId, content, pageNum, source: 'chat' })
+  }
+
+  const handleAddNote = (content: string, pageNum?: number) => {
+    createNote.mutate({ docId, content, pageNum, source: 'manual' })
+  }
+
+  const handleDeleteNote = (noteId: number) => {
+    deleteNote.mutate({ docId, noteId })
+  }
+
+  const handleGenerateStudyGuide = (saveAsNote: boolean) => {
+    generateStudyGuideMutation.mutate(
+      { docId, saveAsNote },
+      { onSuccess: (data) => setStudyGuide(data.sections) },
+    )
+  }
+
+  const handleGenerateFaq = (saveAsNote: boolean) => {
+    generateFaqMutation.mutate(
+      { docId, saveAsNote },
+      { onSuccess: (data) => setFaq(data.questions) },
+    )
   }
 
   if (docLoading) {
@@ -163,6 +210,12 @@ export default function ReaderViewPage() {
       />
     )
   }
+
+  const tabs: { key: RightTab; icon: typeof MessageSquare; label: string }[] = [
+    { key: 'chat', icon: MessageSquare, label: t('reader.tabChat') },
+    { key: 'overview', icon: BookOpen, label: t('reader.tabOverview') },
+    { key: 'notes', icon: FileText, label: t('reader.tabNotes') },
+  ]
 
   return (
     <div className="flex flex-col h-[calc(100vh-2rem)] -mx-6 -mt-6">
@@ -217,29 +270,96 @@ export default function ReaderViewPage() {
           />
         </div>
 
-        {/* Right: Chat panel */}
+        {/* Right: Tab panel */}
         {chatOpen && (
-          <div className="w-[38%] border-l border-gray-200">
-            <ChatPanel
-              messages={chatMessages}
-              currentPage={currentPage}
-              isSending={streamChat.isStreaming}
-              sendError={streamChat.error}
-              onSend={handleSendChat}
-              onClear={handleClearChat}
-              sessions={sessions}
-              activeSessionId={activeSessionId}
-              onSessionSelect={setActiveSessionId}
-              onSessionCreate={handleSessionCreate}
-              onSessionDelete={handleSessionDelete}
-              suggestions={suggestions}
-              suggestionsLoading={suggestionsLoading}
-              streamingContent={streamChat.streamingContent}
-              isStreaming={streamChat.isStreaming}
-              agentMode={agentMode}
-              onToggleAgent={() => setAgentMode(prev => !prev)}
-              agentSteps={streamChat.agentSteps}
-            />
+          <div className="w-[38%] border-l border-gray-200 flex flex-col">
+            {/* Tab bar */}
+            <div className="flex border-b border-gray-200 bg-white shrink-0">
+              {tabs.map((tab) => {
+                const Icon = tab.icon
+                return (
+                  <button
+                    key={tab.key}
+                    onClick={() => setRightTab(tab.key)}
+                    className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 text-xs font-medium transition-colors border-b-2 ${
+                      rightTab === tab.key
+                        ? 'border-primary-600 text-primary-700'
+                        : 'border-transparent text-gray-400 hover:text-gray-600'
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    {tab.label}
+                    {tab.key === 'notes' && notes.length > 0 && (
+                      <span className="ml-0.5 px-1.5 py-0.5 bg-gray-100 text-gray-500 text-[10px] rounded-full">
+                        {notes.length}
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Tab content */}
+            <div className="flex-1 overflow-hidden">
+              {rightTab === 'chat' && (
+                <ChatPanel
+                  messages={chatMessages}
+                  currentPage={currentPage}
+                  isSending={streamChat.isStreaming}
+                  sendError={streamChat.error}
+                  onSend={handleSendChat}
+                  onClear={handleClearChat}
+                  sessions={sessions}
+                  activeSessionId={activeSessionId}
+                  onSessionSelect={setActiveSessionId}
+                  onSessionCreate={handleSessionCreate}
+                  onSessionDelete={handleSessionDelete}
+                  suggestions={suggestions}
+                  suggestionsLoading={suggestionsLoading}
+                  streamingContent={streamChat.streamingContent}
+                  isStreaming={streamChat.isStreaming}
+                  agentMode={agentMode}
+                  onToggleAgent={() => setAgentMode(prev => !prev)}
+                  agentSteps={streamChat.agentSteps}
+                  onPageJump={handlePageChange}
+                  onSaveNote={handleSaveNote}
+                />
+              )}
+              {rightTab === 'overview' && (
+                <div className="h-full overflow-y-auto">
+                  <DocumentOverview
+                    overview={overview}
+                    isLoading={overviewLoading}
+                    isGenerating={regenerateOverview.isPending}
+                    hasError={overviewError}
+                    onGenerate={() => regenerateOverview.mutate(docId)}
+                    onPageJump={handlePageChange}
+                  />
+                  {/* Study tools below overview */}
+                  {overview && (
+                    <div className="px-4 pb-4 border-t border-gray-100 pt-4">
+                      <StudyTools
+                        onGenerateStudyGuide={handleGenerateStudyGuide}
+                        onGenerateFaq={handleGenerateFaq}
+                        studyGuide={studyGuide}
+                        faq={faq}
+                        isGeneratingGuide={generateStudyGuideMutation.isPending}
+                        isGeneratingFaq={generateFaqMutation.isPending}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+              {rightTab === 'notes' && (
+                <NotesPanel
+                  notes={notes}
+                  isLoading={notesLoading}
+                  onAdd={handleAddNote}
+                  onDelete={handleDeleteNote}
+                  onPageJump={handlePageChange}
+                />
+              )}
+            </div>
           </div>
         )}
       </div>

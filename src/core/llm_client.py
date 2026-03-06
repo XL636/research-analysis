@@ -59,14 +59,27 @@ class LLMClient:
                         f"API key not found. Set environment variable: {model_config.api_key_env}"
                     )
 
-                self._clients[model_name] = OpenAI(
-                    api_key=api_key,
-                    base_url=model_config.base_url,
-                    timeout=Timeout(300.0, connect=10.0),
-                )
+                if model_config.provider == "anthropic":
+                    # Anthropic 使用 OpenAI 兼容层 (/v1/messages → /v1/chat/completions)
+                    self._clients[model_name] = OpenAI(
+                        api_key=api_key,
+                        base_url="https://api.anthropic.com/v1/",
+                        timeout=Timeout(300.0, connect=10.0),
+                        default_headers={"anthropic-version": "2023-06-01"},
+                    )
+                else:
+                    self._clients[model_name] = OpenAI(
+                        api_key=api_key,
+                        base_url=model_config.base_url,
+                        timeout=Timeout(300.0, connect=10.0),
+                    )
                 logger.debug(f"Initialized client for {model_name} ({model_config.provider})")
 
         return self._clients[model_name], model_config.model
+
+    def _provider_for(self, model_name: str) -> str:
+        """返回模型的 provider 名称."""
+        return self._models[model_name].provider if model_name in self._models else ""
 
     def chat(
         self,
@@ -146,14 +159,37 @@ class LLMClient:
         **kwargs: Any,
     ) -> dict:
         """发送聊天请求，返回 JSON 解析后的字典."""
-        content = self.chat(
-            model_name=model_name,
-            messages=messages,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            response_format={"type": "json_object"},
-            **kwargs,
-        )
+        provider = self._provider_for(model_name)
+        # Anthropic 兼容层不支持 response_format，改用 prompt 引导
+        if provider == "anthropic":
+            # 在系统消息中追加 JSON 输出指令
+            guided_messages = list(messages)
+            if guided_messages and guided_messages[0]["role"] == "system":
+                guided_messages[0] = {
+                    **guided_messages[0],
+                    "content": guided_messages[0]["content"] + "\n\nIMPORTANT: You must respond with valid JSON only, no other text.",
+                }
+            else:
+                guided_messages.insert(0, {
+                    "role": "system",
+                    "content": "You must respond with valid JSON only, no other text.",
+                })
+            content = self.chat(
+                model_name=model_name,
+                messages=guided_messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                **kwargs,
+            )
+        else:
+            content = self.chat(
+                model_name=model_name,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                response_format={"type": "json_object"},
+                **kwargs,
+            )
 
         try:
             return json.loads(content)
