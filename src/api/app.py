@@ -92,6 +92,10 @@ def create_app() -> FastAPI:
         # SPA fallback: serve index.html for all non-API routes
         from fastapi.responses import FileResponse
 
+        @app.get("/", include_in_schema=False)
+        async def spa_root():
+            return FileResponse(str(dist_dir / "index.html"))
+
         @app.get("/{path:path}", include_in_schema=False)
         async def spa_fallback(path: str):
             # If file exists in dist, serve it; otherwise serve index.html
