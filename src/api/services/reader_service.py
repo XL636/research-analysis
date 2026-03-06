@@ -175,10 +175,11 @@ def _extract_txt_pages(file_path: str) -> list[str]:
     return pages
 
 
-def sample_document_content(store, doc_id: int, max_chars: int = 12000) -> str:
+def sample_document_content(store, doc_id: int, max_chars: int = 16000) -> str:
     """Sample document content for overview/study generation.
 
     Takes pages from beginning, middle, and end to get representative content.
+    For longer documents (>20 pages), also samples at 1/4 and 3/4 positions.
     """
     from src.store.reader_store import ReaderStore
     doc = store.get_document(doc_id)
@@ -200,6 +201,12 @@ def sample_document_content(store, doc_id: int, max_chars: int = 12000) -> str:
     # Last pages
     for i in range(max(1, total - 1), total + 1):
         page_nums.add(i)
+    # For longer documents, add 1/4 and 3/4 sampling points
+    if total > 20:
+        q1 = total // 4
+        q3 = total * 3 // 4
+        page_nums.add(max(1, q1))
+        page_nums.add(min(total, q3))
 
     pages = store.get_pages_by_nums(doc_id, sorted(page_nums))
     parts = []

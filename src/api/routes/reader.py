@@ -935,8 +935,27 @@ async def delete_note(doc_id: int, note_id: int):
 # --- Study Tools ---
 
 
+STUDY_GUIDE_FOCUS_MODES = {
+    "conceptual": (
+        "侧重模式：概念理解\n"
+        "请侧重概念解释、原理推导和知识关联。每个章节应深入阐述核心概念的定义、"
+        "来龙去脉和与其他概念的关系，帮助学习者建立完整的知识框架。"
+    ),
+    "practical": (
+        "侧重模式：实践应用\n"
+        "请侧重应用场景、操作步骤和案例分析。每个章节应突出实际应用方法、"
+        "具体操作流程和真实案例，帮助学习者掌握实操技能。"
+    ),
+    "review": (
+        "侧重模式：复习备考\n"
+        "请侧重考点梳理、易错点和记忆口诀。每个章节应突出高频考点、"
+        "常见易错陷阱和便于记忆的总结，帮助学习者高效复习。"
+    ),
+}
+
+
 @router.post("/{doc_id}/generate/study-guide", response_model=StudyGuideResponse)
-async def generate_study_guide(doc_id: int, save_as_note: bool = False):
+async def generate_study_guide(doc_id: int, save_as_note: bool = False, focus: str = "conceptual"):
     """Generate a study guide from the document."""
     from src.core.llm_client import LLMClient
 
@@ -944,6 +963,9 @@ async def generate_study_guide(doc_id: int, save_as_note: bool = False):
     doc = store.get_document(doc_id)
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
+
+    if focus not in STUDY_GUIDE_FOCUS_MODES:
+        raise HTTPException(status_code=400, detail=f"Invalid focus mode: {focus}. Must be one of: {', '.join(STUDY_GUIDE_FOCUS_MODES)}")
 
     config = _load_config()
     agent_models = config.get("agent_models", {})
@@ -961,6 +983,7 @@ async def generate_study_guide(doc_id: int, save_as_note: bool = False):
 
     prompt = prompt.replace("{document_title}", doc["title"])
     prompt = prompt.replace("{sampled_content}", sampled)
+    prompt = prompt.replace("{focus_mode}", STUDY_GUIDE_FOCUS_MODES[focus])
 
     llm = LLMClient()
     try:

@@ -415,6 +415,9 @@
   "reader.studyGuideGenerating": "Generating study guide...",
   "reader.faqGenerating": "Generating FAQ...",
   "reader.saveToNotes": "Save to Notes",
+  "reader.focus_conceptual": "Conceptual",
+  "reader.focus_practical": "Practical",
+  "reader.focus_review": "Review",
 
   "nav.paperSearch": "Paper Search",
   "paperSearch.title": "Paper Search",

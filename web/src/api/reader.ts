@@ -221,9 +221,9 @@ export async function deleteNote(docId: number, noteId: number): Promise<DeleteR
 }
 
 // Study Tools
-export async function generateStudyGuide(docId: number, saveAsNote: boolean = false): Promise<StudyGuideResponse> {
+export async function generateStudyGuide(docId: number, saveAsNote: boolean = false, focus: string = 'conceptual'): Promise<StudyGuideResponse> {
   const { data } = await api.post(`/reader/${docId}/generate/study-guide`, null, {
-    params: { save_as_note: saveAsNote },
+    params: { save_as_note: saveAsNote, focus },
     timeout: 120000,
   })
   return data

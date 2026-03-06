@@ -175,9 +175,9 @@ export default function ReaderViewPage() {
     deleteNote.mutate({ docId, noteId })
   }
 
-  const handleGenerateStudyGuide = (saveAsNote: boolean) => {
+  const handleGenerateStudyGuide = (saveAsNote: boolean, focus: string = 'conceptual') => {
     generateStudyGuideMutation.mutate(
-      { docId, saveAsNote },
+      { docId, saveAsNote, focus },
       { onSuccess: (data) => setStudyGuide(data.sections) },
     )
   }

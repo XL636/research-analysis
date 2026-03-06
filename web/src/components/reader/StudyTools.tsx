@@ -1,17 +1,25 @@
 import { useState } from 'react'
-import { GraduationCap, HelpCircle, Bookmark } from 'lucide-react'
+import { GraduationCap, HelpCircle, Bookmark, Lightbulb, Wrench, ClipboardCheck } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import MarkdownRenderer from '../ui/MarkdownRenderer'
 import type { StudyGuideSection, FaqItem } from '../../types'
 
+type FocusMode = 'conceptual' | 'practical' | 'review'
+
 interface StudyToolsProps {
-  onGenerateStudyGuide: (saveAsNote: boolean) => void
+  onGenerateStudyGuide: (saveAsNote: boolean, focus: FocusMode) => void
   onGenerateFaq: (saveAsNote: boolean) => void
   studyGuide: StudyGuideSection[] | null
   faq: FaqItem[] | null
   isGeneratingGuide: boolean
   isGeneratingFaq: boolean
 }
+
+const FOCUS_MODES: { key: FocusMode; icon: typeof Lightbulb }[] = [
+  { key: 'conceptual', icon: Lightbulb },
+  { key: 'practical', icon: Wrench },
+  { key: 'review', icon: ClipboardCheck },
+]
 
 export default function StudyTools({
   onGenerateStudyGuide,
@@ -23,13 +31,14 @@ export default function StudyTools({
 }: StudyToolsProps) {
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<'guide' | 'faq'>('guide')
+  const [focusMode, setFocusMode] = useState<FocusMode>('conceptual')
 
   return (
     <div className="space-y-4">
       {/* Buttons */}
       <div className="flex gap-2">
         <button
-          onClick={() => { setActiveTab('guide'); if (!studyGuide) onGenerateStudyGuide(false) }}
+          onClick={() => { setActiveTab('guide'); if (!studyGuide) onGenerateStudyGuide(false, focusMode) }}
           disabled={isGeneratingGuide}
           className={`flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border transition-colors ${
             activeTab === 'guide'
@@ -54,13 +63,38 @@ export default function StudyTools({
         </button>
       </div>
 
+      {/* Focus mode selector (shown when guide tab is active) */}
+      {activeTab === 'guide' && (
+        <div className="flex gap-1.5">
+          {FOCUS_MODES.map(({ key, icon: Icon }) => (
+            <button
+              key={key}
+              onClick={() => {
+                setFocusMode(key)
+                // If guide already generated with different mode, regenerate
+                if (studyGuide) onGenerateStudyGuide(false, key)
+              }}
+              disabled={isGeneratingGuide}
+              className={`flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 text-[11px] font-medium rounded-md border transition-colors ${
+                focusMode === key
+                  ? 'bg-primary-50 border-primary-300 text-primary-700'
+                  : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'
+              }`}
+            >
+              <Icon className="w-3 h-3" />
+              {t(`reader.focus_${key}`)}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Content */}
       {activeTab === 'guide' && studyGuide && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h4 className="text-sm font-semibold text-gray-800">{t('reader.studyGuide')}</h4>
             <button
-              onClick={() => onGenerateStudyGuide(true)}
+              onClick={() => onGenerateStudyGuide(true, focusMode)}
               className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-primary-600"
             >
               <Bookmark className="w-3 h-3" />
