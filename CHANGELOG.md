@@ -22,6 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - API: 12 个新端点（概览 2 + 笔记 5 + 学习 2 + 模型相关 3）
 - i18n: 30+ 个新翻译 key（中英双语）
 
+### Fixed
+- API: SPA 根路由修复 — `/{path:path}` 不匹配空路径 `/`，添加显式 `@app.get("/")` 路由返回 index.html
+
 ### Changed
 - Reader: Prompt 重写 — reader_assistant.txt 增加引用标注规范和诚实边界要求
 - Reader: reader_agent.txt 增加推理链和引用标注规范
