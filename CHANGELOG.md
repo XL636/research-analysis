@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Reader: 学习指南三种侧重模式（概念理解 / 实践应用 / 复习备考），前端按钮切换，切换后自动重新生成
+- Reader: 学习指南 Prompt 增强 — 每个章节包含学习目标、要点、思考题结构化内容
+- Reader: 文档采样策略优化 — >20 页文档增加 1/4 和 3/4 采样点，max_chars 提升至 16000
 - Reader: OpenAI (gpt-4o, o4-mini) + Claude (claude-sonnet-4-20250514) 模型支持，LLMClient 自动处理 anthropic provider
 - Reader: 阅读辅助模型独立配置 — reader/reader_agent/reader_suggestions 三个 slot，设置页新增"阅读辅助"分组
 - Reader: AI 回答引用标注 [p.X] 格式，前端可点击蓝色标签跳转到对应页码
