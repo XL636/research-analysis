@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Fixed
+- Reader: 学习指南/FAQ 刷新后持久化 — 新增 `reader_study_cache` 表，生成结果按 doc+focus 缓存，页面加载自动恢复
 - Reader: 学习指南/FAQ「保存为笔记」不再重新调用 LLM，直接将已有内容格式化保存，防止重复笔记
 - Reader: 三种侧重模式（概念/实践/复习）输出差异增强 — 结构化强制指令 + prompt 末尾覆盖 + temperature 调高
 
