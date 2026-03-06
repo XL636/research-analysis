@@ -175,18 +175,22 @@ export default function ReaderViewPage() {
     deleteNote.mutate({ docId, noteId })
   }
 
-  const handleGenerateStudyGuide = (saveAsNote: boolean, focus: string = 'conceptual') => {
+  const handleGenerateStudyGuide = (focus: string = 'conceptual') => {
     generateStudyGuideMutation.mutate(
-      { docId, saveAsNote, focus },
+      { docId, focus },
       { onSuccess: (data) => setStudyGuide(data.sections) },
     )
   }
 
-  const handleGenerateFaq = (saveAsNote: boolean) => {
+  const handleGenerateFaq = () => {
     generateFaqMutation.mutate(
-      { docId, saveAsNote },
+      { docId },
       { onSuccess: (data) => setFaq(data.questions) },
     )
+  }
+
+  const handleSaveStudyNote = (content: string) => {
+    createNote.mutate({ docId, content, source: 'study_guide' })
   }
 
   if (docLoading) {
@@ -341,10 +345,12 @@ export default function ReaderViewPage() {
                       <StudyTools
                         onGenerateStudyGuide={handleGenerateStudyGuide}
                         onGenerateFaq={handleGenerateFaq}
+                        onSaveAsNote={handleSaveStudyNote}
                         studyGuide={studyGuide}
                         faq={faq}
                         isGeneratingGuide={generateStudyGuideMutation.isPending}
                         isGeneratingFaq={generateFaqMutation.isPending}
+                        docTitle={doc.title}
                       />
                     </div>
                   )}

@@ -937,25 +937,43 @@ async def delete_note(doc_id: int, note_id: int):
 
 STUDY_GUIDE_FOCUS_MODES = {
     "conceptual": (
-        "侧重模式：概念理解\n"
-        "请侧重概念解释、原理推导和知识关联。每个章节应深入阐述核心概念的定义、"
-        "来龙去脉和与其他概念的关系，帮助学习者建立完整的知识框架。"
+        "## 强制侧重模式：概念理解（此指令覆盖上述所有通用要求）\n\n"
+        "**学习目标**必须聚焦于「理解XXX的定义/原理/机制」，禁止出现「能够操作/实践/实现」类目标。\n\n"
+        "**要点**部分的强制要求：\n"
+        "- 每个要点必须解释「是什么 → 为什么 → 与其他概念的关系」\n"
+        "- 必须包含至少一个类比或图示说明（用文字描述）\n"
+        "- 禁止列举具体操作步骤、命令或代码片段\n"
+        "- 必须阐述概念的来源/背景/演进历史\n\n"
+        "**思考题**必须是开放性概念辨析题，例如「A和B的本质区别是什么？」「如果没有X，会产生什么后果？」\n"
+        "禁止出现「如何实现/如何操作」类问题。"
     ),
     "practical": (
-        "侧重模式：实践应用\n"
-        "请侧重应用场景、操作步骤和案例分析。每个章节应突出实际应用方法、"
-        "具体操作流程和真实案例，帮助学习者掌握实操技能。"
+        "## 强制侧重模式：实践应用（此指令覆盖上述所有通用要求）\n\n"
+        "**学习目标**必须聚焦于「能够动手完成XXX/实现XXX」，禁止出现「理解/阐述」类目标。\n\n"
+        "**要点**部分的强制要求：\n"
+        "- 每个要点必须包含具体的操作步骤（Step 1 → Step 2 → ...）\n"
+        "- 必须给出真实案例或示例（代码、命令、配置示例等）\n"
+        "- 必须指出常见错误和排错方法\n"
+        "- 禁止长篇理论阐述，概念解释限制在一句话以内\n\n"
+        "**思考题**必须是实操场景题，例如「给定X场景，你会如何实现？」「如果遇到Y错误，排查步骤是什么？」\n"
+        "禁止出现纯概念辨析题。"
     ),
     "review": (
-        "侧重模式：复习备考\n"
-        "请侧重考点梳理、易错点和记忆口诀。每个章节应突出高频考点、"
-        "常见易错陷阱和便于记忆的总结，帮助学习者高效复习。"
+        "## 强制侧重模式：复习备考（此指令覆盖上述所有通用要求）\n\n"
+        "**学习目标**替换为「考点清单」：列出本章节 3-5 个必考知识点，每个用一句话概括。\n\n"
+        "**要点**部分的强制要求：\n"
+        "- 必须使用「对比表格」呈现易混淆概念（| 概念A | 概念B | 区别 |）\n"
+        "- 每个要点必须标注重要程度（★★★ 高频必考 / ★★ 常见 / ★ 了解）\n"
+        "- 必须提供至少一个记忆口诀或助记技巧\n"
+        "- 必须列出「常见陷阱」：考试/面试中的典型错误理解\n\n"
+        "**思考题**替换为「自测题」：给出 2-3 个判断题或选择题（含答案和解析）。\n"
+        "禁止使用开放性问题。"
     ),
 }
 
 
 @router.post("/{doc_id}/generate/study-guide", response_model=StudyGuideResponse)
-async def generate_study_guide(doc_id: int, save_as_note: bool = False, focus: str = "conceptual"):
+async def generate_study_guide(doc_id: int, focus: str = "conceptual"):
     """Generate a study guide from the document."""
     from src.core.llm_client import LLMClient
 
@@ -990,27 +1008,17 @@ async def generate_study_guide(doc_id: int, save_as_note: bool = False, focus: s
         result = await asyncio.to_thread(
             llm.chat_json, model_name,
             [{"role": "user", "content": prompt}],
-            temperature=0.3, max_tokens=4096,
+            temperature=0.5, max_tokens=4096,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Study guide generation failed: {e}")
 
     sections = result.get("sections", [])
-    saved_note_id = None
-
-    if save_as_note and sections:
-        # Format as markdown note
-        lines = [f"# 学习指南 — {doc['title']}\n"]
-        for s in sections:
-            lines.append(f"## {s.get('title', '')}\n{s.get('content', '')}\n")
-        note = store.create_note(doc_id, "\n".join(lines), source="study_guide")
-        saved_note_id = note["id"]
-
-    return StudyGuideResponse(sections=sections, saved_note_id=saved_note_id)
+    return StudyGuideResponse(sections=sections, saved_note_id=None)
 
 
 @router.post("/{doc_id}/generate/faq", response_model=FaqResponse)
-async def generate_faq(doc_id: int, save_as_note: bool = False):
+async def generate_faq(doc_id: int):
     """Generate FAQ from the document."""
     from src.core.llm_client import LLMClient
 
@@ -1047,16 +1055,7 @@ async def generate_faq(doc_id: int, save_as_note: bool = False):
         raise HTTPException(status_code=500, detail=f"FAQ generation failed: {e}")
 
     questions = result.get("questions", [])
-    saved_note_id = None
-
-    if save_as_note and questions:
-        lines = [f"# FAQ — {doc['title']}\n"]
-        for q in questions:
-            lines.append(f"**Q: {q.get('question', '')}**\n\nA: {q.get('answer', '')}\n")
-        note = store.create_note(doc_id, "\n".join(lines), source="faq")
-        saved_note_id = note["id"]
-
-    return FaqResponse(questions=questions, saved_note_id=saved_note_id)
+    return FaqResponse(questions=questions, saved_note_id=None)
 
 
 # --- Legacy endpoints (backward compatible) ---

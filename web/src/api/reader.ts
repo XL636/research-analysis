@@ -221,17 +221,16 @@ export async function deleteNote(docId: number, noteId: number): Promise<DeleteR
 }
 
 // Study Tools
-export async function generateStudyGuide(docId: number, saveAsNote: boolean = false, focus: string = 'conceptual'): Promise<StudyGuideResponse> {
+export async function generateStudyGuide(docId: number, focus: string = 'conceptual'): Promise<StudyGuideResponse> {
   const { data } = await api.post(`/reader/${docId}/generate/study-guide`, null, {
-    params: { save_as_note: saveAsNote, focus },
+    params: { focus },
     timeout: 120000,
   })
   return data
 }
 
-export async function generateFaq(docId: number, saveAsNote: boolean = false): Promise<FaqResponse> {
+export async function generateFaq(docId: number): Promise<FaqResponse> {
   const { data } = await api.post(`/reader/${docId}/generate/faq`, null, {
-    params: { save_as_note: saveAsNote },
     timeout: 120000,
   })
   return data

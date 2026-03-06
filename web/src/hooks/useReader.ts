@@ -253,28 +253,16 @@ export function useDeleteNote() {
 
 // Study tools hooks
 export function useGenerateStudyGuide() {
-  const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ docId, saveAsNote, focus }: { docId: number; saveAsNote?: boolean; focus?: string }) =>
-      generateStudyGuide(docId, saveAsNote, focus),
-    onSuccess: (_data, vars) => {
-      if (vars.saveAsNote) {
-        queryClient.invalidateQueries({ queryKey: ['readerNotes', vars.docId] })
-      }
-    },
+    mutationFn: ({ docId, focus }: { docId: number; focus?: string }) =>
+      generateStudyGuide(docId, focus),
   })
 }
 
 export function useGenerateFaq() {
-  const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ docId, saveAsNote }: { docId: number; saveAsNote?: boolean }) =>
-      generateFaq(docId, saveAsNote),
-    onSuccess: (_data, vars) => {
-      if (vars.saveAsNote) {
-        queryClient.invalidateQueries({ queryKey: ['readerNotes', vars.docId] })
-      }
-    },
+    mutationFn: ({ docId }: { docId: number }) =>
+      generateFaq(docId),
   })
 }
 

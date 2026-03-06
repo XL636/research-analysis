@@ -7,12 +7,14 @@ import type { StudyGuideSection, FaqItem } from '../../types'
 type FocusMode = 'conceptual' | 'practical' | 'review'
 
 interface StudyToolsProps {
-  onGenerateStudyGuide: (saveAsNote: boolean, focus: FocusMode) => void
-  onGenerateFaq: (saveAsNote: boolean) => void
+  onGenerateStudyGuide: (focus: FocusMode) => void
+  onGenerateFaq: () => void
+  onSaveAsNote: (content: string) => void
   studyGuide: StudyGuideSection[] | null
   faq: FaqItem[] | null
   isGeneratingGuide: boolean
   isGeneratingFaq: boolean
+  docTitle?: string
 }
 
 const FOCUS_MODES: { key: FocusMode; icon: typeof Lightbulb }[] = [
@@ -24,21 +26,25 @@ const FOCUS_MODES: { key: FocusMode; icon: typeof Lightbulb }[] = [
 export default function StudyTools({
   onGenerateStudyGuide,
   onGenerateFaq,
+  onSaveAsNote,
   studyGuide,
   faq,
   isGeneratingGuide,
   isGeneratingFaq,
+  docTitle = '',
 }: StudyToolsProps) {
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<'guide' | 'faq'>('guide')
   const [focusMode, setFocusMode] = useState<FocusMode>('conceptual')
+  const [guideSaved, setGuideSaved] = useState(false)
+  const [faqSaved, setFaqSaved] = useState(false)
 
   return (
     <div className="space-y-4">
       {/* Buttons */}
       <div className="flex gap-2">
         <button
-          onClick={() => { setActiveTab('guide'); if (!studyGuide) onGenerateStudyGuide(false, focusMode) }}
+          onClick={() => { setActiveTab('guide'); if (!studyGuide) onGenerateStudyGuide(focusMode) }}
           disabled={isGeneratingGuide}
           className={`flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border transition-colors ${
             activeTab === 'guide'
@@ -50,7 +56,7 @@ export default function StudyTools({
           {isGeneratingGuide ? t('reader.studyGuideGenerating') : t('reader.generateStudyGuide')}
         </button>
         <button
-          onClick={() => { setActiveTab('faq'); if (!faq) onGenerateFaq(false) }}
+          onClick={() => { setActiveTab('faq'); if (!faq) onGenerateFaq() }}
           disabled={isGeneratingFaq}
           className={`flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border transition-colors ${
             activeTab === 'faq'
@@ -71,8 +77,9 @@ export default function StudyTools({
               key={key}
               onClick={() => {
                 setFocusMode(key)
+                setGuideSaved(false)
                 // If guide already generated with different mode, regenerate
-                if (studyGuide) onGenerateStudyGuide(false, key)
+                if (studyGuide) onGenerateStudyGuide(key)
               }}
               disabled={isGeneratingGuide}
               className={`flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 text-[11px] font-medium rounded-md border transition-colors ${
@@ -94,11 +101,20 @@ export default function StudyTools({
           <div className="flex items-center justify-between">
             <h4 className="text-sm font-semibold text-gray-800">{t('reader.studyGuide')}</h4>
             <button
-              onClick={() => onGenerateStudyGuide(true, focusMode)}
-              className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-primary-600"
+              onClick={() => {
+                if (guideSaved || !studyGuide) return
+                const lines = [`# 学习指南 — ${docTitle}\n`]
+                for (const s of studyGuide) {
+                  lines.push(`## ${s.title}\n${s.content}\n`)
+                }
+                onSaveAsNote(lines.join('\n'))
+                setGuideSaved(true)
+              }}
+              disabled={guideSaved}
+              className={`inline-flex items-center gap-1 text-xs ${guideSaved ? 'text-green-500' : 'text-gray-400 hover:text-primary-600'}`}
             >
               <Bookmark className="w-3 h-3" />
-              {t('reader.saveToNotes')}
+              {guideSaved ? t('reader.saved') : t('reader.saveToNotes')}
             </button>
           </div>
           {studyGuide.map((section, i) => (
@@ -117,11 +133,20 @@ export default function StudyTools({
           <div className="flex items-center justify-between">
             <h4 className="text-sm font-semibold text-gray-800">{t('reader.faq')}</h4>
             <button
-              onClick={() => onGenerateFaq(true)}
-              className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-primary-600"
+              onClick={() => {
+                if (faqSaved || !faq) return
+                const lines = [`# FAQ — ${docTitle}\n`]
+                for (const q of faq) {
+                  lines.push(`**Q: ${q.question}**\n\nA: ${q.answer}\n`)
+                }
+                onSaveAsNote(lines.join('\n'))
+                setFaqSaved(true)
+              }}
+              disabled={faqSaved}
+              className={`inline-flex items-center gap-1 text-xs ${faqSaved ? 'text-green-500' : 'text-gray-400 hover:text-primary-600'}`}
             >
               <Bookmark className="w-3 h-3" />
-              {t('reader.saveToNotes')}
+              {faqSaved ? t('reader.saved') : t('reader.saveToNotes')}
             </button>
           </div>
           {faq.map((item, i) => (
