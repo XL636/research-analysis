@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- Reader: 学习指南/FAQ「保存为笔记」不再重新调用 LLM，直接将已有内容格式化保存，防止重复笔记
+- Reader: 三种侧重模式（概念/实践/复习）输出差异增强 — 结构化强制指令 + prompt 末尾覆盖 + temperature 调高
+
 ### Added
 - Reader: 学习指南三种侧重模式（概念理解 / 实践应用 / 复习备考），前端按钮切换，切换后自动重新生成
 - Reader: 学习指南 Prompt 增强 — 每个章节包含学习目标、要点、思考题结构化内容
