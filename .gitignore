@@ -79,3 +79,16 @@ config/.env
 *.key
 *.pem
 *.p12
+
+# === Claude / Playwright MCP ===
+.claude/settings.local.json
+.playwright-mcp/
+
+# === Build artifacts ===
+web/tsconfig.tsbuildinfo
+
+# === Uploads (temp) ===
+uploads/
+
+# === Generated docs (local) ===
+*.docx
